@@ -1,0 +1,198 @@
+const express = require("express");
+const notes = require("./data/notes");
+const dotenv = require("dotenv");
+const sqlite3 = require('sqlite3').verbose();
+const path = require('path');
+const cors = require('cors');
+const multer = require('multer');
+
+const app=express();
+
+const corsOptions = {
+  origin: '*', // or specify the allowed origins ['http://example1.com', 'http://example2.com']
+  methods: 'GET, POST, PUT, DELETE, PATCH, OPTIONS',
+  allowedHeaders: 'X-Requested-With, content-type, Authorization',
+};
+
+app.use(cors(corsOptions));
+app.use(express.json())
+// app.use(require("../frontend/src/scenes/routine"));
+app.use(require("./routes/routine"));
+
+// Points directly to 'routine.db' inside the same directory as server.js
+//const dbPath = path.resolve('backend', 'routine.db');
+const dbPath = path.join(__dirname, 'routine.db');
+
+console.log("dbPath", dbPath)
+const db = new sqlite3.Database(dbPath, (err) => {
+  if (err) {
+    console.error(err.message);
+  } else {
+    console.log('Connected to the SQLite database.');
+  }
+});
+
+
+dotenv.config()
+
+app.get("/",(req,res) => {
+    res.send("API is running..");
+});
+
+
+
+
+app.get('/api/notes',(req,res) => {
+    res.json(notes);
+});
+
+//app.get('/api/notes/:id',(req,res) => {
+app.get('/api/notes/:id',(req,res) => {
+    const note = notes.find((n) => n._id === req.params.id);
+    //console.log(req.params);
+    res.send(note);
+
+});
+
+/**
+ * Database as backend
+ */
+app.get('/data', (req, res) => {
+    db.all('SELECT * FROM meal', (err, rows) => {
+    //db.all('PRAGMA database_list;', (err, rows) => { //useful in debugging
+      if (err) {
+        res.status(500).json({ error: err.message });
+        return;
+      }
+      res.json(rows);
+    });
+  });
+
+app.get('/dailyevent', (req, res) => {
+    db.all('SELECT * FROM event', (err, rows) => {
+    //db.all('PRAGMA database_list;', (err, rows) => { //useful in debugging
+      if (err) {
+        res.status(500).json({ error: err.message });
+        return;
+      }
+      res.json(rows);
+    });
+  });
+
+app.get('/getKidsMenu', async (req, res) => {
+    db.all('SELECT MEAL_TIME, MEAL_TYPE, MEAL_NAME,DAY_OF_WEEK  FROM meal order by MEAL_TIME DESC', (err, rows) => {
+    //db.all('PRAGMA database_list;', (err, rows) => { //useful in debugging
+      if (err) {
+        res.status(500).json({ error: err.message });
+        return;
+      }
+      res.json(rows);
+    });
+  });
+
+app.post('/addNewEvent', (req, res) => {
+//  const data = req.body
+//    console.log(data)
+    const field1 = req.body.EventFor
+    const field2 = req.body.EventName
+    const field3 = req.body.EventTime
+
+    //const { field1, field2, field3 } = data; // Assuming you're receiving specific fields from the frontend
+    //Perform database insertion using the received data
+    
+    //console.log(field1, field2, field3)
+    db.run('INSERT INTO event (PERSON_NAME, EVENT_NAME, EVENT_TIME) VALUES (?, ?, ?)', [field1, field2, field3], (err) => {
+      if (err) {
+        res.status(500).json({ error: err.message });
+        return;
+      }
+      res.json({ message: 'Data inserted successfully' });
+    });
+  });
+
+app.post('/deleteEvent', (req, res) => {
+  const field1 = req.body.EventFor
+  const field2 = req.body.EventName
+  const field3 = req.body.EventTime
+  
+  //console.log(field1, field2, field3)
+  db.run('delete from event where (PERSON_NAME, EVENT_NAME, EVENT_TIME) VALUES (?, ?, ?)', [field1, field2, field3], (err) => {
+    if (err) {
+      res.status(500).json({ error: err.message });
+      return;
+    }
+    res.json({ message: 'Data inserted successfully' });
+  });
+});  
+
+app.post('/updateEvent', (req, res) => {
+  const field1 = req.body.EventFor
+  const field2 = req.body.EventName
+  const field3 = req.body.EventTime
+  
+  //console.log(field1, field2, field3)
+  db.run('update event (PERSON_NAME, EVENT_NAME, EVENT_TIME) VALUES (?, ?, ?)', [field1, field2, field3], (err) => {
+    if (err) {
+      res.status(500).json({ error: err.message });
+      return;
+    }
+    res.json({ message: 'Data inserted successfully' });
+  });
+});  
+
+app.get('/addNewEvent2', (req, res) => {
+  db.all('PRAGMA database_list;', (err, rows) => { //useful in debugging
+    if (err) {
+      res.status(500).json({ error: err.message });
+      return;
+    }
+    res.json(rows);
+  });
+});
+
+app.get('/getDoctorAppointment', async (req, res) => {
+  db.all('SELECT appointment_id,patient_name,doctor_name,appointment_date,purpose,amount_charged,address,contact_number,doctor_special,insurance FROM doctor_appointment', (err, rows) => {
+  //db.all('PRAGMA database_list;', (err, rows) => { //useful in debugging
+    if (err) {
+      res.status(500).json({ error: err.message });
+      return;
+    }
+    res.json(rows);
+  });
+});
+
+//Sports
+app.get('/getSportSchedule', async (req, res) => {
+  db.all('SELECT ACTIVITY_CODE ,ACTIVITY_NAME ,ACTIVITY_FOR ,LEVEL ,DAY_OF_WEEK ,TIME_SLOT ,DURATION ,FREQUENCY ,START_DATE ,END_DATE ,SPECIAL_EVENT_DATE ,FACILITY_NAME ,ADDRESS ,PHONE_NUMBER ,MONTHLY_FEES ,REGISTRATION_FEES ,OTHER_EXPENSES ,GEAR_LIST FROM activity', (err, rows) => {
+  //db.all('PRAGMA database_list;', (err, rows) => { //useful in debugging
+    if (err) {
+      res.status(500).json({ error: err.message });
+      return;
+    }
+    res.json(rows);
+  });
+});
+
+// Configure multer to save uploaded files to the 'uploads' directory
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, 'data'); // Save files to the 'data' directory
+  },
+  filename: function (req, file, cb) {
+    cb(null, file.originalname); // Use the original file name
+  }
+});
+const upload = multer({ storage });
+
+// POST endpoint to handle file uploads
+app.post('/upload', upload.array('files'), (req, res) => {
+  // Files have been uploaded and saved to the 'uploads' directory
+  res.status(200).send('Files uploaded successfully');
+});
+
+// Hard code 
+//app.listen(5000 ,console.log('Server started on port 5000'))
+
+// Variable
+PORT = process.env.PORT || 5001;
+app.listen(PORT ,console.log(`Server started on port ${PORT}`))

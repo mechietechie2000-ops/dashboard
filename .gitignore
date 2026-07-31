@@ -1,0 +1,17 @@
+backend/.env
+/Users/sandarbh/Projects/github/dashboard/backend/.env
+/Users/sandarbh/Projects/github/dashboard/frontend/.env
+
+node_modules/*
+backend/node_modules/*
+frontend/node_modules/*
+backend/routine*
+
+*/*/*copy*
+frontend/*/*copy*
+backend/*/*copy*
+scripting
+backend/routes/auth.js
+for_claude
+
+backend/db/schema.sql.DONOTCHECKIN

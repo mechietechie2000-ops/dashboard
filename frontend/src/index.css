@@ -1,0 +1,26 @@
+/* Force flex layout for root app */
+.app {
+  display: flex !important;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* Ensure sidebar sits in flow rather than floating on top */
+.pro-sidebar {
+  position: relative !important;
+  height: 100% !important;
+  min-height: 100vh !important;
+  z-index: 10;
+}
+
+/* On mobile screens, allow it to become an overlay drawer */
+@media (max-width: 768px) {
+  .pro-sidebar.md {
+    position: fixed !important;
+    top: 0;
+    left: 0;
+    height: 100vh !important;
+    z-index: 1300 !important;
+  }
+}
