@@ -13,5 +13,5 @@ backend/*/*copy*
 scripting
 backend/routes/auth.js
 for_claude
-
+backend/cookies.txt
 backend/db/schema.sql.DONOTCHECKIN
