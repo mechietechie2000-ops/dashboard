@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Routes, Route, Navigate, useNavigate } from "react-router-dom";
 import Topbar from "./scenes/global/Topbar";
 import Sidebar from "./scenes/global/Sidebar";
-import Dashboard from "./scenes/dashboard";
+import Dashboard from "./scenes/home";
 import HomeDashboard from "./scenes/home";
 import KidsMenu from "./scenes/kids/KidsMenu";
 import { CssBaseline, ThemeProvider, Box } from "@mui/material";

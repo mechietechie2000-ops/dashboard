@@ -1,0 +1,55 @@
+frontend
+ ┣ public
+ ┃ ┣ assets
+ ┃ ┃ ┣ user.png
+ ┃ ┃ ┗ user2.png
+ ┃ ┣ favicon.ico
+ ┃ ┣ index.html
+ ┃ ┣ logo192.png
+ ┃ ┣ logo512.png
+ ┃ ┣ manifest copy.json
+ ┃ ┣ manifest.json
+ ┃ ┗ robots.txt
+ ┣ src
+ ┃ ┣ components
+ ┃ ┃ ┣ ProtectedRoute.jsx
+ ┃ ┃ ┣ Register.jsx
+ ┃ ┃ ┣ Login.jsx
+ ┃ ┣ context
+ ┃ ┃ ┗ AuthContext.jsx
+ ┃ ┣ scenes
+ ┃ ┃ ┣ dashboard
+ ┃ ┃ ┃ ┗ index.jsx
+ ┃ ┃ ┣ global
+ ┃ ┃ ┃ ┣ Sidebar.jsx
+ ┃ ┃ ┃ ┗ Topbar.jsx
+ ┃ ┃ ┣ routine
+ ┃ ┃ ┃ ┣ RoutineAdmin.jsx
+ ┃ ┃ ┃ ┗ index.jsx
+ ┃ ┣ services
+ ┃ ┃ ┗ api.js
+ ┃ ┣ App.js
+ ┃ ┣ index.css
+ ┃ ┣ index.js
+ ┃ ┣ service-worker.js
+ ┃ ┣ serviceWorkerRegistration.js
+ ┃ ┗ theme.js
+ ┗ package.json
+
+ backend
+ ┣ db
+ ┃ ┣ drivers
+ ┃ ┃ ┣ mysqlDriver.js
+ ┃ ┃ ┗ sqliteDriver.js
+ ┃ ┣ connection.js
+ ┃ ┣ routineRepository.js
+ ┃ ┗ schema.sql
+ ┣ middleware
+ ┃ ┗ auth.js
+ ┣ routes
+ ┃ ┣ auth.js
+ ┃ ┣ events.js
+ ┃ ┣ routine.js
+ ┣ package.json
+ ┣ routine.db
+ ┣ server.js
