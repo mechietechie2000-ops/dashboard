@@ -13,12 +13,16 @@ try {
   // Enable WAL mode for better performance & concurrent read/write handling
   db.pragma("journal_mode = WAL");
 
-  // 2. Read and apply schema
-  const schemaPath = path.resolve(__dirname, "..", "schema.sql");
-  if (fs.existsSync(schemaPath)) {
-    const schema = fs.readFileSync(schemaPath, "utf8");
-    db.exec(schema);
-    console.log("[sqliteDriver] schema executed successfully");
+  // 2. Read and apply schema(s)
+  const schemaPaths = [
+    path.resolve(__dirname, "..", "schema.sql"),
+    path.resolve(__dirname, "..", "home_dashboard_schema.sql"),
+  ];
+  for (const schemaPath of schemaPaths) {
+    if (fs.existsSync(schemaPath)) {
+      db.exec(fs.readFileSync(schemaPath, "utf8"));
+      console.log(`[sqliteDriver] schema executed: ${schemaPath}`);
+    }
   }
 } catch (err) {
   console.error("[sqliteDriver] error:", err.message);

@@ -1,32 +1,51 @@
-import { Box, useTheme } from "@mui/material";
+import { useEffect, useState, useCallback } from "react";
+import { Box, IconButton, Modal, useTheme } from "@mui/material";
+import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
 import { tokens } from "../../theme";
 import Header from "../../components/Header";
 import DashboardSection from "../../components/DashboardSection";
-import QueryBuilderIcon from "@mui/icons-material/QueryBuilder";
-import NotificationsActiveOutlinedIcon from "@mui/icons-material/NotificationsActiveOutlined";
-import EmojiEventsOutlinedIcon from "@mui/icons-material/EmojiEventsOutlined";
-import CakeOutlinedIcon from "@mui/icons-material/CakeOutlined";
-import LocalHospitalIcon from "@mui/icons-material/LocalHospital";
-import AutorenewOutlinedIcon from "@mui/icons-material/AutorenewOutlined";
-import PaymentsOutlinedIcon from "@mui/icons-material/PaymentsOutlined";
-import SportsHandballRoundedIcon from "@mui/icons-material/SportsHandballRounded";
-import LocalLibraryOutlinedIcon from "@mui/icons-material/LocalLibraryOutlined";
+import SectionForm from "../../components/SectionForm";
+import sectionFields from "../../config/sectionFields";
+import { listRecords, insertRecord } from "../../data/sectionRepository";
 
-import {
-  routineItems,
-  reminderItems,
-  goalItems,
-  eventItems,
-  appointmentItems,
-  renewalItems,
-  billItems,
-  extraCurriculumItems,
-  libraryItems,
-} from "../../data/homeDashboardMockData";
+const SECTION_KEYS = [
+  "routine",
+  "reminders",
+  "goals",
+  "events",
+  "appointments",
+  "renewals",
+  "bills",
+  "extracurricular",
+  "library",
+];
 
 const HomeDashboard = () => {
   const theme = useTheme();
   const colors = tokens(theme.palette.mode);
+
+  const [itemsBySection, setItemsBySection] = useState({});
+  const [activeSection, setActiveSection] = useState(null);
+
+  const loadSection = useCallback(async (sectionKey) => {
+    try {
+      const items = await listRecords(sectionKey);
+      setItemsBySection((prev) => ({ ...prev, [sectionKey]: items }));
+    } catch (err) {
+      console.error(`Failed to load ${sectionKey}:`, err);
+      setItemsBySection((prev) => ({ ...prev, [sectionKey]: [] }));
+    }
+  }, []);
+
+  useEffect(() => {
+    SECTION_KEYS.forEach(loadSection);
+  }, [loadSection]);
+
+  const handleSubmit = async (sectionKey, values) => {
+    await insertRecord(sectionKey, values);
+    await loadSection(sectionKey);
+    setActiveSection(null);
+  };
 
   return (
     <Box m="20px">
@@ -34,82 +53,57 @@ const HomeDashboard = () => {
 
       <Box
         display="grid"
-        gridTemplateColumns={{
-          xs: "1fr",
-          sm: "repeat(2, 1fr)",
-          md: "repeat(3, 1fr)",
-        }}
+        gridTemplateColumns={{ xs: "1fr", sm: "repeat(2, 1fr)", md: "repeat(3, 1fr)" }}
         gridAutoRows="minmax(240px, auto)"
         gap="20px"
         mt="10px"
       >
-        <DashboardSection
-          title="Routine"
-          icon={<QueryBuilderIcon />}
-          items={routineItems}
-          emptyMessage="No routine items today"
-          viewAllLink="/routine"
-        />
-
-        <DashboardSection
-          title="Reminders"
-          icon={<NotificationsActiveOutlinedIcon />}
-          items={reminderItems}
-          emptyMessage="No reminders"
-        />
-
-        <DashboardSection
-          title="Goals"
-          icon={<EmojiEventsOutlinedIcon />}
-          items={goalItems}
-          emptyMessage="No goals set yet"
-        />
-
-        <DashboardSection
-          title="Events (Birthdays, Anniversaries)"
-          icon={<CakeOutlinedIcon />}
-          items={eventItems}
-          emptyMessage="No upcoming birthdays or anniversaries"
-          viewAllLink="/calendar"
-        />
-
-        <DashboardSection
-          title="Appointments"
-          icon={<LocalHospitalIcon />}
-          items={appointmentItems}
-          emptyMessage="No upcoming appointments"
-          viewAllLink="/medical"
-        />
-
-        <DashboardSection
-          title="Renewals"
-          icon={<AutorenewOutlinedIcon />}
-          items={renewalItems}
-          emptyMessage="Nothing due for renewal"
-        />
-
-        <DashboardSection
-          title="Upcoming Payments / Bills"
-          icon={<PaymentsOutlinedIcon />}
-          items={billItems}
-          emptyMessage="No upcoming bills"
-        />
-
-        <DashboardSection
-          title="Extra Curriculum Registrations"
-          icon={<SportsHandballRoundedIcon />}
-          items={extraCurriculumItems}
-          emptyMessage="No open registrations"
-          viewAllLink="/sports"
-        />
-
-        <DashboardSection
-          title="Library Return Day"
-          icon={<LocalLibraryOutlinedIcon />}
-          items={libraryItems}
-          emptyMessage="No books currently borrowed"
-        />
+        {SECTION_KEYS.map((sectionKey) => {
+          const config = sectionFields[sectionKey];
+          return (
+            <Box key={sectionKey} position="relative">
+              <DashboardSection
+                title={config.label}
+                icon={config.icon}
+                items={itemsBySection[sectionKey] || []}
+                emptyMessage={config.emptyMessage}
+                viewAllLink={config.viewAllLink}
+              />
+              <IconButton
+                onClick={() => setActiveSection(sectionKey)}
+                size="small"
+                sx={{ position: "absolute", top: 12, right: config.viewAllLink ? 90 : 12 }}
+                aria-label={`Add ${config.label}`}
+              >
+                <AddCircleOutlineIcon sx={{ color: colors.greenAccent[500] }} />
+              </IconButton>
+            </Box>
+          );
+        })}
       </Box>
+
+      <Modal open={Boolean(activeSection)} onClose={() => setActiveSection(null)}>
+        <Box
+          sx={{
+            position: "absolute",
+            top: "50%",
+            left: "50%",
+            transform: "translate(-50%, -50%)",
+            width: { xs: "90%", sm: 420 },
+            bgcolor: colors.primary[400],
+            borderRadius: "4px",
+            p: "24px",
+          }}
+        >
+          {activeSection && (
+            <SectionForm
+              sectionKey={activeSection}
+              onSubmit={handleSubmit}
+              onCancel={() => setActiveSection(null)}
+            />
+          )}
+        </Box>
+      </Modal>
     </Box>
   );
 };

@@ -21,6 +21,7 @@ import SportsHandballRoundedIcon from '@mui/icons-material/SportsHandballRounded
 import LocalHospitalIcon from '@mui/icons-material/LocalHospital';
 import QueryBuilderIcon from '@mui/icons-material/QueryBuilder';
 import ChildCareIcon from '@mui/icons-material/ChildCare';
+import LockIcon from '@mui/icons-material/Lock';
 
 const Item = ({ title, to, icon, selected, setSelected, onSelect }) => {
   const theme = useTheme();
@@ -149,6 +150,15 @@ const Sidebar = ({ isMobileOpen = false, onMobileClose = () => {} }) => {
               <Item title="Routine Admin" to="/routine/admin" icon={<PeopleOutlinedIcon />} selected={selected} setSelected={setSelected} onSelect={isMobile ? onMobileClose : undefined} />              
               <Item title="Calendar" to="/calendar" icon={<CalendarTodayOutlinedIcon />} selected={selected} setSelected={setSelected} onSelect={isMobile ? onMobileClose : undefined} />
             </SubMenu>
+
+            <Item
+              title="Digi Locker"
+              to="/digiLocker"
+              icon={<LockIcon />}
+              selected={selected}
+              setSelected={setSelected}
+              onSelect={isMobile ? onMobileClose : undefined}
+            />
 
             <SubMenu title="Kids" icon={<ChildCareIcon />} opened={true}>
               <Item title="Meal Plan" to="/kids" icon={<LunchDiningRoundedIcon />} selected={selected} setSelected={setSelected} onSelect={isMobile ? onMobileClose : undefined} />

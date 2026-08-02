@@ -7,6 +7,17 @@ const { createProxyMiddleware } = require("http-proxy-middleware");
 dotenv.config();
 const app = express();
 
+const allowedOrigins = [
+  "http://localhost:3000",
+  "http://18mm.tail146023.ts.net:3000",
+  "http://18mm.tail146023.ts.net",
+
+  // "100.121.15.14:3000"
+  // add your production frontend domain here later, e.g.:
+  // "https://myapp.com",
+];
+
+
 // Updated CORS options to allow credentials (cookies) securely
 const corsOptions = {
   origin: (origin, callback) => {
@@ -17,6 +28,22 @@ const corsOptions = {
   allowedHeaders: "X-Requested-With, content-type, Authorization",
   credentials: true, // Required for HTTP-only cookies
 };
+
+/*
+const corsOptions = {
+  origin: (origin, callback) => {
+    // Allow requests with no origin (like curl, mobile apps, Postman) only if you need to
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
+  methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+  allowedHeaders: ["X-Requested-With", "Content-Type", "Authorization"],
+  credentials: true,
+};
+*/
 
 app.use(cors(corsOptions));
 app.use(express.json());
@@ -33,10 +60,10 @@ app.use("/api/auth", require("./routes/auth"));
 app.use(require("./routes/routine")); 
 app.use(require("./routes/notes")); 
 // app.use("/api", require("./routes/meals"));
-app.use(require("./routes/events")); 
-app.use(require("./routes/doctorAppointments")); 
-app.use(require("./routes/sports")); 
-app.use(require("./routes/upload")); 
+app.use(require("./routes/doctorAppointments")); // still used by scenes/medical
+app.use(require("./routes/sports")); // still used by scenes/kids/sports
+app.use(require("./routes/upload"));
+app.use(require("./routes/sections")); // generic CRUD for Home Dashboard sections
 
 app.use("/api/push", require("./routes/push").router);
 

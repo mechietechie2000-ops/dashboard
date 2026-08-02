@@ -13,6 +13,7 @@ import Passport from "./scenes/passport/passport";
 import Sports from "./scenes/kids/sports";
 import Routine from "./scenes/routine";
 import RoutineAdmin from "./scenes/routine/RoutineAdmin";
+import DigiLocker from "./scenes/digiLocker/digiLocker";
 
 // Auth imports
 import { AuthProvider, useAuth } from "./context/AuthContext";
@@ -90,6 +91,7 @@ const ProtectedAppLayout = () => {
             <Route path="/sports" element={<Sports />} />
             <Route path="/routine" element={<Routine />} />
             <Route path="/routine/admin" element={<RoutineAdmin />} />
+            <Route path="/digiLocker" element={<DigiLocker />} />
             {/* Catch-all fallback inside layout */}
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
