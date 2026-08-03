@@ -101,3 +101,29 @@ CREATE TABLE IF NOT EXISTS library_loans (
   borrower TEXT,
   due_date DATE NOT NULL
 );
+
+-- ---------------------------------------------------------------------
+-- Document uploads (DigiLocker feature)
+-- stored_filename/relative_path are server-generated; never derived from
+-- the client-supplied original filename. original_filename is kept as
+-- metadata only, for display purposes.
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS uploads (
+  id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+  original_filename   TEXT NOT NULL,
+  stored_filename      TEXT NOT NULL UNIQUE,
+  relative_path        TEXT NOT NULL,               -- relative to backend/uploads, never absolute
+  mime_type             TEXT NOT NULL,
+  size_bytes            INTEGER NOT NULL CHECK (size_bytes > 0),
+  category              TEXT NOT NULL,
+  subcategory           TEXT,
+  person_id             INTEGER REFERENCES family_members(id),
+  scope                 TEXT NOT NULL DEFAULT 'individual' CHECK (scope IN ('individual', 'joint')),
+  issue_date            TEXT,                       -- ISO-8601: YYYY-MM-DD, NULL = N/A
+  expiry_date           TEXT,                       -- ISO-8601: YYYY-MM-DD, NULL = N/A
+  status                TEXT NOT NULL DEFAULT 'current' CHECK (status IN ('current', 'archived')),
+  uploaded_by            INTEGER NOT NULL REFERENCES users(id),
+  uploaded_at            TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_uploads_person_status ON uploads(person_id, status);
+CREATE INDEX IF NOT EXISTS idx_uploads_uploaded_by ON uploads(uploaded_by);

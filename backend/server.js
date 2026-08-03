@@ -3,9 +3,19 @@ const dotenv = require("dotenv");
 const cors = require("cors");
 const cookieParser = require("cookie-parser"); // Added for cookie handling
 const { createProxyMiddleware } = require("http-proxy-middleware");
+const fs = require("fs");
+const path = require("path");
 
 dotenv.config();
 const app = express();
+
+// Ensure the uploads directory exists at boot. Lives outside any
+// statically-served/public path — see backend/routes/upload.js.
+const UPLOADS_DIR = path.join(__dirname, "uploads");
+if (!fs.existsSync(UPLOADS_DIR)) {
+  fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+  console.log(`[server] created uploads directory: ${UPLOADS_DIR}`);
+}
 
 const allowedOrigins = [
   "http://localhost:3000",
