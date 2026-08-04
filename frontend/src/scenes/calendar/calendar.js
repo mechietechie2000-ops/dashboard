@@ -4,40 +4,39 @@ import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
 import listPlugin from "@fullcalendar/list";
-import { Box, List, ListItem, ListItemText, Typography, useTheme } from "@mui/material";
+import {
+  Box,
+  List,
+  ListItem,
+  ListItemText,
+  Typography,
+  useTheme,
+} from "@mui/material";
 import Header from "../../components/Header";
 import { tokens } from "../../theme";
 
-
-/**
- * Consolidate All Calendars 
- * Google Calendar, Apple Calender, Office Oncall, Month End support, Kids School Calendar, Festival
- * 
- * 
- */
 const Calendar = () => {
   const theme = useTheme();
   const colors = tokens(theme.palette.mode);
   const [currentEvents, setCurrentEvents] = useState([]);
-  
-  // Function to read events from JSON file
-  const readEventsFromFile = () => {
-    const storedEvents = localStorage.getItem("calendarEvents");
-    if (storedEvents) {
-      setCurrentEvents(JSON.parse(storedEvents));
-    }
-  };
-  
-  // Function to write events to JSON file
-  const writeEventsToFile = (events) => {
-    localStorage.setItem("calendarEvents", JSON.stringify(events));
-  };
 
+  // 1. Fetch events from SQLite database via API on component load
   useEffect(() => {
-    readEventsFromFile();
+    const fetchEvents = async () => {
+      try {
+        const response = await fetch("/api/events");
+        const data = await response.json();
+        setCurrentEvents(data);
+      } catch (error) {
+        console.error("Failed to fetch events:", error);
+      }
+    };
+
+    fetchEvents();
   }, []);
 
-  const handleDateClick = (selected) => {
+  // 2. Add event to SQLite database via API
+  const handleDateClick = async (selected) => {
     const title = prompt("Please enter a new title for your event");
     const calendarApi = selected.view.calendar;
     calendarApi.unselect();
@@ -50,24 +49,51 @@ const Calendar = () => {
         end: selected.endStr,
         allDay: selected.allDay,
       };
-      const updatedEvents = [...currentEvents, newEvent];
-      setCurrentEvents(updatedEvents);
-      writeEventsToFile(updatedEvents);
+      // 1. Render immediately on the FullCalendar UI
+      calendarApi.addEvent(newEvent);
+      // 2. Persist to State & Backend API
+      try {
+        const response = await fetch("/api/events", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(newEvent),
+        });
+        const savedEvent = await response.json();
+
+        // Update local React state with saved event
+        setCurrentEvents((prev) => [...prev, savedEvent]);
+      } catch (error) {
+        console.error("Error saving event:", error);
+      }
     }
   };
 
-  const handleEventClick = (selected) => {
-    if (window.confirm(`Are you sure you want to delete the event '${selected.event.title}'`)) {
-      const updatedEvents = currentEvents.filter(event => event.id !== selected.event.id);
-      setCurrentEvents(updatedEvents);
-      writeEventsToFile(updatedEvents);
-      selected.event.remove();
+  // 3. Delete event from SQLite database via API
+  const handleEventClick = async (selected) => {
+    if (
+      window.confirm(
+        `Are you sure you want to delete the event '${selected.event.title}'?`,
+      )
+    ) {
+      try {
+        await fetch(`/api/events/${selected.event.id}`, {
+          method: "DELETE",
+        });
+
+        // Remove from local React state & calendar view
+        setCurrentEvents((prev) =>
+          prev.filter((event) => event.id !== selected.event.id),
+        );
+        selected.event.remove();
+      } catch (error) {
+        console.error("Error deleting event:", error);
+      }
     }
   };
 
   return (
     <Box m="20px">
-      <Header title="Calendar" subtitle="Full Calendar Interactive Page" />
+      <Header title="Calendar" subtitle="Calendar Interactive Page" />
 
       <Box display="flex" justifyContent="space-between">
         {/* CALENDAR SIDEBAR */}
@@ -105,7 +131,7 @@ const Calendar = () => {
           </List>
         </Box>
 
-        {/* CALENDAR */}
+        {/* CALENDAR MAIN DISPLAY */}
         <Box flex="1 1 100%" ml="15px">
           <FullCalendar
             height="75vh"
@@ -127,7 +153,7 @@ const Calendar = () => {
             dayMaxEvents={true}
             select={handleDateClick}
             eventClick={handleEventClick}
-            events={currentEvents} // Pass currentEvents directly to FullCalendar
+            events={currentEvents}
           />
         </Box>
       </Box>

@@ -129,3 +129,19 @@ CREATE TABLE IF NOT EXISTS uploads (
 );
 CREATE INDEX IF NOT EXISTS idx_uploads_person_status ON uploads(person_id, status);
 CREATE INDEX IF NOT EXISTS idx_uploads_uploaded_by ON uploads(uploaded_by);
+
+
+-- Create calendar_events table
+CREATE TABLE IF NOT EXISTS calendar_events (
+    id TEXT PRIMARY KEY,          -- Matches FullCalendar ID (e.g. string/uuid)
+    title TEXT NOT NULL,          -- Event title
+    start TEXT NOT NULL,          -- ISO 8601 String: YYYY-MM-DD or YYYY-MM-DDTHH:mm:ss
+    end TEXT,                     -- ISO 8601 String (Optional)
+    all_day INTEGER DEFAULT 1,    -- 1 for true, 0 for false
+    category TEXT DEFAULT 'general', -- e.g., 'holiday', 'birthday', 'work'
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Indexes for optimized calendar queries across date ranges
+CREATE INDEX IF NOT EXISTS idx_calendar_start ON calendar_events(start);
+CREATE INDEX IF NOT EXISTS idx_calendar_end ON calendar_events(end);
