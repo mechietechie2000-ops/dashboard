@@ -263,9 +263,17 @@ router.post(
       yearSuffix +
       `-${randomSuffix}.${ext}`;
 
-    // 8. Target directory: uploads/{Person or "Joint Documents"}/{category}/{current|archive}/
+    // 8. Target directory:
+    //      current: uploads/{first_name}/{document_category}/
+    //      archive: uploads/archive/{first_name}/{document_category}/
+    //    Uses the full category label (not the shortcode) so the folder
+    //    structure on disk is human-readable/searchable at a glance.
     const personDir = scope === "joint" ? "Joint Documents" : personLabel;
-    const relativeDir = path.join(personDir, category.shortName, folder);
+    const categoryDir = sanitizePathComponent(category.label, category.shortName);
+    const relativeDir =
+      folder === "archive"
+        ? path.join("archive", personDir, categoryDir)
+        : path.join(personDir, categoryDir);
     const targetDir = path.join(UPLOAD_ROOT, relativeDir);
     const absolutePath = path.join(targetDir, storedFilename);
     const relativePath = path.join(relativeDir, storedFilename);

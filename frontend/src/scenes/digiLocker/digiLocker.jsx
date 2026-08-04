@@ -1,5 +1,25 @@
 import React, { useState, useEffect } from 'react';
 import { useDropzone } from 'react-dropzone';
+import {
+  Box,
+  Paper,
+  Typography,
+  TextField,
+  FormControl,
+  FormLabel,
+  FormControlLabel,
+  RadioGroup,
+  Radio,
+  Checkbox,
+  Select,
+  MenuItem,
+  InputLabel,
+  Button,
+  useTheme,
+} from '@mui/material';
+import CloudUploadOutlinedIcon from '@mui/icons-material/CloudUploadOutlined';
+import Header from '../../components/Header';
+import { tokens } from '../../theme';
 
 const MAX_FILE_SIZE_MB = 10;
 const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
@@ -10,12 +30,35 @@ const ALLOWED_MIME_TYPES = {
   'image/webp': ['.webp']
 };
 
+// Shared styling for TextField / Select so every themed input in this form
+// looks and behaves consistently (label color, focus/hover border, etc.),
+// matching the pattern used in RoutineAdmin.jsx.
+const fieldSx = (colors) => ({
+  '& .MuiInputLabel-root': { color: colors.grey[300] },
+  '& .MuiInputLabel-root.MuiInputLabel-shrink, & .MuiInputLabel-root.Mui-focused': {
+    color: `${colors.greenAccent[400]} !important`,
+    backgroundColor: colors.primary[400],
+    px: '6px',
+  },
+  '& .MuiOutlinedInput-root': {
+    color: colors.grey[100],
+    '& fieldset': { borderColor: colors.grey[500] },
+    '&:hover fieldset': { borderColor: colors.greenAccent[500] },
+    '&.Mui-focused fieldset': { borderColor: colors.greenAccent[500] },
+  },
+  '& .MuiSelect-icon': { color: colors.grey[300] },
+});
+
 const DigiLocker = () => {
+  const theme = useTheme();
+  const colors = tokens(theme.palette.mode);
+
   // Form state
   const [categories, setCategories] = useState([]);
   const [category, setCategory] = useState('');
   const [personId, setPersonId] = useState('');
   const [issueDate, setIssueDate] = useState('');
+  const [noIssueDate, setNoIssueDate] = useState(false);
   const [expiryDate, setExpiryDate] = useState('');
   const [noExpiry, setNoExpiry] = useState(false);
   const [scope, setScope] = useState('individual'); // 'individual' | 'joint'
@@ -41,13 +84,26 @@ const DigiLocker = () => {
       .then((data) => setCategories(data.categories || []))
       .catch(() => setError('Could not load document categories.'));
 
-    // TODO: replace with a real GET /api/family endpoint once it exists.
-    const mockFamily = [
-      { id: '1', name: 'Self' },
-      { id: '2', name: 'Spouse' },
-      { id: '3', name: 'Child 1' }
-    ];
-    setFamilyMembers(mockFamily);
+    // Previously a hardcoded placeholder while GET /api/family-members
+    // didn't exist yet. Kept here, commented, for reference:
+    //
+    // const mockFamily = [
+    //   { id: '1', name: 'Self' },
+    //   { id: '2', name: 'Spouse' },
+    //   { id: '3', name: 'Child 1' }
+    // ];
+    // setFamilyMembers(mockFamily);
+    fetch('/api/family-members', { credentials: 'include' })
+      .then((res) => (res.ok ? res.json() : Promise.reject(new Error('Failed to load family members'))))
+      .then((rows) =>
+        setFamilyMembers(
+          (rows || []).map((m) => ({
+            id: String(m.id),
+            name: [m.first_name, m.last_name].filter(Boolean).join(' '),
+          }))
+        )
+      )
+      .catch(() => setError('Could not load family members.'));
   }, []);
 
   const onDrop = (acceptedFiles, rejectedFiles) => {
@@ -84,6 +140,23 @@ const DigiLocker = () => {
     multiple: false
   });
 
+  const resetForm = () => {
+    setFile(null);
+    setCategory('');
+    setPersonId('');
+    setIssueDate('');
+    setNoIssueDate(false);
+    setExpiryDate('');
+    setNoExpiry(false);
+    setScope('individual');
+    setFolder('current');
+  };
+
+  const handleCancel = () => {
+    setError('');
+    resetForm();
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!file || !category || (scope === 'individual' && !personId)) {
@@ -99,7 +172,7 @@ const DigiLocker = () => {
       formData.append('document', file);
       formData.append('category', category);
       formData.append('personId', personId);
-      formData.append('issueDate', issueDate || 'N/A');
+      formData.append('issueDate', noIssueDate ? 'N/A' : (issueDate || 'N/A'));
       formData.append('expiryDate', noExpiry ? 'N/A' : (expiryDate || 'N/A'));
       formData.append('scope', scope);
       formData.append('folder', folder);
@@ -118,16 +191,7 @@ const DigiLocker = () => {
       }
 
       setLastUploadedFile(file);
-
-      // Reset form
-      setFile(null);
-      setCategory('');
-      setPersonId('');
-      setIssueDate('');
-      setExpiryDate('');
-      setNoExpiry(false);
-      setScope('individual');
-      setFolder('current');
+      resetForm();
     } catch (err) {
       setError(err.message);
     } finally {
@@ -164,158 +228,252 @@ const DigiLocker = () => {
   };
 
   return (
-    <div style={{ maxWidth: '600px', margin: '2rem auto', padding: '1.5rem', border: '1px solid #ddd', borderRadius: '8px' }}>
-      <h2>DigiLocker - Document Upload</h2>
+    <Box m="20px">
+      <Header title="DigiLocker" subtitle="Upload and organize household documents" />
 
-      {error && <div style={{ color: 'red', marginBottom: '1rem', padding: '0.5rem', background: '#ffe6e6' }}>{error}</div>}
-
-      {lastUploadedFile && (
-        <div style={{ marginBottom: '1rem', padding: '0.75rem', background: '#e9f9ee', border: '1px solid #b7e4c7', borderRadius: '6px' }}>
-          <p style={{ margin: 0 }}>Uploaded "{lastUploadedFile.name}" successfully.</p>
-          <button
-            type="button"
-            onClick={handleSaveACopy}
-            style={{ marginTop: '0.5rem', padding: '0.4rem 0.75rem', cursor: 'pointer' }}
-          >
-            Save a copy to iCloud / Files / Drive
-          </button>
-        </div>
+      {error && (
+        <Box
+          mb="16px"
+          p="10px 14px"
+          borderRadius="6px"
+          sx={{ backgroundColor: colors.redAccent[900], border: `1px solid ${colors.redAccent[600]}` }}
+        >
+          <Typography color={colors.redAccent[300]}>{error}</Typography>
+        </Box>
       )}
 
-      <form onSubmit={handleSubmit}>
+      {lastUploadedFile && (
+        <Box
+          mb="16px"
+          p="12px 14px"
+          borderRadius="6px"
+          sx={{ backgroundColor: colors.greenAccent[900], border: `1px solid ${colors.greenAccent[600]}` }}
+        >
+          <Typography color={colors.greenAccent[300]} mb="8px">
+            Uploaded "{lastUploadedFile.name}" successfully.
+          </Typography>
+          <Button
+            type="button"
+            variant="outlined"
+            onClick={handleSaveACopy}
+            sx={{
+              color: colors.greenAccent[300],
+              borderColor: colors.greenAccent[500],
+              '&:hover': { borderColor: colors.greenAccent[300], backgroundColor: colors.greenAccent[800] },
+            }}
+          >
+            Save a copy to iCloud / Files / Drive
+          </Button>
+        </Box>
+      )}
+
+      <Paper
+        component="form"
+        onSubmit={handleSubmit}
+        elevation={0}
+        sx={{
+          maxWidth: '640px',
+          p: '24px',
+          backgroundColor: colors.primary[400],
+          backgroundImage: 'none',
+          borderRadius: '10px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 2.5,
+        }}
+      >
         {/* Category Selection */}
-        <div style={{ marginBottom: '1rem' }}>
-          <label><strong>Document Category *</strong></label>
-          <select
+        <FormControl fullWidth required sx={fieldSx(colors)}>
+          <InputLabel id="category-label">Document Category</InputLabel>
+          <Select
+            labelId="category-label"
+            label="Document Category"
             value={category}
             onChange={(e) => setCategory(e.target.value)}
-            required
-            style={{ width: '100%', padding: '0.5rem', marginTop: '0.25rem' }}
           >
-            <option value="">-- Select Category --</option>
             {categories.map((cat) => (
-              <option key={cat.id} value={cat.id}>{cat.label}</option>
+              <MenuItem key={cat.id} value={cat.id}>
+                {cat.label}
+              </MenuItem>
             ))}
-          </select>
-        </div>
+          </Select>
+        </FormControl>
 
         {/* Individual / Joint */}
-        <div style={{ marginBottom: '1rem' }}>
-          <label style={{ marginRight: '1.5rem' }}>
-            <input
-              type="radio"
-              name="scope"
-              checked={scope === 'individual'}
-              onChange={() => setScope('individual')}
-            /> Individual
-          </label>
-          <label>
-            <input
-              type="radio"
-              name="scope"
-              checked={scope === 'joint'}
-              onChange={() => setScope('joint')}
-            /> Joint / Shared (household)
-          </label>
-        </div>
+        <FormControl>
+          <FormLabel sx={{ color: colors.grey[300], fontSize: '0.85rem', mb: 0.5 }}>Scope</FormLabel>
+          <RadioGroup row value={scope} onChange={(e) => setScope(e.target.value)}>
+            <FormControlLabel
+              value="individual"
+              control={<Radio color="secondary" />}
+              label="Individual"
+              sx={{ color: colors.grey[200] }}
+            />
+            <FormControlLabel
+              value="joint"
+              control={<Radio color="secondary" />}
+              label="Joint / Shared (household)"
+              sx={{ color: colors.grey[200] }}
+            />
+          </RadioGroup>
+        </FormControl>
 
         {/* Family Member Selection (individual only) */}
         {scope === 'individual' && (
-          <div style={{ marginBottom: '1rem' }}>
-            <label><strong>Person Name *</strong></label>
-            <select
+          <FormControl fullWidth required sx={fieldSx(colors)}>
+            <InputLabel id="person-label">Person Name</InputLabel>
+            <Select
+              labelId="person-label"
+              label="Person Name"
               value={personId}
               onChange={(e) => setPersonId(e.target.value)}
-              required
-              style={{ width: '100%', padding: '0.5rem', marginTop: '0.25rem' }}
             >
-              <option value="">-- Select Family Member --</option>
               {familyMembers.map((member) => (
-                <option key={member.id} value={member.id}>{member.name}</option>
+                <MenuItem key={member.id} value={member.id}>
+                  {member.name}
+                </MenuItem>
               ))}
-            </select>
-          </div>
+            </Select>
+          </FormControl>
         )}
 
         {/* Dates Selection */}
         {(!selectedCategory || selectedCategory.hasIssueDate || selectedCategory.hasExpiryDate) && (
-          <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
-            <div style={{ flex: 1 }}>
-              <label><strong>Issue Date</strong></label>
-              <input
+          <Box display="flex" gap={2} flexWrap="wrap">
+            <Box flex={1} minWidth={220}>
+              <TextField
+                label="Issue Date"
                 type="date"
+                fullWidth
                 value={issueDate}
+                disabled={noIssueDate}
                 onChange={(e) => setIssueDate(e.target.value)}
-                style={{ width: '100%', padding: '0.5rem', marginTop: '0.25rem' }}
+                InputLabelProps={{ shrink: true }}
+                sx={fieldSx(colors)}
               />
-            </div>
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    size="small"
+                    checked={noIssueDate}
+                    onChange={(e) => {
+                      setNoIssueDate(e.target.checked);
+                      if (e.target.checked) setIssueDate('');
+                    }}
+                    sx={{ color: colors.grey[400], '&.Mui-checked': { color: colors.greenAccent[500] } }}
+                  />
+                }
+                label="N/A (Does not have Issue Date)"
+                sx={{ color: colors.grey[300], mt: '2px', '& .MuiFormControlLabel-label': { fontSize: '0.85rem' } }}
+              />
+            </Box>
 
-            <div style={{ flex: 1 }}>
-              <label><strong>Expiration Date</strong></label>
-              <input
+            <Box flex={1} minWidth={220}>
+              <TextField
+                label="Expiration Date"
                 type="date"
+                fullWidth
                 value={expiryDate}
                 disabled={noExpiry}
                 onChange={(e) => setExpiryDate(e.target.value)}
-                style={{ width: '100%', padding: '0.5rem', marginTop: '0.25rem' }}
+                InputLabelProps={{ shrink: true }}
+                sx={fieldSx(colors)}
               />
-              <label style={{ fontSize: '0.85rem', display: 'block', marginTop: '0.25rem' }}>
-                <input
-                  type="checkbox"
-                  checked={noExpiry}
-                  onChange={(e) => {
-                    setNoExpiry(e.target.checked);
-                    if (e.target.checked) setExpiryDate('');
-                  }}
-                /> N/A (Does not expire)
-              </label>
-            </div>
-          </div>
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    size="small"
+                    checked={noExpiry}
+                    onChange={(e) => {
+                      setNoExpiry(e.target.checked);
+                      if (e.target.checked) setExpiryDate('');
+                    }}
+                    sx={{ color: colors.grey[400], '&.Mui-checked': { color: colors.greenAccent[500] } }}
+                  />
+                }
+                label="N/A (Does not expire)"
+                sx={{ color: colors.grey[300], mt: '2px', '& .MuiFormControlLabel-label': { fontSize: '0.85rem' } }}
+              />
+            </Box>
+          </Box>
         )}
 
         {/* Current / Archive */}
-        <div style={{ marginBottom: '1rem' }}>
-          <label>
-            <input
-              type="checkbox"
+        <FormControlLabel
+          control={
+            <Checkbox
               checked={folder === 'current'}
               onChange={(e) => setFolder(e.target.checked ? 'current' : 'archive')}
-            /> Current (uncheck to file under Archive)
-          </label>
-        </div>
+              sx={{ color: colors.grey[400], '&.Mui-checked': { color: colors.greenAccent[500] } }}
+            />
+          }
+          label="Current (uncheck to file under Archive)"
+          sx={{ color: colors.grey[200] }}
+        />
 
         {/* Drag and Drop Zone */}
-        <div
+        <Box
           {...getRootProps()}
-          style={{
-            border: '2px dashed #007bff',
+          sx={{
+            border: `2px dashed ${isDragActive ? colors.greenAccent[500] : colors.grey[500]}`,
             borderRadius: '6px',
             padding: '2rem',
             textAlign: 'center',
-            backgroundColor: isDragActive ? '#e9f5ff' : '#f9f9f9',
+            backgroundColor: isDragActive ? colors.blueAccent[900] : colors.primary[500],
             cursor: 'pointer',
-            marginBottom: '1rem'
+            transition: 'background-color 120ms ease, border-color 120ms ease',
+            '&:hover': { borderColor: colors.greenAccent[500] },
           }}
         >
           {/* `capture` lets mobile browsers offer the camera directly */}
           <input {...getInputProps({ capture: 'environment' })} />
+          <CloudUploadOutlinedIcon sx={{ fontSize: 32, color: colors.grey[400], mb: 1 }} />
           {isDragActive ? (
-            <p>Drop the document here...</p>
+            <Typography color={colors.grey[100]}>Drop the document here...</Typography>
           ) : (
-            <p>Drag & drop a document here, or click to select (PDF, JPG, PNG, WEBP - Max {MAX_FILE_SIZE_MB}MB)</p>
+            <Typography color={colors.grey[300]}>
+              Drag & drop a document here, or click to select (PDF, JPG, PNG, WEBP - Max {MAX_FILE_SIZE_MB}MB)
+            </Typography>
           )}
-          {file && <p style={{ color: 'green', fontWeight: 'bold' }}>Selected File: {file.name} ({(file.size / (1024 * 1024)).toFixed(2)} MB)</p>}
-        </div>
+          {file && (
+            <Typography color={colors.greenAccent[400]} fontWeight="bold" mt={1}>
+              Selected File: {file.name} ({(file.size / (1024 * 1024)).toFixed(2)} MB)
+            </Typography>
+          )}
+        </Box>
 
-        <button
-          type="submit"
-          disabled={uploading}
-          style={{ width: '100%', padding: '0.75rem', backgroundColor: '#007bff', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
-        >
-          {uploading ? 'Uploading...' : 'Upload Document'}
-        </button>
-      </form>
-    </div>
+        {/* Actions */}
+        <Box display="flex" gap={2}>
+          <Button
+            type="button"
+            onClick={handleCancel}
+            disabled={uploading}
+            fullWidth
+            sx={{
+              color: colors.grey[200],
+              border: `1px solid ${colors.grey[500]}`,
+              '&:hover': { borderColor: colors.redAccent[400], color: colors.redAccent[400] },
+            }}
+          >
+            Cancel
+          </Button>
+          <Button
+            type="submit"
+            variant="contained"
+            disabled={uploading}
+            fullWidth
+            sx={{
+              backgroundColor: colors.blueAccent[600],
+              color: '#fff',
+              fontWeight: 'bold',
+              '&:hover': { backgroundColor: colors.blueAccent[700] },
+            }}
+          >
+            {uploading ? 'Uploading...' : 'Upload Document'}
+          </Button>
+        </Box>
+      </Paper>
+    </Box>
   );
 };
 

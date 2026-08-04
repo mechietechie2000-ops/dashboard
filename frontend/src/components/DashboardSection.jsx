@@ -4,7 +4,7 @@ import { tokens } from "../theme";
 
 /**
  * A single dashboard panel: header (icon + title + optional "View all" link)
- * followed by a vertical list of single-line items, or an empty-state message
+ * followed by a vertical list of items, or an empty-state message
  * when there's nothing to show.
  *
  * Each item is expected to look like:
@@ -32,24 +32,40 @@ const DashboardSection = ({
       key={item.id ?? i}
       display="flex"
       justifyContent="space-between"
-      alignItems="center"
+      alignItems="flex-start" // Changed to flex-start so meta stays top-aligned when primary wraps
       borderBottom={
         i === items.length - 1 ? "none" : `1px solid ${colors.primary[500]}`
       }
       py="10px"
       gap="10px"
     >
-      <Box minWidth={0}>
+      <Box
+        minWidth={0} // Allows flex child to shrink properly inside grid box
+        sx={{
+          wordBreak: "break-word",
+          overflowWrap: "anywhere",
+        }}
+      >
         <Typography
           color={colors.grey[100]}
           fontWeight="600"
-          noWrap
           title={item.primary}
+          sx={{
+            wordBreak: "break-word",
+            overflowWrap: "anywhere",
+          }}
         >
           {item.primary}
         </Typography>
         {item.secondary && (
-          <Typography variant="body2" color={colors.grey[300]} noWrap>
+          <Typography
+            variant="body2"
+            color={colors.grey[300]}
+            sx={{
+              wordBreak: "break-word",
+              overflowWrap: "anywhere",
+            }}
+          >
             {item.secondary}
           </Typography>
         )}
@@ -59,6 +75,7 @@ const DashboardSection = ({
           variant="body2"
           color={colors.greenAccent[500]}
           whiteSpace="nowrap"
+          sx={{ flexShrink: 0 }} // Prevents meta tag (e.g., date or price) from squishing
         >
           {item.meta}
         </Typography>
@@ -74,6 +91,9 @@ const DashboardSection = ({
       display="flex"
       flexDirection="column"
       height="100%"
+      sx={{
+        overflow: "hidden", // Prevents card overflow from pushing screen bounds
+      }}
     >
       {/* HEADER */}
       <Box
@@ -84,15 +104,23 @@ const DashboardSection = ({
         pb="10px"
         borderBottom={`3px solid ${colors.primary[500]}`}
       >
-        <Box display="flex" alignItems="center" gap="10px">
+        <Box display="flex" alignItems="center" gap="10px" minWidth={0}>
           <Box
             color={colors.greenAccent[500]}
             display="flex"
             alignItems="center"
+            sx={{ flexShrink: 0 }}
           >
             {icon}
           </Box>
-          <Typography variant="h5" fontWeight="600" color={colors.grey[100]}>
+          <Typography
+            variant="h5"
+            fontWeight="600"
+            color={colors.grey[100]}
+            sx={{
+              wordBreak: "break-word",
+            }}
+          >
             {title}
           </Typography>
         </Box>
@@ -105,6 +133,8 @@ const DashboardSection = ({
               color: colors.greenAccent[400],
               textDecoration: "none",
               whiteSpace: "nowrap",
+              flexShrink: 0,
+              ml: "10px",
               "&:hover": { textDecoration: "underline" },
             }}
           >

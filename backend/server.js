@@ -74,6 +74,7 @@ app.use(require("./routes/doctorAppointments")); // still used by scenes/medical
 app.use(require("./routes/sports")); // still used by scenes/kids/sports
 app.use(require("./routes/upload"));
 app.use(require("./routes/sections")); // generic CRUD for Home Dashboard sections
+app.use(require("./routes/family")); // GET /api/family-members, used by DigiLocker's person dropdown
 
 app.use("/api/push", require("./routes/push").router);
 

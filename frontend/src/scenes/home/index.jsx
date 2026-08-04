@@ -61,7 +61,9 @@ const HomeDashboard = () => {
         {SECTION_KEYS.map((sectionKey) => {
           const config = sectionFields[sectionKey];
           return (
-            <Box key={sectionKey} position="relative">
+            <Box key={sectionKey} position="relative"sx={{ minWidth: 0, // CRITICAL: Prevents CSS Grid item from stretching beyond screen width 
+              }}
+            >
               <DashboardSection
                 title={config.label}
                 icon={config.icon}
