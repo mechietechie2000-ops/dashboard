@@ -4,11 +4,13 @@
 -- so it stays in sync with the Medical scene, which already reads from it.
 -- Extra-curriculum reuses/creates `activity`, kept in sync with the Sports scene.
 
-CREATE TABLE IF NOT EXISTS family_members (
+/* CREATE TABLE IF NOT EXISTS family_members (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   name TEXT NOT NULL UNIQUE
 );
+ */
 
+ 
 CREATE TABLE IF NOT EXISTS family_members (
     id              INTEGER PRIMARY KEY AUTOINCREMENT,
     first_name      TEXT NOT NULL,
