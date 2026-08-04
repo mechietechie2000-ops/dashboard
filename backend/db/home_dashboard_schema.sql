@@ -1,7 +1,9 @@
 -- Home Dashboard schema.
 -- Routine reuses the existing daily_routine table (see schema.sql).
--- Appointments reuses doctor_appointment (see sqlscripts/cr_tbl_doctor_appointment.sql)
--- so it stays in sync with the Medical scene, which already reads from it.
+-- Appointments reuses the `appointments` table (renamed from
+-- doctor_appointment, see db/migrations/001_reminders_appointments.js for
+-- existing installs) so it stays in sync with the Medical scene, which
+-- already reads from it.
 -- Extra-curriculum reuses/creates `activity`, kept in sync with the Sports scene.
 
 /* CREATE TABLE IF NOT EXISTS family_members (
@@ -23,8 +25,12 @@ CREATE TABLE IF NOT EXISTS family_members (
 
 /* INSERT OR IGNORE INTO family_members (name) VALUES ('Mom'), ('Dad'), ('Kid1'), ('Emma'); */
 
-CREATE TABLE IF NOT EXISTS doctor_appointment (
+-- Renamed from doctor_appointment -> appointments (see migration 001 for
+-- existing installs). `category` lets non-doctor appointment types (Auto,
+-- Other, etc.) share this table; existing rows default to 'Doctor'.
+CREATE TABLE IF NOT EXISTS appointments (
   appointment_id INTEGER PRIMARY KEY,
+  category STRING NOT NULL DEFAULT 'Doctor',
   patient_name STRING NOT NULL,
   doctor_name STRING NOT NULL,
   appointment_date DATE NOT NULL,
@@ -62,6 +68,9 @@ CREATE TABLE IF NOT EXISTS reminders (
   title TEXT NOT NULL,
   note TEXT,
   due_date DATE NOT NULL,
+  priority TEXT NOT NULL DEFAULT 'medium' CHECK (priority IN ('low', 'medium', 'high')),
+  is_completed INTEGER NOT NULL DEFAULT 0 CHECK (is_completed IN (0, 1)),
+  family_member_id INTEGER REFERENCES family_members(id),
   created_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
 

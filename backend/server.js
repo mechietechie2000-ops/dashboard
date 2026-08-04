@@ -70,7 +70,7 @@ app.use("/api/auth", require("./routes/auth"));
 app.use(require("./routes/routine")); 
 app.use(require("./routes/notes")); 
 // app.use("/api", require("./routes/meals"));
-app.use(require("./routes/doctorAppointments")); // still used by scenes/medical
+app.use(require("./routes/appointments")); // still used by scenes/medical (table renamed from doctor_appointment)
 app.use(require("./routes/sports")); // still used by scenes/kids/sports
 app.use(require("./routes/upload"));
 app.use(require("./routes/sections")); // generic CRUD for Home Dashboard sections

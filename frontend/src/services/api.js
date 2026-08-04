@@ -40,12 +40,14 @@ export const api = async (endpoint, options = {}) => {
         onUnauthorizedCallback();
       }
       const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.message || 'Unauthorized');
+      // Backend error handlers send { error: "..." } (see routes/sections.js
+      // and others); some older routes may send { message: "..." } instead.
+      throw new Error(errorData.error || errorData.message || 'Unauthorized');
     }
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+      throw new Error(errorData.error || errorData.message || `HTTP error! status: ${response.status}`);
     }
 
     // Return JSON if present, otherwise null

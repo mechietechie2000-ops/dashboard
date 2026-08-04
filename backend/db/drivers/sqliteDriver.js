@@ -24,6 +24,14 @@ try {
       console.log(`[sqliteDriver] schema executed: ${schemaPath}`);
     }
   }
+
+  // 3. Apply any migrations not covered by the (additive-only) schema files
+  // above — e.g. renaming/altering tables that already have data. Each
+  // migration is idempotent and safe to run on every boot.
+  const migrations = [require("../migrations/001_reminders_appointments")];
+  for (const migration of migrations) {
+    migration.run(db);
+  }
 } catch (err) {
   console.error("[sqliteDriver] error:", err.message);
 }

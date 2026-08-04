@@ -65,8 +65,23 @@ const sectionFields = {
     emptyMessage: "No reminders",
     fields: [
       { name: "title", label: "Reminder", type: "text", required: true },
-      { name: "note", label: "Note", type: "textarea", required: false },
+      { name: "notes", label: "Notes", type: "textarea", required: false },
       { name: "due_date", label: "Due date", type: "date", required: true },
+      {
+        name: "priority",
+        label: "Priority",
+        type: "select",
+        required: false,
+        options: ["low", "medium", "high"],
+      },
+      {
+        name: "family_member_id",
+        label: "For",
+        type: "asyncSelect",
+        source: "familyMembers",
+        required: false,
+      },
+      { name: "is_completed", label: "Completed", type: "checkbox", required: false },
     ],
     mapRowToItem: (row) => ({
       id: row.reminder_id,
@@ -83,9 +98,9 @@ const sectionFields = {
     emptyMessage: "No goals set yet",
     fields: [
       { name: "title", label: "Goal", type: "text", required: true },
-      { name: "progress_note", label: "Progress note", type: "text", required: false },
+      { name: "description", label: "Description", type: "text", required: false },
       { name: "target_date", label: "Target date", type: "date", required: false },
-      { name: "target_amount", label: "Target amount", type: "number", required: false },
+      { name: "target_value", label: "Current amount", type: "number", required: false },
     ],
     mapRowToItem: (row) => ({
       id: row.goal_id,
@@ -128,12 +143,19 @@ const sectionFields = {
   },
 
   appointments: {
-    tableName: "doctor_appointment",
+    tableName: "appointments",
     label: "Appointments",
     icon: <LocalHospitalIcon />,
     viewAllLink: "/medical",
     emptyMessage: "No upcoming appointments",
     fields: [
+      {
+        name: "category",
+        label: "Category",
+        type: "select",
+        required: false,
+        options: ["Doctor", "Auto", "Other"],
+      },
       { name: "patient_name", label: "Patient", type: "text", required: true },
       { name: "doctor_name", label: "Doctor", type: "text", required: true },
       { name: "appointment_date", label: "Date", type: "date", required: true },

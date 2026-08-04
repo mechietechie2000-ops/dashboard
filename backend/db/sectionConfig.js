@@ -17,13 +17,13 @@ module.exports = {
   },
   reminders: {
     tableName: "reminders",
-    columns: ["title", "note", "due_date"],
+    columns: ["title", "notes", "due_date", "priority", "is_completed", "family_member_id"],
     requiredColumns: ["title", "due_date"],
     orderBy: "due_date ASC",
   },
   goals: {
     tableName: "goals",
-    columns: ["title", "family_member_id", "target_date", "progress_note", "target_amount"],
+    columns: ["title", "family_member_id", "target_date", "description", "target_value"],
     requiredColumns: ["title"],
     orderBy: "(target_date IS NULL) ASC, target_date ASC",
   },
@@ -34,8 +34,9 @@ module.exports = {
     orderBy: "event_date ASC",
   },
   appointments: {
-    tableName: "doctor_appointment",
+    tableName: "appointments",
     columns: [
+      "category",
       "patient_name",
       "doctor_name",
       "appointment_date",
@@ -51,8 +52,8 @@ module.exports = {
   },
   renewals: {
     tableName: "renewals",
-    columns: ["title", "category", "renewal_date"],
-    requiredColumns: ["title", "renewal_date"],
+    columns: ["title", "category", "expiry_date"],
+    requiredColumns: ["title", "expiry_date"],
     orderBy: "renewal_date ASC",
   },
   bills: {
