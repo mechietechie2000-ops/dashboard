@@ -6,7 +6,10 @@ const crypto = require("crypto");
 const router = express.Router();
 
 const { authenticate } = require("../middleware/auth");
-const { ipUploadLimiter, userUploadLimiter } = require("../middleware/uploadRateLimit");
+const {
+  ipUploadLimiter,
+  userUploadLimiter,
+} = require("../middleware/uploadRateLimit");
 const { get, run } = require("../db/connection");
 const categoriesConfig = require("../data/documentCategories.json");
 
@@ -32,7 +35,9 @@ const ALLOWED_MIME_TO_EXT = {
 // authenticated GET /api/documents/:fileId route below.
 const UPLOAD_ROOT = path.join(__dirname, "..", "uploads");
 
-const CATEGORY_BY_ID = new Map(categoriesConfig.categories.map((c) => [c.id, c]));
+const CATEGORY_BY_ID = new Map(
+  categoriesConfig.categories.map((c) => [c.id, c]),
+);
 
 const handle = (fn) => async (req, res, next) => {
   try {
@@ -206,15 +211,21 @@ router.post(
     // 2. Category allowlist.
     const category = CATEGORY_BY_ID.get(categoryId);
     if (!category) {
-      return res.status(400).json({ error: "Invalid or missing document category." });
+      return res
+        .status(400)
+        .json({ error: "Invalid or missing document category." });
     }
 
     // 3. Scope / folder allowlists.
     if (!["individual", "joint"].includes(scope)) {
-      return res.status(400).json({ error: "Invalid scope. Must be 'individual' or 'joint'." });
+      return res
+        .status(400)
+        .json({ error: "Invalid scope. Must be 'individual' or 'joint'." });
     }
     if (!["current", "archive"].includes(folder)) {
-      return res.status(400).json({ error: "Invalid folder. Must be 'current' or 'archive'." });
+      return res
+        .status(400)
+        .json({ error: "Invalid folder. Must be 'current' or 'archive'." });
     }
     const status = folder === "archive" ? "archived" : "current";
 
@@ -228,11 +239,18 @@ router.post(
     let personRow = null;
     if (scope === "individual") {
       if (!personId) {
-        return res.status(400).json({ error: "personId is required for individual documents." });
+        return res
+          .status(400)
+          .json({ error: "personId is required for individual documents." });
       }
-      personRow = await get("SELECT id, first_name FROM family_members WHERE id = ?", [personId]);
+      personRow = await get(
+        "SELECT id, first_name FROM family_members WHERE id = ?",
+        [personId],
+      );
       if (!personRow) {
-        return res.status(400).json({ error: "Selected family member was not found." });
+        return res
+          .status(400)
+          .json({ error: "Selected family member was not found." });
       }
     }
 
@@ -241,7 +259,8 @@ router.post(
     const detected = await fileTypeFromBuffer(buffer);
     if (!detected || !ALLOWED_MIME_TO_EXT[detected.mime]) {
       return res.status(400).json({
-        error: "File content does not match an allowed type (PDF, PNG, JPEG, WEBP).",
+        error:
+          "File content does not match an allowed type (PDF, PNG, JPEG, WEBP).",
       });
     }
     const ext = ALLOWED_MIME_TO_EXT[detected.mime];
@@ -251,15 +270,20 @@ router.post(
     //    entirely from server-validated fields — never from the raw
     //    client-supplied filename — plus a random suffix to prevent
     //    collisions/overwrites.
-    const personLabel = scope === "joint" ? "Joint" : sanitizePathComponent(personRow.first_name);
-    const subcategorySafe = subcategory ? sanitizePathComponent(subcategory) : "";
+    const personLabel =
+      scope === "joint" ? "Joint" : sanitizePathComponent(personRow.first_name);
+    const subcategorySafe = subcategory
+      ? sanitizePathComponent(subcategory)
+      : "";
     const startYY = !isNAValue(issueDate) ? toTwoDigitYear(issueDate) : null;
     const endYY = !isNAValue(expiryDate) ? toTwoDigitYear(expiryDate) : null;
     const yearSuffix = startYY && endYY ? `-${startYY}-${endYY}` : "";
     const randomSuffix = crypto.randomBytes(4).toString("hex");
 
     const storedFilename =
-      [personLabel, category.shortName, subcategorySafe].filter(Boolean).join("-") +
+      [personLabel, category.shortName, subcategorySafe]
+        .filter(Boolean)
+        .join("-") +
       yearSuffix +
       `-${randomSuffix}.${ext}`;
 
@@ -269,7 +293,10 @@ router.post(
     //    Uses the full category label (not the shortcode) so the folder
     //    structure on disk is human-readable/searchable at a glance.
     const personDir = scope === "joint" ? "Joint Documents" : personLabel;
-    const categoryDir = sanitizePathComponent(category.label, category.shortName);
+    const categoryDir = sanitizePathComponent(
+      category.label,
+      category.shortName,
+    );
     const relativeDir =
       folder === "archive"
         ? path.join("archive", personDir, categoryDir)
@@ -314,7 +341,7 @@ router.post(
           isNAValue(expiryDate) ? null : expiryDate,
           status,
           req.user.userId,
-        ]
+        ],
       );
 
       return res.status(201).json({
@@ -322,6 +349,7 @@ router.post(
         upload: {
           id: result.lastID,
           originalFilename: originalname,
+          storedFilename,
           category: category.id,
           subcategory: subcategory || null,
           scope,
@@ -336,7 +364,7 @@ router.post(
       console.error("Failed to save upload metadata:", err.message);
       return res.status(500).json({ error: "Failed to save upload metadata." });
     }
-  })
+  }),
 );
 
 // ---------------------------------------------------------------------
@@ -362,21 +390,26 @@ router.get(
     const isOwner = row.uploaded_by === req.user.userId;
     const isJointVisible = row.scope === "joint";
     if (!isOwner && !isJointVisible) {
-      return res.status(403).json({ error: "You do not have access to this document." });
+      return res
+        .status(403)
+        .json({ error: "You do not have access to this document." });
     }
 
     const absolutePath = path.join(UPLOAD_ROOT, row.relative_path);
-    if (!absolutePath.startsWith(UPLOAD_ROOT + path.sep) || !fs.existsSync(absolutePath)) {
+    if (
+      !absolutePath.startsWith(UPLOAD_ROOT + path.sep) ||
+      !fs.existsSync(absolutePath)
+    ) {
       return res.status(404).json({ error: "Document not found." });
     }
 
     res.setHeader("Content-Type", row.mime_type);
     res.setHeader(
       "Content-Disposition",
-      `inline; filename="${encodeURIComponent(row.original_filename)}"`
+      `inline; filename="${encodeURIComponent(row.original_filename)}"`,
     );
     fs.createReadStream(absolutePath).pipe(res);
-  })
+  }),
 );
 
 module.exports = router;
