@@ -5,6 +5,9 @@ const cookieParser = require("cookie-parser"); // Added for cookie handling
 const { createProxyMiddleware } = require("http-proxy-middleware");
 const fs = require("fs");
 const path = require("path");
+const cron = require("node-cron");
+const { runDailyReset, hasResetRunToday } = require("./db/routineRepository");
+const { ALLOWED_ORIGINS } = require("./config.js");
 
 dotenv.config();
 const app = express();
@@ -16,17 +19,6 @@ if (!fs.existsSync(UPLOADS_DIR)) {
   fs.mkdirSync(UPLOADS_DIR, { recursive: true });
   console.log(`[server] created uploads directory: ${UPLOADS_DIR}`);
 }
-
-const allowedOrigins = [
-  "http://localhost:3000",
-  "http://18mm.tail146023.ts.net:3000",
-  "http://18mm.tail146023.ts.net",
-
-  // "100.121.15.14:3000"
-  // add your production frontend domain here later, e.g.:
-  // "https://myapp.com",
-];
-
 
 // Updated CORS options to allow credentials (cookies) securely
 const corsOptions = {
@@ -74,7 +66,9 @@ app.use(require("./routes/appointments")); // still used by scenes/medical (tabl
 app.use(require("./routes/sports")); // still used by scenes/kids/sports
 app.use(require("./routes/upload"));
 app.use(require("./routes/sections")); // generic CRUD for Home Dashboard sections
+app.use(require("./routes/reminders")); // computed feed across events/goals/renewals/appointments
 app.use(require("./routes/family")); // GET /api/family-members, used by DigiLocker's person dropdown
+app.use(require("./routes/calendar")); // GET /api/calendar
 
 app.use("/api/push", require("./routes/push").router);
 
@@ -89,4 +83,29 @@ app.use(
 );
 
 const PORT = process.env.PORT || 5001;
-app.listen(PORT, () => console.log(`Server started on port ${PORT}`)); 
+app.listen(PORT, () => console.log(`Server started on port ${PORT}`));
+
+// ---- Daily routine reset: in-process backup layer ----
+// Primary trigger is launchd (see backend/scripts/daily-reset.plist), which
+// runs independently of this Node process and survives crashes/restarts.
+// This node-cron job is a same-process backup in case launchd isn't set up
+// or misses a run. runDailyReset() is idempotent (checked against app_state),
+// so having both firing is harmless — worst case it's a no-op second call.
+cron.schedule("5 0 * * *", () => {
+  runDailyReset()
+    .then((result) => console.log("[daily-reset:cron]", result))
+    .catch((err) => console.error("[daily-reset:cron] failed:", err.message));
+});
+
+// Startup catch-up: if the server was offline through 00:05 (crash, deploy,
+// laptop asleep) and boots up later still missing today's reset, run it once
+// immediately rather than waiting for either scheduler to hit its next slot.
+hasResetRunToday()
+  .then((ranToday) => {
+    if (!ranToday) {
+      return runDailyReset().then((result) =>
+        console.log("[daily-reset:startup-catchup]", result)
+      );
+    }
+  })
+  .catch((err) => console.error("[daily-reset:startup-catchup] failed:", err.message));

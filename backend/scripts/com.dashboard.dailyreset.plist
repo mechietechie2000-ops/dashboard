@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Fires the daily routine reset every day at 00:05, independent of the
+  Node process — this is what makes the reset survive server crashes/
+  restarts, unlike the in-process node-cron backup in server.js.
+
+  BEFORE INSTALLING, replace the two placeholders below:
+    __CRON_SECRET__  -> the same value as CRON_SECRET in backend/.env
+    __SERVER_URL__   -> e.g. http://localhost:5001 (or your Tailscale host)
+
+  INSTALL (run once):
+    cp com.dashboard.dailyreset.plist ~/Library/LaunchAgents/
+    launchctl load ~/Library/LaunchAgents/com.dashboard.dailyreset.plist
+
+  VERIFY:
+    launchctl list | grep com.dashboard.dailyreset
+    cat /tmp/dashboard-daily-reset.log
+
+  UNINSTALL:
+    launchctl unload ~/Library/LaunchAgents/com.dashboard.dailyreset.plist
+    rm ~/Library/LaunchAgents/com.dashboard.dailyreset.plist
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.dashboard.dailyreset</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/usr/bin/curl</string>
+    <string>-sS</string>
+    <string>-X</string>
+    <string>POST</string>
+    <string>-H</string>
+    <string>X-Internal-Key: __CRON_SECRET__</string>
+    <string>__SERVER_URL__</string>
+  </array>
+
+  <!-- Fires daily at 00:05. Omitting Weekday runs every day. -->
+  <key>StartCalendarInterval</key>
+  <dict>
+    <key>Hour</key>
+    <integer>0</integer>
+    <key>Minute</key>
+    <integer>5</integer>
+  </dict>
+
+  <!-- If the Mac is asleep at 00:05, launchd runs it as soon as it wakes. -->
+  <key>RunAtLoad</key>
+  <false/>
+
+  <key>StandardOutPath</key>
+  <string>/tmp/dashboard-daily-reset.log</string>
+  <key>StandardErrorPath</key>
+  <string>/tmp/dashboard-daily-reset.log</string>
+</dict>
+</plist>

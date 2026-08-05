@@ -1,4 +1,4 @@
-const db = require("./db"); // Your database connection module
+const db = require("./connection"); // Your database connection module
 
 const listEvents = async (start, end) => {
   if (start && end) {

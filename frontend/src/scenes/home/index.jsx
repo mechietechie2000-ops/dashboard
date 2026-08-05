@@ -1,12 +1,14 @@
 import { useEffect, useState, useCallback } from "react";
-import { Box, IconButton, Modal, useTheme } from "@mui/material";
+import { Box, IconButton, Modal, Snackbar, useTheme } from "@mui/material";
 import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
+import RestartAltIcon from "@mui/icons-material/RestartAlt";
 import { tokens } from "../../theme";
 import Header from "../../components/Header";
 import DashboardSection from "../../components/DashboardSection";
 import SectionForm from "../../components/SectionForm";
 import sectionFields from "../../config/sectionFields";
 import { listRecords, insertRecord } from "../../data/sectionRepository";
+import { runDailyResetManual } from "../../data/routineRepository";
 
 const SECTION_KEYS = [
   "routine",
@@ -26,6 +28,8 @@ const HomeDashboard = () => {
 
   const [itemsBySection, setItemsBySection] = useState({});
   const [activeSection, setActiveSection] = useState(null);
+  const [resetting, setResetting] = useState(false);
+  const [resetMessage, setResetMessage] = useState("");
 
   const loadSection = useCallback(async (sectionKey) => {
     try {
@@ -45,6 +49,24 @@ const HomeDashboard = () => {
     await insertRecord(sectionKey, values);
     await loadSection(sectionKey);
     setActiveSection(null);
+  };
+
+  const handleDailyReset = async () => {
+    if (resetting) return;
+    setResetting(true);
+    try {
+      const result = await runDailyResetManual();
+      setResetMessage(
+        result.skipped
+          ? "Already reset for today."
+          : `Reset complete — ${result.tasksLoaded} task(s) loaded for today.`
+      );
+      await loadSection("routine");
+    } catch (err) {
+      setResetMessage(err.message || "Reset failed — please try again.");
+    } finally {
+      setResetting(false);
+    }
   };
 
   return (
@@ -79,6 +101,22 @@ const HomeDashboard = () => {
               >
                 <AddCircleOutlineIcon sx={{ color: colors.greenAccent[500] }} />
               </IconButton>
+              {sectionKey === "routine" && (
+                <IconButton
+                  onClick={handleDailyReset}
+                  disabled={resetting}
+                  size="small"
+                  sx={{
+                    position: "absolute",
+                    top: 12,
+                    right: (config.viewAllLink ? 90 : 12) + 40,
+                  }}
+                  aria-label="Reset today's routine"
+                  title="Reset today's routine"
+                >
+                  <RestartAltIcon sx={{ color: colors.grey[300], opacity: resetting ? 0.4 : 1 }} />
+                </IconButton>
+              )}
             </Box>
           );
         })}
@@ -109,6 +147,13 @@ const HomeDashboard = () => {
           )}
         </Box>
       </Modal>
+
+      <Snackbar
+        open={!!resetMessage}
+        message={resetMessage}
+        autoHideDuration={4000}
+        onClose={() => setResetMessage("")}
+      />
     </Box>
   );
 };

@@ -24,7 +24,7 @@ const Calendar = () => {
   useEffect(() => {
     const fetchEvents = async () => {
       try {
-        const response = await fetch("/api/events");
+        const response = await fetch("/api/calendar");
         const data = await response.json();
         setCurrentEvents(data);
       } catch (error) {
@@ -53,7 +53,7 @@ const Calendar = () => {
       calendarApi.addEvent(newEvent);
       // 2. Persist to State & Backend API
       try {
-        const response = await fetch("/api/events", {
+        const response = await fetch("/api/calendar", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(newEvent),
@@ -76,7 +76,7 @@ const Calendar = () => {
       )
     ) {
       try {
-        await fetch(`/api/events/${selected.event.id}`, {
+        await fetch(`/api/calendar/${selected.event.id}`, {
           method: "DELETE",
         });
 
@@ -93,8 +93,8 @@ const Calendar = () => {
 
   return (
     <Box m="20px">
-      <Header title="Calendar" subtitle="Calendar Interactive Page" />
-
+{/*       <Header title="Calendar" subtitle="Calendar Interactive Page" />
+ */}
       <Box display="flex" justifyContent="space-between">
         {/* CALENDAR SIDEBAR */}
         <Box

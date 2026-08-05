@@ -1,0 +1,258 @@
+diff --git a/backend/db/reminderSources.js b/backend/db/reminderSources.js
+new file mode 100644
+index 0000000..4bd702e
+--- /dev/null
++++ b/backend/db/reminderSources.js
+@@ -0,0 +1,65 @@
++// Every table that should surface in Reminders gets one entry here. The
++// query builder in remindersRepository.js loops this array to generate a
++// UNION ALL — adding a future source (a 5th/6th table) means adding an
++// entry here, not writing new SQL or touching the route/repository code.
++//
++// Fields:
++//   type              - short label shown to the client, e.g. "renewal"
++//   table              - source table name
++//   idCol              - primary key column, aliased to source_id
++//   titleExpr          - SQL expression for the display title (can combine
++//                         columns, e.g. appointments has no single title)
++//   dueDateExpr        - the hard deadline column (SQL DATE/TEXT expression)
++//   leadDaysExpr       - SQL expression for how many days before due_date
++//                         this should start appearing. Use '0' for
++//                         point-in-time items (events, goals, appointments).
++//                         Renewals use their own lead_time_days column so
++//                         each renewal can have a different lead time.
++//   familyMemberExpr   - column name, or the literal 'NULL' if the table
++//                         doesn't track a family member (e.g. appointments).
++//   where              - optional extra SQL condition (e.g. only active rows)
++const REMINDER_SOURCES = [
++  {
++    type: "event",
++    table: "events",
++    idCol: "event_id",
++    titleExpr: "title",
++    dueDateExpr: "event_date",
++    leadDaysExpr: "0",
++    familyMemberExpr: "family_member_id",
++    where: null,
++  },
++  {
++    type: "goal",
++    table: "goals",
++    idCol: "goal_id",
++    titleExpr: "title",
++    dueDateExpr: "target_date",
++    leadDaysExpr: "0",
++    familyMemberExpr: "family_member_id",
++    where: "target_date IS NOT NULL",
++  },
++  {
++    type: "renewal",
++    table: "renewals",
++    idCol: "renewal_id",
++    titleExpr: "title",
++    dueDateExpr: "expiry_date",
++    leadDaysExpr: "lead_time_days", // per-row lead time, already on the table
++    familyMemberExpr: "family_member_id",
++    where: "status = 'active'",
++  },
++  {
++    type: "appointment",
++    table: "appointments",
++    idCol: "appointment_id",
++    // No single title column on this table — compose one.
++    titleExpr: "doctor_name || ' — ' || COALESCE(purpose, category)",
++    dueDateExpr: "appointment_date",
++    leadDaysExpr: "0",
++    familyMemberExpr: "NULL", // appointments has no family_member_id column
++    where: null,
++  },
++];
++
++module.exports = { REMINDER_SOURCES };
+diff --git a/backend/db/remindersRepository.js b/backend/db/remindersRepository.js
+new file mode 100644
+index 0000000..425b8a7
+--- /dev/null
++++ b/backend/db/remindersRepository.js
+@@ -0,0 +1,37 @@
++const db = require("./connection");
++const { REMINDER_SOURCES } = require("./reminderSources");
++
++// One SELECT per source, unioned together. window_start is when this item
++// should start appearing (due_date - lead_days); due_date is the hard
++// deadline. Point-in-time sources (events/goals/appointments) have
++// window_start === due_date since their leadDaysExpr is '0'.
++function buildUnionQuery() {
++  const selects = REMINDER_SOURCES.map((src) => {
++    const whereClause = src.where ? ` WHERE ${src.where}` : "";
++    return `
++      SELECT
++        '${src.type}' AS source_type,
++        ${src.idCol} AS source_id,
++        ${src.titleExpr} AS title,
++        date(${src.dueDateExpr}, '-' || ${src.leadDaysExpr} || ' days') AS window_start,
++        ${src.dueDateExpr} AS due_date,
++        ${src.familyMemberExpr} AS family_member_id
++      FROM ${src.table}${whereClause}
++    `;
++  });
++  return selects.join(" UNION ALL ");
++}
++
++// Returns every reminder whose [window_start, due_date] range overlaps
++// [from, to] — this is what makes a renewal with a long lead time appear
++// across many days/buckets, not just once on its exact due date.
++async function getReminders({ from, to }) {
++  const sql = `
++    SELECT * FROM (${buildUnionQuery()})
++    WHERE window_start <= ? AND due_date >= ?
++    ORDER BY due_date ASC
++  `;
++  return db.all(sql, [to, from]);
++}
++
++module.exports = { getReminders };
+diff --git a/backend/routes/reminders.js b/backend/routes/reminders.js
+new file mode 100644
+index 0000000..9928d57
+--- /dev/null
++++ b/backend/routes/reminders.js
+@@ -0,0 +1,31 @@
++const express = require("express");
++const router = express.Router();
++const repo = require("../db/remindersRepository");
++const { authenticate } = require("../middleware/auth");
++
++const handle = (fn) => async (req, res) => {
++  try {
++    res.json(await fn(req, res));
++  } catch (err) {
++    res.status(err.status || 400).json({ error: err.message });
++  }
++};
++
++router.use(authenticate);
++
++// GET /api/reminders?from=YYYY-MM-DD&to=YYYY-MM-DD
++// Returns a flat, date-ordered list spanning every source table in
++// reminderSources.js. Defaults to today through +400 days so the frontend
++// can bucket into Today/This Week/This Month/.../Next Year from one call.
++router.get(
++  "/api/reminders",
++  handle((req) => {
++    const today = new Date().toISOString().slice(0, 10);
++    const defaultTo = new Date(Date.now() + 400 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
++    const from = req.query.from || today;
++    const to = req.query.to || defaultTo;
++    return repo.getReminders({ from, to });
++  })
++);
++
++module.exports = router;
+diff --git a/frontend/src/utils/reminderBuckets.js b/frontend/src/utils/reminderBuckets.js
+new file mode 100644
+index 0000000..98d76c4
+--- /dev/null
++++ b/frontend/src/utils/reminderBuckets.js
+@@ -0,0 +1,88 @@
++// Groups a flat reminders list (from GET /api/reminders) into the named
++// buckets a UI would show: Today, Tomorrow, This Week, Next Week,
++// This Month, Next Month, Later. Pure function — no fetch, no state —
++// so it's easy to unit test and easy to reuse (Home tile today, a full
++// Reminders page later, etc.) without duplicating this logic.
++//
++// A reminder can appear in exactly one bucket: the earliest bucket its
++// [window_start, due_date] range overlaps, working from Today outward.
++// That's the "already nagging you" behavior — a renewal with a 30-day
++// lead time that opened 25 days ago shows up under Today, not buried
++// under some future bucket matching its actual due_date.
++
++const toDate = (isoString) => new Date(`${isoString}T00:00:00`);
++const addDays = (date, n) => new Date(date.getTime() + n * 24 * 60 * 60 * 1000);
++const startOfDay = (date) => new Date(date.getFullYear(), date.getMonth(), date.getDate());
++
++function endOfWeek(date) {
++  // Week ends Saturday, matching a Sun–Sat week. Adjust here if your
++  // calendar elsewhere assumes Mon–Sun.
++  const day = date.getDay(); // 0 = Sunday
++  return addDays(date, 6 - day);
++}
++
++function endOfMonth(date) {
++  return new Date(date.getFullYear(), date.getMonth() + 1, 0);
++}
++
++export function bucketReminders(reminders, today = new Date()) {
++  const day0 = startOfDay(today);
++  const day1 = addDays(day0, 1); // tomorrow
++  const weekEnd = endOfWeek(day0);
++  const nextWeekEnd = addDays(weekEnd, 7);
++  const monthEnd = endOfMonth(day0);
++  const nextMonthEnd = endOfMonth(addDays(monthEnd, 1));
++  const yearEnd = new Date(day0.getFullYear(), 11, 31);
++
++  const buckets = {
++    today: [],
++    tomorrow: [],
++    thisWeek: [],
++    nextWeek: [],
++    thisMonth: [],
++    nextMonth: [],
++    thisYear: [],
++    later: [],
++  };
++
++  // [label, rangeEnd] in order — first range whose end is >= the
++  // reminder's earliest relevant day wins.
++  const ranges = [
++    ["today", day0],
++    ["tomorrow", day1],
++    ["thisWeek", weekEnd],
++    ["nextWeek", nextWeekEnd],
++    ["thisMonth", monthEnd],
++    ["nextMonth", nextMonthEnd],
++    ["thisYear", yearEnd],
++  ];
++
++  for (const reminder of reminders) {
++    const windowStart = toDate(reminder.window_start);
++    const dueDate = toDate(reminder.due_date);
++    // Already-open items (window_start in the past) should surface under
++    // Today, not their literal window_start date.
++    const earliestRelevantDay = windowStart < day0 ? day0 : windowStart;
++
++    const match = ranges.find(([, rangeEnd]) => earliestRelevantDay <= rangeEnd);
++    const bucketKey = match ? match[0] : "later";
++    buckets[bucketKey].push(reminder);
++
++    // Suppress unused var lint noise; dueDate reserved for future
++    // "overdue" styling without changing this function's signature.
++    void dueDate;
++  }
++
++  return buckets;
++}
++
++export const BUCKET_LABELS = {
++  today: "Today",
++  tomorrow: "Tomorrow",
++  thisWeek: "This Week",
++  nextWeek: "Next Week",
++  thisMonth: "This Month",
++  nextMonth: "Next Month",
++  thisYear: "This Year",
++  later: "Later",
++};
+diff --git a/backend/server.js b/backend/server.js
+index c5b3a36..d3790c4 100644
+--- a/backend/server.js
++++ b/backend/server.js
+@@ -74,6 +74,7 @@ app.use(require("./routes/appointments")); // still used by scenes/medical (tabl
+ app.use(require("./routes/sports")); // still used by scenes/kids/sports
+ app.use(require("./routes/upload"));
+ app.use(require("./routes/sections")); // generic CRUD for Home Dashboard sections
++app.use(require("./routes/reminders")); // computed feed across events/goals/renewals/appointments
+ app.use(require("./routes/family")); // GET /api/family-members, used by DigiLocker's person dropdown
+ 
+ app.use("/api/push", require("./routes/push").router);
+ 
