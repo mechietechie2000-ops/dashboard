@@ -1,0 +1,194 @@
+diff --git a/backend/package.json b/backend/package.json
+index e98cdcd..808f316 100644
+--- a/backend/package.json
++++ b/backend/package.json
+@@ -14,6 +14,7 @@
+     "file-type": "^22.0.1",
+     "jsonwebtoken": "^9.0.3",
+     "multer": "^2.2.0",
++    "node-cron": "^4.6.0",
+     "web-push": "^3.6.7"
+   },
+   "devDependencies": {
+diff --git a/backend/routes/routine.js b/backend/routes/routine.js
+index 399668b..beece49 100644
+--- a/backend/routes/routine.js
++++ b/backend/routes/routine.js
+@@ -1,7 +1,8 @@
+ const express = require("express");
+ const router = express.Router();
+ const repo = require("../db/routineRepository");
+-const { authenticate } = require("../middleware/auth"); // <-- Import middleware
++const { authenticate } = require("../middleware/auth");
++const { authenticateInternal } = require("../middleware/internalAuth");
+ 
+ const handle = (fn) => async (req, res) => {
+   try {
+@@ -11,7 +12,18 @@ const handle = (fn) => async (req, res) => {
+   }
+ };
+ 
+-// Apply protection to all /api/routine routes below
++// ---- Daily reset (machine-to-machine only — launchd curl / node-cron backup) ----
++// Deliberately ABOVE router.use(authenticate) below: launchd's curl has no
++// browser session/JWT cookie, so this uses its own shared-secret check
++// (see middleware/internalAuth.js) instead of user login.
++router.post("/api/routine/daily-reset", authenticateInternal, handle(() => repo.runDailyReset()));
++router.get(
++  "/api/routine/daily-reset/status",
++  authenticateInternal,
++  handle(async () => ({ ranToday: await repo.hasResetRunToday() }))
++);
++
++// Apply protection to all remaining /api/routine routes below
+ router.use(authenticate); // <-- Secure all routes below
+ 
+ // ---- Master routine templates (CRUD) ----
+@@ -43,10 +55,4 @@ router.get(
+   handle(async (req) => ({ streak: await repo.getStreak(req.params.person) }))
+ );
+ 
+-// ---- Daily reset ----
+-// Call this from launchd (curl) at midnight, and/or an in-process node-cron
+-// backup. It's idempotent, so calling it more than once in a day is harmless.
+-router.post("/api/routine/daily-reset", handle(() => repo.runDailyReset()));
+-router.get("/api/routine/daily-reset/status", handle(async () => ({ ranToday: await repo.hasResetRunToday() })));
+-
+ module.exports = router;
+\ No newline at end of file
+diff --git a/backend/server.js b/backend/server.js
+index c5b3a36..fc46dfc 100644
+--- a/backend/server.js
++++ b/backend/server.js
+@@ -5,6 +5,8 @@ const cookieParser = require("cookie-parser"); // Added for cookie handling
+ const { createProxyMiddleware } = require("http-proxy-middleware");
+ const fs = require("fs");
+ const path = require("path");
++const cron = require("node-cron");
++const { runDailyReset, hasResetRunToday } = require("./db/routineRepository");
+ 
+ dotenv.config();
+ const app = express();
+@@ -89,4 +91,29 @@ app.use(
+ );
+ 
+ const PORT = process.env.PORT || 5001;
+-app.listen(PORT, () => console.log(`Server started on port ${PORT}`)); 
+\ No newline at end of file
++app.listen(PORT, () => console.log(`Server started on port ${PORT}`));
++
++// ---- Daily routine reset: in-process backup layer ----
++// Primary trigger is launchd (see backend/scripts/daily-reset.plist), which
++// runs independently of this Node process and survives crashes/restarts.
++// This node-cron job is a same-process backup in case launchd isn't set up
++// or misses a run. runDailyReset() is idempotent (checked against app_state),
++// so having both firing is harmless — worst case it's a no-op second call.
++cron.schedule("5 0 * * *", () => {
++  runDailyReset()
++    .then((result) => console.log("[daily-reset:cron]", result))
++    .catch((err) => console.error("[daily-reset:cron] failed:", err.message));
++});
++
++// Startup catch-up: if the server was offline through 00:05 (crash, deploy,
++// laptop asleep) and boots up later still missing today's reset, run it once
++// immediately rather than waiting for either scheduler to hit its next slot.
++hasResetRunToday()
++  .then((ranToday) => {
++    if (!ranToday) {
++      return runDailyReset().then((result) =>
++        console.log("[daily-reset:startup-catchup]", result)
++      );
++    }
++  })
++  .catch((err) => console.error("[daily-reset:startup-catchup] failed:", err.message));
+\ No newline at end of file
+diff --git a/backend/middleware/internalAuth.js b/backend/middleware/internalAuth.js
+new file mode 100644
+index 0000000..6ff01e6
+--- /dev/null
++++ b/backend/middleware/internalAuth.js
+@@ -0,0 +1,19 @@
++// Auth for machine-to-machine calls (launchd's curl, cron jobs) that have no
++// browser session/JWT cookie. Separate from middleware/auth.js on purpose —
++// this is a single shared secret, not a per-user credential.
++//
++// Set CRON_SECRET in backend/.env. If it's unset, this middleware refuses
++// every request rather than silently allowing an unauthenticated reset.
++const authenticateInternal = (req, res, next) => {
++  const expected = process.env.CRON_SECRET;
++  if (!expected) {
++    return res.status(500).json({ error: "CRON_SECRET is not configured on the server." });
++  }
++  const provided = req.headers["x-internal-key"];
++  if (provided !== expected) {
++    return res.status(401).json({ error: "Invalid or missing internal key." });
++  }
++  next();
++};
++
++module.exports = { authenticateInternal };
+diff --git a/backend/scripts/com.dashboard.dailyreset.plist b/backend/scripts/com.dashboard.dailyreset.plist
+new file mode 100644
+index 0000000..df113ba
+--- /dev/null
++++ b/backend/scripts/com.dashboard.dailyreset.plist
+@@ -0,0 +1,59 @@
++<?xml version="1.0" encoding="UTF-8"?>
++<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
++  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
++<!--
++  Fires the daily routine reset every day at 00:05, independent of the
++  Node process — this is what makes the reset survive server crashes/
++  restarts, unlike the in-process node-cron backup in server.js.
++
++  BEFORE INSTALLING, replace the two placeholders below:
++    __CRON_SECRET__  -> the same value as CRON_SECRET in backend/.env
++    __SERVER_URL__   -> e.g. http://localhost:5001 (or your Tailscale host)
++
++  INSTALL (run once):
++    cp com.dashboard.dailyreset.plist ~/Library/LaunchAgents/
++    launchctl load ~/Library/LaunchAgents/com.dashboard.dailyreset.plist
++
++  VERIFY:
++    launchctl list | grep com.dashboard.dailyreset
++    cat /tmp/dashboard-daily-reset.log
++
++  UNINSTALL:
++    launchctl unload ~/Library/LaunchAgents/com.dashboard.dailyreset.plist
++    rm ~/Library/LaunchAgents/com.dashboard.dailyreset.plist
++-->
++<plist version="1.0">
++<dict>
++  <key>Label</key>
++  <string>com.dashboard.dailyreset</string>
++
++  <key>ProgramArguments</key>
++  <array>
++    <string>/usr/bin/curl</string>
++    <string>-sS</string>
++    <string>-X</string>
++    <string>POST</string>
++    <string>-H</string>
++    <string>X-Internal-Key: __CRON_SECRET__</string>
++    <string>__SERVER_URL__/api/routine/daily-reset</string>
++  </array>
++
++  <!-- Fires daily at 00:05. Omitting Weekday runs every day. -->
++  <key>StartCalendarInterval</key>
++  <dict>
++    <key>Hour</key>
++    <integer>0</integer>
++    <key>Minute</key>
++    <integer>5</integer>
++  </dict>
++
++  <!-- If the Mac is asleep at 00:05, launchd runs it as soon as it wakes. -->
++  <key>RunAtLoad</key>
++  <false/>
++
++  <key>StandardOutPath</key>
++  <string>/tmp/dashboard-daily-reset.log</string>
++  <key>StandardErrorPath</key>
++  <string>/tmp/dashboard-daily-reset.log</string>
++</dict>
++</plist>
