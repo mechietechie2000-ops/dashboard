@@ -48,7 +48,7 @@ const HomeDashboard = () => {
   };
 
   return (
-    <Box m="20px">
+    <Box m={{ xs: "0px", sm: "20px" }}>
       <Header title="HOME" subtitle="Welcome back!" />
 
       <Box
@@ -95,6 +95,9 @@ const HomeDashboard = () => {
             bgcolor: colors.primary[400],
             borderRadius: "4px",
             p: "24px",
+            maxHeight: "90vh",
+            overflowY: "auto",
+
           }}
         >
           {activeSection && (

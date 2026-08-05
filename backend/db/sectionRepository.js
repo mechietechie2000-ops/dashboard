@@ -11,13 +11,31 @@ function getConfig(sectionKey) {
   return cfg;
 }
 
+function parseJsonColumns(cfg, rows) {
+  if (!cfg.jsonColumns || cfg.jsonColumns.length === 0) return rows;
+  return rows.map((row) => {
+    const next = { ...row };
+    for (const col of cfg.jsonColumns) {
+      if (typeof next[col] === "string" && next[col]) {
+        try {
+          next[col] = JSON.parse(next[col]);
+        } catch {
+          // leave as-is if it's not valid JSON (e.g. legacy/blank data)
+        }
+      }
+    }
+    return next;
+  });
+}
+
 async function listRecords(sectionKey, { limit } = {}) {
   const cfg = getConfig(sectionKey);
   let sql = `SELECT * FROM ${cfg.tableName}`;
   if (cfg.where) sql += ` WHERE ${cfg.where}`;
   sql += ` ORDER BY ${cfg.orderBy}`;
   if (limit) sql += ` LIMIT ${Number(limit)}`;
-  return db.all(sql);
+  const rows = await db.all(sql);
+  return parseJsonColumns(cfg, rows);
 }
 
 async function insertRecord(sectionKey, values) {
@@ -33,7 +51,11 @@ async function insertRecord(sectionKey, values) {
 
   const cols = cfg.columns.filter((c) => values[c] !== undefined && values[c] !== "");
   const placeholders = cols.map(() => "?").join(", ");
-  const params = cols.map((c) => values[c]);
+  const params = cols.map((c) => {
+    const v = values[c];
+    // Object-valued fields (e.g. renewals.attributes) are stored as JSON text.
+    return v !== null && typeof v === "object" ? JSON.stringify(v) : v;
+  });
 
   const sql = `INSERT INTO ${cfg.tableName} (${cols.join(", ")}) VALUES (${placeholders})`;
   const result = await db.run(sql, params);

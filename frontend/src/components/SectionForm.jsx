@@ -17,10 +17,36 @@ const ASYNC_OPTION_SOURCES = {
       ),
 };
 
+// A field can depend on other field(s) being set to a particular value —
+// used to show/hide category-specific inputs (e.g. only show "License Plate"
+// when category === "insurance" && subcategory === "auto"). `dependsOn` can
+// be a single condition or an array of conditions (all must match).
+// Condition shape: { field: "category", value: "insurance" } or
+// { field: "category", in: ["insurance", "subscription"] }.
+const isFieldVisible = (field, values) => {
+  if (!field.dependsOn) return true;
+  const conditions = Array.isArray(field.dependsOn) ? field.dependsOn : [field.dependsOn];
+  return conditions.every((cond) => {
+    const current = values[cond.field];
+    if (cond.in) return cond.in.includes(current);
+    return current === cond.value;
+  });
+};
+
+// `options` on a select field can be a static array or a function of the
+// current form values (e.g. subcategory options that depend on category).
+const resolveOptions = (field, values) =>
+  typeof field.options === "function" ? field.options(values) || [] : field.options || [];
+
 /**
  * One reusable form for every Home Dashboard section. Which inputs render,
  * which are required, and where the data ends up are all driven by
  * config/sectionFields.js — this component has no per-section logic.
+ *
+ * Two config options beyond the basics support category-driven sections
+ * like Renewals: `dependsOn` (conditionally show a field) and `packInto`
+ * (group a set of fields into one nested JSON object on submit, e.g. all
+ * category-specific fields collapse into `attributes`).
  */
 const SectionForm = ({ sectionKey, onSubmit, onCancel }) => {
   const config = sectionFields[sectionKey];
@@ -57,6 +83,7 @@ const SectionForm = ({ sectionKey, onSubmit, onCancel }) => {
   const validate = () => {
     const nextErrors = {};
     for (const field of config.fields) {
+      if (!isFieldVisible(field, values)) continue;
       if (field.required && !values[field.name]) {
         nextErrors[field.name] = `${field.label} is required`;
       }
@@ -65,13 +92,32 @@ const SectionForm = ({ sectionKey, onSubmit, onCancel }) => {
     return Object.keys(nextErrors).length === 0;
   };
 
+  // Fields with `packInto: "attributes"` collapse into a single nested
+  // object under that key (only currently-visible ones), everything else
+  // is sent flat. Hidden fields (e.g. attribute inputs for a category the
+  // user didn't pick) are dropped entirely rather than sent as stale values.
+  const buildPayload = () => {
+    const payload = {};
+    for (const field of config.fields) {
+      if (!isFieldVisible(field, values)) continue;
+      const value = values[field.name];
+      if (value === undefined || value === "") continue;
+      if (field.packInto) {
+        payload[field.packInto] = { ...(payload[field.packInto] || {}), [field.name]: value };
+      } else {
+        payload[field.name] = value;
+      }
+    }
+    return payload;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validate()) return;
     setSubmitting(true);
     setSubmitError(null);
     try {
-      await onSubmit(sectionKey, values);
+      await onSubmit(sectionKey, buildPayload());
       setValues({});
     } catch (err) {
       setSubmitError(err.message || "Something went wrong saving this — please try again.");
@@ -83,6 +129,8 @@ const SectionForm = ({ sectionKey, onSubmit, onCancel }) => {
   return (
     <Box component="form" onSubmit={handleSubmit} display="flex" flexDirection="column" gap="16px">
       {config.fields.map((field) => {
+        if (!isFieldVisible(field, values)) return null;
+
         const common = {
           key: field.name,
           label: field.label,
@@ -96,11 +144,15 @@ const SectionForm = ({ sectionKey, onSubmit, onCancel }) => {
         if (field.type === "select") {
           return (
             <TextField {...common} select>
-              {(field.options || []).map((opt) => (
-                <MenuItem key={opt} value={opt}>
-                  {opt}
-                </MenuItem>
-              ))}
+              {resolveOptions(field, values).map((opt) => {
+                const optValue = typeof opt === "object" ? opt.value : opt;
+                const optLabel = typeof opt === "object" ? opt.label : opt;
+                return (
+                  <MenuItem key={optValue} value={optValue}>
+                    {optLabel}
+                  </MenuItem>
+                );
+              })}
             </TextField>
           );
         }

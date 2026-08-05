@@ -51,6 +51,7 @@ const DashboardSection = ({
           fontWeight="600"
           title={item.primary}
           sx={{
+            fontSize: { xs: "1.25rem", sm: "0.875rem" },   // bigger on mobile, normal on desktop
             wordBreak: "break-word",
             overflowWrap: "anywhere",
           }}
@@ -62,6 +63,7 @@ const DashboardSection = ({
             variant="body2"
             color={colors.grey[300]}
             sx={{
+              fontSize: { xs: "0.9rem", sm: "0.75rem" },
               wordBreak: "break-word",
               overflowWrap: "anywhere",
             }}
@@ -75,7 +77,7 @@ const DashboardSection = ({
           variant="body2"
           color={colors.greenAccent[500]}
           whiteSpace="nowrap"
-          sx={{ flexShrink: 0 }} // Prevents meta tag (e.g., date or price) from squishing
+          sx={{ flexShrink: 0, fontSize: { xs: "0.9rem", sm: "0.75rem" } }} // Prevents meta tag (e.g., date or price) from squishing
         >
           {item.meta}
         </Typography>
@@ -86,7 +88,7 @@ const DashboardSection = ({
   return (
     <Box
       backgroundColor={colors.primary[400]}
-      borderRadius="4px"
+      borderRadius="16px"
       p="20px"
       display="flex"
       flexDirection="column"

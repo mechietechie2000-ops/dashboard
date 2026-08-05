@@ -180,7 +180,7 @@ const Sidebar = ({ isMobileOpen = false, onMobileClose = () => {} }) => {
               <Item title="H1" to="/h1" icon={<ReceiptOutlinedIcon color="success"/>} selected={selected} setSelected={setSelected} onSelect={isMobile ? onMobileClose : undefined} />
             </SubMenu>
 
-            <SubMenu title="Non-Personal" icon={<PersonOutlinedIcon />} opened={false}>
+            <SubMenu title="Education" icon={<PersonOutlinedIcon />} opened={false}>
               <Item title="Marksheets" to="/marksheet" icon={<ReceiptOutlinedIcon color="success"/>} selected={selected} setSelected={setSelected} onSelect={isMobile ? onMobileClose : undefined} />
               <Item title="Something" to="/something" icon={<ReceiptOutlinedIcon color="success"/>} selected={selected} setSelected={setSelected} onSelect={isMobile ? onMobileClose : undefined} />
             </SubMenu>

@@ -175,15 +175,133 @@ const sectionFields = {
     icon: <AutorenewOutlinedIcon />,
     emptyMessage: "Nothing due for renewal",
     fields: [
+      {
+        name: "category",
+        label: "Category",
+        type: "select",
+        required: true,
+        options: [
+          { value: "insurance", label: "Insurance" },
+          { value: "passport", label: "Passport" },
+          { value: "license", label: "License" },
+          { value: "subscription", label: "Subscription" },
+          { value: "parking", label: "Parking Garage" },
+          { value: "other", label: "Other" },
+        ],
+      },
+      {
+        name: "subcategory",
+        label: "Subcategory",
+        type: "select",
+        required: false,
+        dependsOn: { field: "category", in: ["insurance", "passport", "subscription"] },
+        options: (values) => {
+          if (values.category === "insurance") {
+            return ["Auto", "Home", "Medical", "Dental", "Vision"];
+          }
+          if (values.category === "passport") {
+            return ["OCI", "Visa"];
+          }
+          if (values.category === "subscription") {
+            return ["Costco", "Amazon", "Sam's Club", "BJ's", "Walmart", "Cable", "Other"];
+          }
+          return [];
+        },
+      },
       { name: "title", label: "Item", type: "text", required: true },
-      { name: "category", label: "Category", type: "text", required: false },
-      { name: "renewal_date", label: "Renewal date", type: "date", required: true },
+      {
+        name: "family_member_id",
+        label: "For",
+        type: "asyncSelect",
+        source: "familyMembers",
+        required: false,
+      },
+      { name: "provider_name", label: "Provider", type: "text", required: false },
+      { name: "start_date", label: "Start date", type: "date", required: false },
+      { name: "expiry_date", label: "Expiration date", type: "date", required: true },
+      { name: "amount", label: "Amount", type: "number", required: false },
+      { name: "auto_renew", label: "Auto-renews", type: "checkbox", required: false },
+      {
+        name: "lead_time_days",
+        label: "Remind me this many days before (e.g. insurance ~30, license ~90, passport ~180)",
+        type: "number",
+        required: false,
+      },
+      {
+        name: "address",
+        label: "Address",
+        type: "text",
+        required: false,
+        dependsOn: { field: "category", in: ["passport", "license"] },
+      },
+
+      // Category-specific fields — collapse into the `attributes` JSON
+      // column instead of their own DB columns, so adding a new one later
+      // never requires a schema change.
+      {
+        name: "license_plate",
+        label: "License Plate",
+        type: "text",
+        required: false,
+        packInto: "attributes",
+        dependsOn: { field: "category", value: "insurance" },
+      },
+      {
+        name: "policy_number",
+        label: "Policy Number",
+        type: "text",
+        required: false,
+        packInto: "attributes",
+        dependsOn: { field: "category", value: "insurance" },
+      },
+      {
+        name: "passport_number",
+        label: "Passport Number",
+        type: "text",
+        required: false,
+        packInto: "attributes",
+        dependsOn: { field: "category", value: "passport" },
+      },
+      {
+        name: "license_number",
+        label: "License Number",
+        type: "text",
+        required: false,
+        packInto: "attributes",
+        dependsOn: { field: "category", value: "license" },
+      },
+      {
+        name: "state",
+        label: "State",
+        type: "text",
+        required: false,
+        packInto: "attributes",
+        dependsOn: { field: "category", value: "license" },
+      },
+      {
+        name: "membership_number",
+        label: "Membership Number",
+        type: "text",
+        required: false,
+        packInto: "attributes",
+        dependsOn: { field: "category", value: "subscription" },
+      },
+      {
+        name: "spot_number",
+        label: "Spot / Unit Number",
+        type: "text",
+        required: false,
+        packInto: "attributes",
+        dependsOn: { field: "category", value: "parking" },
+      },
+
+      { name: "notes", label: "Notes", type: "textarea", required: false },
     ],
     mapRowToItem: (row) => ({
       id: row.renewal_id,
       primary: row.title,
-      secondary: row.category,
-      meta: fmtDate(row.renewal_date),
+      secondary: row.subcategory ? `${row.category} — ${row.subcategory}` : row.category,
+      meta: fmtDate(row.expiry_date),
     }),
   },
 

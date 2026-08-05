@@ -93,10 +93,25 @@ CREATE TABLE IF NOT EXISTS events (
 
 CREATE TABLE IF NOT EXISTS renewals (
   renewal_id INTEGER PRIMARY KEY AUTOINCREMENT,
-  title TEXT NOT NULL,
-  category TEXT,
-  renewal_date DATE NOT NULL
+  family_member_id INTEGER REFERENCES family_members(id),
+  category TEXT NOT NULL,          -- insurance | passport | license | subscription | parking | other
+  subcategory TEXT,                -- e.g. auto/home/health(medical,dental,vision) | OCI/visa | costco/amazon/...
+  title TEXT NOT NULL,             -- "Auto Insurance - Honda Civic"
+  provider_name TEXT,
+  start_date DATE,
+  expiry_date DATE NOT NULL,
+  amount REAL CHECK (amount IS NULL OR amount > 0),
+  auto_renew INTEGER NOT NULL DEFAULT 0 CHECK (auto_renew IN (0, 1)),
+  lead_time_days INTEGER NOT NULL DEFAULT 30,
+  address TEXT,
+  attributes TEXT,                 -- JSON blob for category-specific fields (license_plate, passport_number, etc.)
+  notes TEXT,
+  status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'renewed', 'expired', 'cancelled')),
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+CREATE INDEX IF NOT EXISTS idx_renewals_expiry ON renewals(expiry_date);
+CREATE INDEX IF NOT EXISTS idx_renewals_category ON renewals(category);
 
 CREATE TABLE IF NOT EXISTS bills (
   bill_id INTEGER PRIMARY KEY AUTOINCREMENT,
