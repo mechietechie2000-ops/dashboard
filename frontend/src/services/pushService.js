@@ -7,9 +7,17 @@ function urlBase64ToUint8Array(base64String) {
   return Uint8Array.from([...rawData].map((c) => c.charCodeAt(0)));
 }
 
-export async function subscribeToPush() {
-  const registration = await navigator.serviceWorker.getRegistration('/push-sw.js');
+async function getPushRegistration() {
+  const registrations = await navigator.serviceWorker.getRegistrations();
+  const registration = registrations.find((reg) =>
+    reg.active?.scriptURL.includes('push-sw.js')
+  );
   if (!registration) throw new Error('Push service worker not registered yet');
+  return registration;
+}
+
+export async function subscribeToPush() {
+  const registration = await getPushRegistration();
 
   const permission = await Notification.requestPermission();
   if (permission !== 'granted') throw new Error('Notification permission denied');
@@ -25,7 +33,7 @@ export async function subscribeToPush() {
 }
 
 export async function unsubscribeFromPush() {
-  const registration = await navigator.serviceWorker.getRegistration('/push-sw.js');
+  const registration = await getPushRegistration();
   const subscription = await registration?.pushManager.getSubscription();
   if (subscription) {
     await api.post('/push/unsubscribe', { endpoint: subscription.endpoint });

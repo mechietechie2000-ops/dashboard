@@ -4,11 +4,10 @@ import "./index.css";
 import App from "./App";
 import { BrowserRouter } from "react-router-dom";
 import * as serviceWorkerRegistration from './serviceWorkerRegistration';
-import * as registerPushSW from './serviceWorkerRegistration';
-// import { serviceWorkerRegistration, registerPushSW } from './serviceWorkerRegistration'
+import { registerPushSW } from './serviceWorkerRegistration';
 
 serviceWorkerRegistration.register();
-registerPushSW.register();
+registerPushSW();
 
 const root = ReactDOM.createRoot(document.getElementById("root"));
 root.render(
