@@ -4,6 +4,15 @@ cd ~/Projects/github/dashboard
 npm run dev
 ```
 
+# Daily Routine Reset Launchd
+
+```
+launchctl load ~/Library/LaunchAgents/com.dashboard.dailyreset.plist
+
+```
+
+# Daily Routine Reset node-cron
+
 # Rule of Thumb
 Root package.json: Holds project-wide orchestrators and tooling (like concurrently).
 

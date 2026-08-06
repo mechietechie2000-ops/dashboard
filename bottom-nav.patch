@@ -1,0 +1,127 @@
+diff --git a/frontend/src/App.js b/frontend/src/App.js
+index 4719003..5056853 100755
+--- a/frontend/src/App.js
++++ b/frontend/src/App.js
+@@ -2,10 +2,11 @@ import { useState } from "react";
+ import { Routes, Route, Navigate, useNavigate } from "react-router-dom";
+ import Topbar from "./scenes/global/Topbar";
+ import Sidebar from "./scenes/global/Sidebar";
++import BottomNav, { BOTTOM_NAV_HEIGHT } from "./scenes/global/BottomNav";
+ import Dashboard from "./scenes/home";
+ import HomeDashboard from "./scenes/home";
+ import KidsMenu from "./scenes/kids/KidsMenu";
+-import { CssBaseline, ThemeProvider, Box } from "@mui/material";
++import { CssBaseline, ThemeProvider, Box, useMediaQuery, useTheme } from "@mui/material";
+ import { ColorModeContext, useMode } from "./theme";
+ import Calendar from "./scenes/calendar/calendar";
+ import Medical from "./scenes/medical/medical";
+@@ -58,6 +59,10 @@ const RegisterPage = () => {
+ // Main layout wrapper for authenticated routes
+ const ProtectedAppLayout = () => {
+   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
++  const theme = useTheme();
++  // Same breakpoint Sidebar.jsx uses for its own mobile/drawer behavior,
++  // kept in sync so both switch to "mobile mode" at the same width.
++  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
+ 
+   return (
+     <Box display="flex" width="100vw" height="100vh" overflow="hidden">
+@@ -80,7 +85,12 @@ const ProtectedAppLayout = () => {
+         }}
+       >
+         <Topbar onMenuClick={() => setIsMobileSidebarOpen(true)} />
+-        <Box flex={1} p={2}>
++        <Box
++          flex={1}
++          p={2}
++          // Reserve space so the fixed BottomNav never covers content.
++          sx={isMobile ? { pb: `calc(${BOTTOM_NAV_HEIGHT}px + env(safe-area-inset-bottom) + 16px)` } : undefined}
++        >
+           <Routes>
+             <Route path="/" element={<HomeDashboard />} />
+             <Route path="/reports/overview" element={<Dashboard />} />
+@@ -97,6 +107,9 @@ const ProtectedAppLayout = () => {
+           </Routes>
+         </Box>
+       </Box>
++
++      {/* BOTTOM NAV — mobile-width screens only (browser tab or installed PWA) */}
++      {isMobile && <BottomNav />}
+     </Box>
+   );
+ };
+diff --git a/frontend/src/scenes/global/BottomNav.jsx b/frontend/src/scenes/global/BottomNav.jsx
+new file mode 100644
+index 0000000..1f69726
+--- /dev/null
++++ b/frontend/src/scenes/global/BottomNav.jsx
+@@ -0,0 +1,69 @@
++import { useEffect, useState } from "react";
++import { useNavigate, useLocation } from "react-router-dom";
++import { BottomNavigation, BottomNavigationAction, Paper, useTheme } from "@mui/material";
++import HomeOutlinedIcon from "@mui/icons-material/HomeOutlined";
++import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
++import SearchIcon from "@mui/icons-material/Search";
++import CloudUploadOutlinedIcon from "@mui/icons-material/CloudUploadOutlined";
++import CalendarTodayOutlinedIcon from "@mui/icons-material/CalendarTodayOutlined";
++import { tokens } from "../../theme";
++
++// Index -> route. `null` entries (Add task, Search) have no destination yet —
++// they're placeholders until those features exist, so onChange no-ops for them.
++const ROUTES = ["/", null, null, "/digiLocker", "/calendar"];
++
++export const BOTTOM_NAV_HEIGHT = 56; // MUI BottomNavigation's default height
++
++const BottomNav = () => {
++  const theme = useTheme();
++  const colors = tokens(theme.palette.mode);
++  const navigate = useNavigate();
++  const location = useLocation();
++
++  const currentIndex = ROUTES.indexOf(location.pathname);
++  const [value, setValue] = useState(currentIndex === -1 ? false : currentIndex);
++
++  // Keep the highlighted tab in sync if the user navigates some other way
++  // (sidebar drawer, back button, deep link) rather than tapping this bar.
++  useEffect(() => {
++    const idx = ROUTES.indexOf(location.pathname);
++    setValue(idx === -1 ? false : idx);
++  }, [location.pathname]);
++
++  const handleChange = (_event, newValue) => {
++    setValue(newValue);
++    const target = ROUTES[newValue];
++    if (target) navigate(target);
++    // else: placeholder tab (Add task / Search) — nothing to do yet.
++  };
++
++  return (
++    <Paper
++      elevation={8}
++      sx={{
++        position: "fixed",
++        bottom: 0,
++        left: 0,
++        right: 0,
++        zIndex: theme.zIndex.appBar,
++        // Clears the home-indicator bar on notched/installed-PWA phones.
++        paddingBottom: "env(safe-area-inset-bottom)",
++      }}
++    >
++      <BottomNavigation
++        showLabels
++        value={value}
++        onChange={handleChange}
++        sx={{ backgroundColor: colors.primary[400], height: BOTTOM_NAV_HEIGHT }}
++      >
++        <BottomNavigationAction label="Home" icon={<HomeOutlinedIcon />} />
++        <BottomNavigationAction label="Add" icon={<AddCircleOutlineIcon />} />
++        <BottomNavigationAction label="Search" icon={<SearchIcon />} />
++        <BottomNavigationAction label="Upload" icon={<CloudUploadOutlinedIcon />} />
++        <BottomNavigationAction label="Calendar" icon={<CalendarTodayOutlinedIcon />} />
++      </BottomNavigation>
++    </Paper>
++  );
++};
++
++export default BottomNav;

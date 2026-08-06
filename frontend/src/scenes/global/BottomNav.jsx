@@ -1,0 +1,69 @@
+import { useEffect, useState } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
+import { BottomNavigation, BottomNavigationAction, Paper, useTheme } from "@mui/material";
+import HomeOutlinedIcon from "@mui/icons-material/HomeOutlined";
+import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
+import SearchIcon from "@mui/icons-material/Search";
+import CloudUploadOutlinedIcon from "@mui/icons-material/CloudUploadOutlined";
+import CalendarTodayOutlinedIcon from "@mui/icons-material/CalendarTodayOutlined";
+import { tokens } from "../../theme";
+
+// Index -> route. `null` entries (Add task, Search) have no destination yet —
+// they're placeholders until those features exist, so onChange no-ops for them.
+const ROUTES = ["/", null, null, "/digiLocker", "/calendar"];
+
+export const BOTTOM_NAV_HEIGHT = 56; // MUI BottomNavigation's default height
+
+const BottomNav = () => {
+  const theme = useTheme();
+  const colors = tokens(theme.palette.mode);
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const currentIndex = ROUTES.indexOf(location.pathname);
+  const [value, setValue] = useState(currentIndex === -1 ? false : currentIndex);
+
+  // Keep the highlighted tab in sync if the user navigates some other way
+  // (sidebar drawer, back button, deep link) rather than tapping this bar.
+  useEffect(() => {
+    const idx = ROUTES.indexOf(location.pathname);
+    setValue(idx === -1 ? false : idx);
+  }, [location.pathname]);
+
+  const handleChange = (_event, newValue) => {
+    setValue(newValue);
+    const target = ROUTES[newValue];
+    if (target) navigate(target);
+    // else: placeholder tab (Add task / Search) — nothing to do yet.
+  };
+
+  return (
+    <Paper
+      elevation={8}
+      sx={{
+        position: "fixed",
+        bottom: 0,
+        left: 0,
+        right: 0,
+        zIndex: theme.zIndex.appBar,
+        // Clears the home-indicator bar on notched/installed-PWA phones.
+        paddingBottom: "env(safe-area-inset-bottom)",
+      }}
+    >
+      <BottomNavigation
+        showLabels
+        value={value}
+        onChange={handleChange}
+        sx={{ backgroundColor: colors.primary[400], height: BOTTOM_NAV_HEIGHT, marginBottom:2, marginLeft:2, marginRight:2 }}
+      >
+        <BottomNavigationAction label="Home" icon={<HomeOutlinedIcon />} />
+        <BottomNavigationAction label="Add" icon={<AddCircleOutlineIcon />} />
+        <BottomNavigationAction label="Search" icon={<SearchIcon />} />
+        <BottomNavigationAction label="Upload" icon={<CloudUploadOutlinedIcon />} />
+        <BottomNavigationAction label="Calendar" icon={<CalendarTodayOutlinedIcon />} />
+      </BottomNavigation>
+    </Paper>
+  );
+};
+
+export default BottomNav;

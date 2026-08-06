@@ -2,10 +2,11 @@ import { useState } from "react";
 import { Routes, Route, Navigate, useNavigate } from "react-router-dom";
 import Topbar from "./scenes/global/Topbar";
 import Sidebar from "./scenes/global/Sidebar";
+import BottomNav, { BOTTOM_NAV_HEIGHT } from "./scenes/global/BottomNav";
 import Dashboard from "./scenes/home";
 import HomeDashboard from "./scenes/home";
 import KidsMenu from "./scenes/kids/KidsMenu";
-import { CssBaseline, ThemeProvider, Box } from "@mui/material";
+import { CssBaseline, ThemeProvider, Box, useMediaQuery, useTheme } from "@mui/material";
 import { ColorModeContext, useMode } from "./theme";
 import Calendar from "./scenes/calendar/calendar";
 import Medical from "./scenes/medical/medical";
@@ -13,6 +14,7 @@ import Passport from "./scenes/passport/passport";
 import Sports from "./scenes/kids/sports";
 import Routine from "./scenes/routine";
 import RoutineAdmin from "./scenes/routine/RoutineAdmin";
+import DigiLocker from "./scenes/digiLocker/digiLocker";
 
 // Auth imports
 import { AuthProvider, useAuth } from "./context/AuthContext";
@@ -57,6 +59,11 @@ const RegisterPage = () => {
 // Main layout wrapper for authenticated routes
 const ProtectedAppLayout = () => {
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  const theme = useTheme();
+  // Same breakpoint Sidebar.jsx uses for its own mobile/drawer behavior,
+  // kept in sync so both switch to "mobile mode" at the same width.
+  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
+  // const isMobile = useMediaQuery("(max-width:768px)");
 
   return (
     <Box display="flex" width="100vw" height="100vh" overflow="hidden">
@@ -79,7 +86,12 @@ const ProtectedAppLayout = () => {
         }}
       >
         <Topbar onMenuClick={() => setIsMobileSidebarOpen(true)} />
-        <Box flex={1} p={2}>
+        <Box
+          flex={1}
+          p={2}
+          // Reserve space so the fixed BottomNav never covers content.
+          sx={isMobile ? { pb: `calc(${BOTTOM_NAV_HEIGHT}px + env(safe-area-inset-bottom) + 16px)` } : undefined}
+        >
           <Routes>
             <Route path="/" element={<HomeDashboard />} />
             <Route path="/reports/overview" element={<Dashboard />} />
@@ -90,11 +102,15 @@ const ProtectedAppLayout = () => {
             <Route path="/sports" element={<Sports />} />
             <Route path="/routine" element={<Routine />} />
             <Route path="/routine/admin" element={<RoutineAdmin />} />
+            <Route path="/digiLocker" element={<DigiLocker />} />
             {/* Catch-all fallback inside layout */}
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Box>
       </Box>
+
+      {/* BOTTOM NAV — mobile-width screens only (browser tab or installed PWA) */}
+      {isMobile && <BottomNav />}
     </Box>
   );
 };
