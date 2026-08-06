@@ -17,3 +17,10 @@ backend/cookies.txt
 backend/db/schema.sql.DONOTCHECKIN
 */tailscale.md 
 .env.development
+backend/uploads/*
+backend/config.js
+frontend/src/scenes/ZNOT_IN_USE/*
+frontend/public/*png
+frontend/public/*png*
+frontend/public/*svg
+frontend/public/*svg*
