@@ -11,9 +11,11 @@ router.get("/getDoctorAppointment", authenticate, async (req, res) => {
   try {
     res.json(
       await db.all(
-        `SELECT appointment_id, category, patient_name, doctor_name, appointment_date, purpose,
+/*         `SELECT appointment_id, category, patient_name, doctor_name, appointment_date, purpose,
                 amount_charged, address, contact_number, doctor_special, insurance
-         FROM appointments`
+         FROM appointments` */
+        `SELECT id, category, appointments.family_member_id , provider_name, appointment_datetime, notes
+        FROM appointments` 
       )
     );
   } catch (err) {

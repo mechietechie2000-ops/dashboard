@@ -18,3 +18,4 @@ backend/db/schema.sql.DONOTCHECKIN
 .env.development
 backend/uploads
 backend/config.js
+frontend/src/scenes/ZNOT_IN_USE/*

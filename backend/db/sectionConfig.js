@@ -37,7 +37,7 @@ module.exports = {
     tableName: "appointments",
     columns: [
       "category",
-      "patient_name",
+      "family_member_id",
       "doctor_name",
       "appointment_date",
       "purpose",
@@ -47,7 +47,7 @@ module.exports = {
       "doctor_special",
       "insurance",
     ],
-    requiredColumns: ["patient_name", "doctor_name", "appointment_date"],
+    requiredColumns: ["doctor_name", "appointment_date"],
     orderBy: "appointment_date ASC",
   },
   renewals: {

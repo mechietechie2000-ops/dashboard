@@ -5,7 +5,7 @@ Global base size (affects body1/body2 everywhere, so all dashboard item text sca
 frontend/src/theme.js, line 167 — fontSize: 12 inside the typography block. MUI derives body1/body2 etc. from this base. Bump it (e.g. to 14).
 
 Dashboard-items-only (scoped, doesn't touch the rest of the app):
-frontend/src/components/DashboardSection.jsx:
+frontend/src/components/DashboardSection.```:
 
 Line 49 — the primary text <Typography> has no variant set (defaults to body1). Add variant="body1" explicitly, or just set sx={{ fontSize: "0.95rem" }} there.
 Line 62 — secondary text, variant="body2" — change to a larger variant or add sx={{ fontSize: "0.85rem" }}.
@@ -14,9 +14,9 @@ If you want it dashboard-wide but not global-global, DashboardSection's three Ty
 
 # Ques: Can it be increased only for mobile view but not for web?
 
-Yes — the app already uses MUI's responsive object syntax ({ xs: ..., sm: ... }) elsewhere, so the cleanest fix is the same pattern, scoped to DashboardSection.jsx (not the global theme.js, since that would need a full breakpoint-aware typography override — messier).
+Yes — the app already uses MUI's responsive object syntax ({ xs: ..., sm: ... }) elsewhere, so the cleanest fix is the same pattern, scoped to DashboardSection.``` (not the global theme.js, since that would need a full breakpoint-aware typography override — messier).
 
-In frontend/src/components/DashboardSection.jsx, change the sx (or add one) on the three Typography elements to a responsive fontSize object:
+In frontend/src/components/DashboardSection.```, change the sx (or add one) on the three Typography elements to a responsive fontSize object:
 
 ```
 sx={{
@@ -33,7 +33,7 @@ xs = mobile breakpoint (<600px), sm and up = your normal web size — MUI applie
 
 # Ques: On mobile I see the vertical gap on both side of the screen, I want to lower that gap to fill the screen with content? what changes I need, give me file and line number ?
 
-Found it — frontend/src/scenes/home/index.jsx, line 51:
+Found it — frontend/src/scenes/home/index.```, line 51:
 
 ```
 <Box m="20px">
@@ -49,8 +49,9 @@ Same pattern as the other responsive spots in this file (line 56, 94). xs = mobi
 
 Careful — line 94 wasn't a page-gap property, it's the Modal box width (the popup for adding a renewal/reminder/etc.), and setting it to "0px" will make that popup invisible on mobile (zero width). Revert that one:
 
-jsx
+```
 width: { xs: "90%", sm: 420 },
+```
 
 Line 56 is unrelated to spacing/gaps — it's gridTemplateColumns, controlling how many dashboard-item columns show per breakpoint (1fr = 1 column on mobile, 2 on tablet, 3 on desktop). Leave it as-is; it's already correct and isn't causing the gap issue.
 
@@ -60,14 +61,17 @@ So net: only line 51 (m={{ xs: "0px", sm: "20px" }}) was the actual fix for the 
 how can I make the grid box curved at edges? which line?
 
 
-Ran a command, viewed a file
-Ran a command, viewed a file
-Found it — frontend/src/components/DashboardSection.jsx, line 89:
+Found it — frontend/src/components/DashboardSection.```, line 89:
 
-jsx
+```
 borderRadius="4px"
+```
+
+
 This is the outer card box for every dashboard item (Routine, Reminders, Renewals, etc.) — it already has rounded corners, just a subtle 4px. Increase the value for a more visibly curved look, e.g.:
 
-jsx
+```
 borderRadius="16px"
+```
+
 That's the only line that controls it — one shared component, so it updates every grid box at once.

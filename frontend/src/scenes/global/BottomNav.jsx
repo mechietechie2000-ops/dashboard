@@ -54,7 +54,7 @@ const BottomNav = () => {
         showLabels
         value={value}
         onChange={handleChange}
-        sx={{ backgroundColor: colors.primary[400], height: BOTTOM_NAV_HEIGHT }}
+        sx={{ backgroundColor: colors.primary[400], height: BOTTOM_NAV_HEIGHT, marginBottom:2, marginLeft:2, marginRight:2 }}
       >
         <BottomNavigationAction label="Home" icon={<HomeOutlinedIcon />} />
         <BottomNavigationAction label="Add" icon={<AddCircleOutlineIcon />} />
