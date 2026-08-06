@@ -63,6 +63,7 @@ const ProtectedAppLayout = () => {
   // Same breakpoint Sidebar.jsx uses for its own mobile/drawer behavior,
   // kept in sync so both switch to "mobile mode" at the same width.
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
+  // const isMobile = useMediaQuery("(max-width:768px)");
 
   return (
     <Box display="flex" width="100vw" height="100vh" overflow="hidden">
