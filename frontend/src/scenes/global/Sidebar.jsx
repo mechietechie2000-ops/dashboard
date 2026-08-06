@@ -21,6 +21,7 @@ import SportsHandballRoundedIcon from '@mui/icons-material/SportsHandballRounded
 import LocalHospitalIcon from '@mui/icons-material/LocalHospital';
 import QueryBuilderIcon from '@mui/icons-material/QueryBuilder';
 import ChildCareIcon from '@mui/icons-material/ChildCare';
+import LockIcon from '@mui/icons-material/Lock';
 
 const Item = ({ title, to, icon, selected, setSelected, onSelect }) => {
   const theme = useTheme();
@@ -47,6 +48,7 @@ const Sidebar = ({ isMobileOpen = false, onMobileClose = () => {} }) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [selected, setSelected] = useState("Dashboard");
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
+  // const isMobile = useMediaQuery("(max-width:768px)");
 
   return (
     <Box
@@ -150,6 +152,15 @@ const Sidebar = ({ isMobileOpen = false, onMobileClose = () => {} }) => {
               <Item title="Calendar" to="/calendar" icon={<CalendarTodayOutlinedIcon />} selected={selected} setSelected={setSelected} onSelect={isMobile ? onMobileClose : undefined} />
             </SubMenu>
 
+            <Item
+              title="Digi Locker"
+              to="/digiLocker"
+              icon={<LockIcon />}
+              selected={selected}
+              setSelected={setSelected}
+              onSelect={isMobile ? onMobileClose : undefined}
+            />
+
             <SubMenu title="Kids" icon={<ChildCareIcon />} opened={true}>
               <Item title="Meal Plan" to="/kids" icon={<LunchDiningRoundedIcon />} selected={selected} setSelected={setSelected} onSelect={isMobile ? onMobileClose : undefined} />
               <Item title="Extra Curriculum" to="/sports" icon={<SportsHandballRoundedIcon />} selected={selected} setSelected={setSelected} onSelect={isMobile ? onMobileClose : undefined} />
@@ -170,7 +181,7 @@ const Sidebar = ({ isMobileOpen = false, onMobileClose = () => {} }) => {
               <Item title="H1" to="/h1" icon={<ReceiptOutlinedIcon color="success"/>} selected={selected} setSelected={setSelected} onSelect={isMobile ? onMobileClose : undefined} />
             </SubMenu>
 
-            <SubMenu title="Non-Personal" icon={<PersonOutlinedIcon />} opened={false}>
+            <SubMenu title="Education" icon={<PersonOutlinedIcon />} opened={false}>
               <Item title="Marksheets" to="/marksheet" icon={<ReceiptOutlinedIcon color="success"/>} selected={selected} setSelected={setSelected} onSelect={isMobile ? onMobileClose : undefined} />
               <Item title="Something" to="/something" icon={<ReceiptOutlinedIcon color="success"/>} selected={selected} setSelected={setSelected} onSelect={isMobile ? onMobileClose : undefined} />
             </SubMenu>

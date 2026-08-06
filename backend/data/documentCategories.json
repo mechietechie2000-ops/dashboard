@@ -1,0 +1,100 @@
+{
+  "categories": [
+    {
+      "id": "passport",
+      "label": "Passport",
+      "shortName": "PP",
+      "hasIssueDate": true,
+      "hasExpiryDate": true,
+      "subcategories": []
+    },
+    {
+      "id": "drivers_license",
+      "label": "Driver License",
+      "shortName": "DL",
+      "hasIssueDate": true,
+      "hasExpiryDate": true,
+      "subcategories": []
+    },
+    {
+      "id": "national_id",
+      "label": "National / State ID",
+      "shortName": "ID",
+      "hasIssueDate": true,
+      "hasExpiryDate": true,
+      "subcategories": []
+    },
+    {
+      "id": "visa",
+      "label": "Visa",
+      "shortName": "VS",
+      "hasIssueDate": true,
+      "hasExpiryDate": true,
+      "subcategories": []
+    },
+    {
+      "id": "birth_certificate",
+      "label": "Birth Certificate",
+      "shortName": "BC",
+      "hasIssueDate": true,
+      "hasExpiryDate": false,
+      "subcategories": []
+    },
+    {
+      "id": "marriage_certificate",
+      "label": "Marriage Certificate",
+      "shortName": "MC",
+      "hasIssueDate": true,
+      "hasExpiryDate": false,
+      "subcategories": []
+    },
+    {
+      "id": "property_registry",
+      "label": "Property Registry / Deed",
+      "shortName": "PR",
+      "hasIssueDate": true,
+      "hasExpiryDate": false,
+      "subcategories": []
+    },
+    {
+      "id": "power_of_attorney",
+      "label": "Power of Attorney",
+      "shortName": "POA",
+      "hasIssueDate": true,
+      "hasExpiryDate": true,
+      "subcategories": []
+    },
+    {
+      "id": "tax_return",
+      "label": "Tax Return",
+      "shortName": "TAX",
+      "hasIssueDate": true,
+      "hasExpiryDate": false,
+      "subcategories": []
+    },
+    {
+      "id": "medical_record",
+      "label": "Medical Record",
+      "shortName": "MED",
+      "hasIssueDate": true,
+      "hasExpiryDate": false,
+      "subcategories": []
+    },
+    {
+      "id": "insurance_policy",
+      "label": "Insurance Policy",
+      "shortName": "INS",
+      "hasIssueDate": true,
+      "hasExpiryDate": true,
+      "subcategories": []
+    },
+    {
+      "id": "other",
+      "label": "Other",
+      "shortName": "OTH",
+      "hasIssueDate": false,
+      "hasExpiryDate": false,
+      "subcategories": []
+    }
+  ]
+}

@@ -67,8 +67,20 @@ const Topbar = ({ onMenuClick = () => {} }) => {
   };
 
   return (
-    <Box display="flex" justifyContent="space-between" alignItems="center" p={2}>
-      {/* Mobile Drawer Trigger */}
+    <Box 
+      // display="flex" justifyContent="space-between" alignItems="center" p={2}>
+      display="flex"
+      justifyContent="space-between"
+      alignItems="center"
+      p={2}
+      sx={{
+        position: "sticky",
+        top: 0,
+        zIndex: (theme) => theme.zIndex.drawer + 1,
+        bgcolor: "background.default",
+      }}
+    >
+    {/* Mobile Drawer Trigger */}
       <IconButton
         onClick={onMenuClick}
         sx={{ display: { xs: "flex", md: "none" }, mr: 1 }}
