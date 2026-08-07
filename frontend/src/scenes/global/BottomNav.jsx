@@ -10,7 +10,7 @@ import { tokens } from "../../theme";
 
 // Index -> route. `null` entries (Add task, Search) have no destination yet —
 // they're placeholders until those features exist, so onChange no-ops for them.
-const ROUTES = ["/", null, null, "/digiLocker", "/calendar"];
+const ROUTES = ["/", "/add-task", null, "/digiLocker", "/calendar"];
 
 export const BOTTOM_NAV_HEIGHT = 56; // MUI BottomNavigation's default height
 

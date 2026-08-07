@@ -1,6 +1,6 @@
 {
   "id": "/",
-  "short_name": "Planner",
+  "short_name": "OneLife",
   "name": "Home Sweet Home",
   "start_url": "/",
   "scope": "/",
@@ -11,14 +11,15 @@
   "icons": [
     {
       "src": "logo192.png",
+      "sizes": "192X192",
       "type": "image/png",
-      "sizes": "any",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
       "src": "logo512.png",
+      "sizes": "512X512",
       "type": "image/png",
-      "sizes": "512x512"
+      "purpose": "any"
     }
   ]
 }

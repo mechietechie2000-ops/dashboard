@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg"
+     width="512"
+     height="512"
+     viewBox="0 0 512 512">
+
+    <!-- Planner -->
+    <rect x="96" y="72"
+          width="320"
+          height="368"
+          rx="36"
+          fill="#FFFFFF"
+          stroke="#1F2937"
+          stroke-width="12"/>
+
+    <!-- Header -->
+    <rect x="96"
+          y="72"
+          width="320"
+          height="64"
+          rx="36"
+          fill="#2563EB"/>
+
+    <rect x="96"
+          y="108"
+          width="320"
+          height="28"
+          fill="#2563EB"/>
+
+    <!-- Rings -->
+    <rect x="165" y="40" width="20" height="52" rx="10" fill="#1F2937"/>
+    <rect x="327" y="40" width="20" height="52" rx="10" fill="#1F2937"/>
+
+    <!-- Check -->
+    <circle cx="150" cy="185" r="24" fill="#2563EB"/>
+    <path d="M140 185 L149 194 L165 176"
+          stroke="white"
+          stroke-width="8"
+          fill="none"
+          stroke-linecap="round"
+          stroke-linejoin="round"/>
+
+    <!-- Reminder Bell -->
+    <circle cx="150" cy="255" r="24" fill="#F59E0B"/>
+    <path d="M150 242
+             C142 242 140 248 140 255
+             L140 263
+             L160 263
+             L160 255
+             C160 248 158 242 150 242Z"
+          fill="white"/>
+    <circle cx="150" cy="268" r="3" fill="white"/>
+
+    <!-- Calendar -->
+    <circle cx="150" cy="325" r="24" fill="#22C55E"/>
+    <rect x="139" y="314"
+          width="22"
+          height="18"
+          rx="2"
+          fill="white"/>
+    <line x1="143" y1="310" x2="143" y2="316"
+          stroke="white"
+          stroke-width="3"/>
+    <line x1="157" y1="310" x2="157" y2="316"
+          stroke="white"
+          stroke-width="3"/>
+    <line x1="139" y1="320" x2="161" y2="320"
+          stroke="#22C55E"
+          stroke-width="2"/>
+
+    <!-- Text lines -->
+    <line x1="205" y1="185" x2="355" y2="185"
+          stroke="#374151"
+          stroke-width="10"
+          stroke-linecap="round"/>
+
+    <line x1="205" y1="255" x2="355" y2="255"
+          stroke="#374151"
+          stroke-width="10"
+          stroke-linecap="round"/>
+
+    <line x1="205" y1="325" x2="355" y2="325"
+          stroke="#374151"
+          stroke-width="10"
+          stroke-linecap="round"/>
+
+</svg>

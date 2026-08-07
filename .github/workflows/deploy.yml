@@ -1,0 +1,16 @@
+name: Deploy to Home Mac
+
+on:
+  push:
+    branches:
+      - main      # Change if you use another branch
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+
+    steps:
+      - name: Update repository
+        run: |
+          cd /Users/sandarbh/Projects/github/dashboard
+          git pull origin main

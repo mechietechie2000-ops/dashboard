@@ -13,6 +13,12 @@ launchctl load ~/Library/LaunchAgents/com.dashboard.dailyreset.plist
 
 # Daily Routine Reset node-cron
 
+
+# Entry point of App 
+- public/index.html -> ../index.js -> ../App.js -> Routes (/ -> HomeDashboard)
+- App.js -> Login(auth), User Registration, Routes, Top Navbar, Sidebar, Botton Navbar
+- /(HomeDashboard) -> src/home/index.jsx
+
 # Rule of Thumb
 Root package.json: Holds project-wide orchestrators and tooling (like concurrently).
 
