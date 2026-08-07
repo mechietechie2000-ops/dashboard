@@ -8,84 +8,43 @@ PRAGMA foreign_keys = ON;
 -- Home Dashboard Schema (SQLite Compatible)
 -- =====================================================================
 
--- ---------------------------------------------------------------------
--- Shared reference table: family members
--- ---------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS family_members (
-    id              INTEGER PRIMARY KEY AUTOINCREMENT,
-    first_name      TEXT NOT NULL,
-    last_name       TEXT,
-    date_of_birth   TEXT,                              -- ISO-8601: YYYY-MM-DD
-    relationship    TEXT,                              -- 'self', 'spouse', 'child', etc.
-    created_at      TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at      TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+
+
+-- Routine reuses the existing daily_routine table (see schema.sql).
+-- Appointments reuses the `appointments` table (renamed from
+-- doctor_appointment, see db/migrations/001_reminders_appointments.js for
+-- existing installs) so it stays in sync with the Medical scene, which
+-- already reads from it.
+-- Extra-curriculum reuses/creates `activity`, kept in sync with the Sports scene.
+
+
+-- Renamed from doctor_appointment -> appointments (see migration 001 for
+-- existing installs). `category` lets non-doctor appointment types (Auto,
+-- Other, etc.) share this table; existing rows default to 'Doctor'.
+
+
+CREATE TABLE IF NOT EXISTS activity (
+  ACTIVITY_CODE INTEGER PRIMARY KEY AUTOINCREMENT,
+  ACTIVITY_NAME TEXT NOT NULL,
+  ACTIVITY_FOR TEXT NOT NULL,
+  LEVEL TEXT,
+  DAY_OF_WEEK TEXT,
+  TIME_SLOT TEXT,
+  DURATION TEXT,
+  FREQUENCY TEXT,
+  START_DATE DATE NOT NULL,
+  END_DATE DATE,
+  SPECIAL_EVENT_DATE DATE,
+  FACILITY_NAME TEXT,
+  ADDRESS TEXT,
+  PHONE_NUMBER TEXT,
+  MONTHLY_FEES REAL CHECK (MONTHLY_FEES IS NULL OR MONTHLY_FEES > 0),
+  REGISTRATION_FEES REAL CHECK (REGISTRATION_FEES IS NULL OR REGISTRATION_FEES > 0),
+  OTHER_EXPENSES REAL,
+  GEAR_LIST TEXT
 );
 
--- ---------------------------------------------------------------------
--- 1. Routine
--- ---------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS routines (
-    id                  INTEGER PRIMARY KEY AUTOINCREMENT,
-    family_member_id    INTEGER REFERENCES family_members(id) ON DELETE CASCADE,
-    title               TEXT NOT NULL,                 -- "Morning routine"
-    description         TEXT,                          -- "Wake up, brush teeth, breakfast"
-    scheduled_time      TEXT,                          -- ISO-8601: HH:MM:SS
-    days_of_week        TEXT,                          -- CSV: 'Mon,Tue,Wed,Thu,Fri'
-    is_active           INTEGER NOT NULL DEFAULT 1 CHECK (is_active IN (0, 1)),
-    created_at          TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at          TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-CREATE INDEX IF NOT EXISTS idx_routines_active ON routines(is_active, scheduled_time);
 
--- ---------------------------------------------------------------------
--- 2. Reminders
--- ---------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS reminders (
-    id                  INTEGER PRIMARY KEY AUTOINCREMENT,
-    family_member_id    INTEGER REFERENCES family_members(id) ON DELETE SET NULL,
-    title               TEXT NOT NULL,
-    notes               TEXT,
-    due_date            TEXT,                          -- ISO-8601: YYYY-MM-DD
-    priority            TEXT NOT NULL DEFAULT 'medium',-- low | medium | high
-    is_completed        INTEGER NOT NULL DEFAULT 0 CHECK (is_completed IN (0, 1)),
-    created_at          TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at          TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-CREATE INDEX IF NOT EXISTS idx_reminders_due ON reminders(is_completed, due_date);
-
--- ---------------------------------------------------------------------
--- 3. Goals
--- ---------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS goals (
-    id                  INTEGER PRIMARY KEY AUTOINCREMENT,
-    family_member_id    INTEGER REFERENCES family_members(id) ON DELETE SET NULL,
-    title               TEXT NOT NULL,
-    description         TEXT,
-    target_value        NUMERIC,                       -- SQLite numeric type
-    current_value       NUMERIC NOT NULL DEFAULT 0,
-    unit                TEXT,                          -- '$', '%', 'lbs', 'books', etc.
-    target_date         TEXT,                          -- ISO-8601: YYYY-MM-DD
-    status              TEXT NOT NULL DEFAULT 'in_progress', -- in_progress | completed | abandoned
-    created_at          TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at          TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-CREATE INDEX IF NOT EXISTS idx_goals_status ON goals(status, target_date);
-
--- ---------------------------------------------------------------------
--- 4. Events (Birthdays, Anniversaries)
--- ---------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS events (
-    id                     INTEGER PRIMARY KEY AUTOINCREMENT,
-    family_member_id       INTEGER REFERENCES family_members(id) ON DELETE SET NULL,
-    title                  TEXT NOT NULL,              -- "Mom's Birthday"
-    event_type             TEXT NOT NULL,              -- birthday | anniversary | other
-    event_date             TEXT NOT NULL,              -- ISO-8601: YYYY-MM-DD
-    is_recurring_yearly    INTEGER NOT NULL DEFAULT 1 CHECK (is_recurring_yearly IN (0, 1)),
-    notes                  TEXT,
-    created_at             TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at             TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-CREATE INDEX IF NOT EXISTS idx_events_date ON events(event_date);
 
 -- ---------------------------------------------------------------------
 -- 5. Appointments
@@ -105,26 +64,33 @@ CREATE TABLE IF NOT EXISTS appointments (
 );
 CREATE INDEX IF NOT EXISTS idx_appointments_datetime ON appointments(status, appointment_datetime);
 
--- ---------------------------------------------------------------------
--- 6. Renewals (insurance, passport, license, subscriptions, etc.)
--- ---------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS renewals (
-    id                      INTEGER PRIMARY KEY AUTOINCREMENT,
-    family_member_id        INTEGER REFERENCES family_members(id) ON DELETE SET NULL,
-    title                   TEXT NOT NULL,             -- "Auto Insurance"
-    renewal_type            TEXT,                      -- insurance | passport | license | subscription | other
-    provider_name           TEXT,
-    expiry_date             TEXT NOT NULL,             -- ISO-8601: YYYY-MM-DD
-    reminder_days_before    INTEGER NOT NULL DEFAULT 30,
-    notes                   TEXT,
-    created_at              TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at              TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+CREATE TABLE IF NOT EXISTS appointments (
+  appointment_id INTEGER PRIMARY KEY,
+  category STRING NOT NULL DEFAULT 'Doctor',
+  patient_name STRING NOT NULL,
+  doctor_name STRING NOT NULL,
+  appointment_date DATE NOT NULL,
+  purpose TEXT,
+  amount_charged INT,
+  address string,
+  contact_number INT,
+  doctor_special STRING,
+  insurance STRING
 );
-CREATE INDEX IF NOT EXISTS idx_renewals_expiry ON renewals(expiry_date);
+
 
 -- ---------------------------------------------------------------------
 -- 7. Upcoming Payments / Bills
 -- ---------------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS bills (
+  bill_id INTEGER PRIMARY KEY AUTOINCREMENT,
+  title TEXT NOT NULL,
+  provider TEXT,
+  amount REAL NOT NULL CHECK (amount > 0),
+  due_date DATE NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS bills (
     id                      INTEGER PRIMARY KEY AUTOINCREMENT,
     title                   TEXT NOT NULL,             -- "Electricity Bill"
@@ -174,3 +140,11 @@ CREATE TABLE IF NOT EXISTS library_checkouts (
     updated_at              TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 CREATE INDEX IF NOT EXISTS idx_library_due ON library_checkouts(returned_date, due_date);
+
+
+CREATE TABLE IF NOT EXISTS library_loans (
+  loan_id INTEGER PRIMARY KEY AUTOINCREMENT,
+  book_title TEXT NOT NULL,
+  borrower TEXT,
+  due_date DATE NOT NULL
+);
