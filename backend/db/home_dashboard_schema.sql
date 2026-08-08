@@ -35,16 +35,18 @@ CREATE TABLE IF NOT EXISTS goals (
     title               TEXT NOT NULL,
     description         TEXT,
     goal_type           TEXT, -- short_term | long_term 
+    target_year			    INTEGER,
+    target_quarter		  TEXT,
     target_value        NUMERIC,
     current_value       NUMERIC NOT NULL DEFAULT 0,
     unit                TEXT, -- $, %, lbs, miles, books, courses, etc.
     target_date         TEXT, -- ISO-8601: YYYY-MM-DD
-    status              TEXT NOT NULL DEFAULT 'in_progress', -- in_progress | completed | abandoned | paused
-    completed_on        TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    status              TEXT NOT NULL DEFAULT 'todo', -- in_progress | completed | abandoned | paused
+    completed_on        TEXT,
     priority            INTEGER NOT NULL DEFAULT 0,
     created_at          TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at          TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    start_date          TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    start_date          TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_goals_status ON goals(status, target_date);
 
@@ -195,10 +197,10 @@ CREATE TABLE IF NOT EXISTS daily_routine (
   scheduled_time      TEXT NOT NULL,    -- 'HH:MM' 24h
   mute                INTEGER DEFAULT 0,
   announce            INTEGER DEFAULT 0,
-  active              INTEGER DEFAULT 1 -- soft-delete flag
-  description         TEXT,            -- "Wake up, brush teeth, breakfast"
+  active              INTEGER DEFAULT 1, -- soft-delete flag
+  description         TEXT            -- "Wake up, brush teeth, breakfast"
 );
-CREATE INDEX IF NOT EXISTS idx_routines_active ON daily_routine(is_active, scheduled_time);
+CREATE INDEX IF NOT EXISTS idx_routines_active ON daily_routine(active, scheduled_time);
 
 
 -- ---------------------------------------------------------------------
@@ -238,14 +240,14 @@ CREATE TABLE IF NOT EXISTS daily_routine_log (
 -- ---------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS events (
     id                     INTEGER PRIMARY KEY AUTOINCREMENT,
-    family_member_id       INTEGER REFERENCES family_members(id) ON DELETE SET NULL,
-    title                  TEXT NOT NULL,              -- "Mom's Birthday"
+    person_name            TEXT NOT NULL,
+    title                  TEXT,              -- "Mom's Birthday"
     event_type             TEXT NOT NULL CHECK (event_type IN ('birthday', 'anniversary', 'other')),
     event_date             TEXT NOT NULL,              -- ISO-8601: YYYY-MM-DD
     is_recurring_yearly    INTEGER NOT NULL DEFAULT 1 CHECK (is_recurring_yearly IN (0, 1)),
     notes                  TEXT,
+    active                 INTEGER NOT NULL DEFAULT 1,     -- soft-delete flag
     created_at             TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at             TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
-CREATE INDEX IF NOT EXISTS idx_events_date ON events(event_date);
 CREATE INDEX IF NOT EXISTS idx_events_date ON events(event_date);

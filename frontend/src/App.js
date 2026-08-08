@@ -1,21 +1,27 @@
 import { useState } from "react";
 import { Routes, Route, Navigate, useNavigate } from "react-router-dom";
+import { CssBaseline, ThemeProvider, Box, useMediaQuery, useTheme } from "@mui/material";
+import { ColorModeContext, useMode } from "./theme";
+
 import Topbar from "./scenes/global/Topbar";
 import Sidebar from "./scenes/global/Sidebar";
 import BottomNav, { BOTTOM_NAV_HEIGHT } from "./scenes/global/BottomNav";
-import Dashboard from "./scenes/home";
-import HomeDashboard from "./scenes/home";
-import KidsMenu from "./scenes/kids/KidsMenu";
-import { CssBaseline, ThemeProvider, Box, useMediaQuery, useTheme } from "@mui/material";
-import { ColorModeContext, useMode } from "./theme";
+
+import HomeDashboard from "./scenes/dashboard";
 import Calendar from "./scenes/calendar/calendar";
+import Routine from "./scenes/routine";
+import RoutineAdmin from "./scenes/routine/RoutineAdmin";
+import Event from "./scenes/events";
+import DigiLocker from "./scenes/digiLocker/digiLocker";
+import AddTask from "./scenes/tasks/AddTask";
+
+/*
+import KidsMenu from "./scenes/kids/KidsMenu";
 import Medical from "./scenes/medical/medical";
 import Passport from "./scenes/passport/passport";
 import Sports from "./scenes/kids/sports";
-import Routine from "./scenes/routine";
-import RoutineAdmin from "./scenes/routine/RoutineAdmin";
-import DigiLocker from "./scenes/digiLocker/digiLocker";
-import AddTask from "./scenes/tasks/AddTask";
+import Dashboard from "./scenes/dashboard";
+*/
 
 // Auth imports
 import { AuthProvider, useAuth } from "./context/AuthContext";
@@ -95,17 +101,20 @@ const ProtectedAppLayout = () => {
         >
           <Routes>
             <Route path="/" element={<HomeDashboard />} />
-            <Route path="/reports/overview" element={<Dashboard />} />
-            <Route path="/kids" element={<KidsMenu />} />
-            <Route path="/medical" element={<Medical />} />
-            <Route path="/calendar" element={<Calendar />} />
-            <Route path="/passport" element={<Passport />} />
-            <Route path="/sports" element={<Sports />} />
             <Route path="/routine" element={<Routine />} />
+            <Route path="/event" element={<Event />} />
             <Route path="/routine/admin" element={<RoutineAdmin />} />
             <Route path="/digiLocker" element={<DigiLocker />} />
+            <Route path="/calendar" element={<Calendar />} />
             <Route path="/add-task" element={<AddTask />} />            
-
+{/*
+            <Route path="/event/admin" element={<EventAdmin />} />
+             <Route path="/reports/overview" element={<Dashboard />} />
+            <Route path="/kids" element={<KidsMenu />} />
+            <Route path="/medical" element={<Medical />} />
+            <Route path="/passport" element={<Passport />} />
+            <Route path="/sports" element={<Sports />} />
+ */}
             {/* Catch-all fallback inside layout */}
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>

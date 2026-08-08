@@ -97,21 +97,60 @@ const sectionFields = {
     icon: <EmojiEventsOutlinedIcon />,
     emptyMessage: "No goals set yet",
     fields: [
+      { name: "category", label: "Category", type: "select", required: true,  options: [
+        { value: "financial", label: "Financial" },
+        { value: "retirement", label: "Retirement" },
+        { value: "health", label: "Health" },
+        { value: "personal", label: "Personal" },
+        { value: "professional", label: "Professional" },
+        { value: "home", label: "Home" },
+        { value: "education", label: "Education" },
+        { value: "other", label: "Other" },
+      ] },      
       { name: "title", label: "Goal", type: "text", required: true },
-      { name: "description", label: "Description", type: "text", required: false },
-      { name: "target_date", label: "Target date", type: "date", required: false },
-      { name: "target_value", label: "Current amount", type: "number", required: false },
+      {
+        name: "family_member_id",
+        label: "For",
+        type: "asyncSelect",
+        source: "familyMembers",
+        required: false,
+      },      
+      {
+        name: "goal_type",
+        label: "Vision",
+        type: "select",
+        required: true,
+        options: [
+          { value: "short_term", label: "Short Term" },
+          { value: "long_term", label: "Long Term" },
+        ],
+      },
+      { name: "target_year", label: "Target Year", type: "number", required: true },
+      {
+        name: "target_quarter",
+        label: "Target Quarter",
+        type: "select",
+        required: false,
+        options: [
+          { value: "Q1", label: "Q1" },
+          { value: "Q2", label: "Q2" },
+          { value: "Q3", label: "Q3" },
+          { value: "Q4", label: "Q4" },
+        ],
+      },    
     ],
     mapRowToItem: (row) => ({
-      id: row.goal_id,
+      id: row.id,
       primary: row.title,
-      secondary: row.progress_note,
-      meta: row.target_date
-        ? new Date(row.target_date).toLocaleDateString(undefined, {
-            month: "short",
-            year: "numeric",
-          })
-        : undefined,
+      secondary: row.category[0].toUpperCase() + row.category.slice(1),
+      meta: [
+        row.goal_type === "short_term" ? "Short Term" : "Long Term",
+        row.target_quarter && row.target_year
+          ? `${row.target_quarter} ${row.target_year}`
+          : row.target_year,
+      ]
+      .filter(Boolean)
+      .join(" • "),
     }),
   },
 
@@ -119,22 +158,27 @@ const sectionFields = {
     tableName: "events",
     label: "Events (Birthdays, Anniversaries)",
     icon: <CakeOutlinedIcon />,
-    viewAllLink: "/calendar",
+    viewAllLink: "/events",  // check if the route exist yet
     emptyMessage: "No upcoming birthdays or anniversaries",
     fields: [
-      { name: "title", label: "Title", type: "text", required: true },
+      { name: "person_name", label: "Person Name", type: "text", required: true },
       {
         name: "event_type",
         label: "Type",
         type: "select",
         required: true,
-        options: ["birthday", "anniversary", "other"],
+        options: [
+          { value: "birthday", label: "Birthday" },
+          { value: "wedding", label: "Wedding Anniversary" },
+          { value: "work", label: "Work Anniversary" },
+          { value: "other", label: "Other" },
+        ]  
       },
       { name: "event_date", label: "Date", type: "date", required: true },
     ],
     mapRowToItem: (row) => ({
-      id: row.event_id,
-      primary: row.title,
+      id: row.id,
+      primary: row.person_name,
       secondary: row.event_type
         ? row.event_type[0].toUpperCase() + row.event_type.slice(1)
         : undefined,
@@ -173,42 +217,48 @@ const sectionFields = {
     tableName: "renewals",
     label: "Renewals",
     icon: <AutorenewOutlinedIcon />,
+    viewAllLink: "/renewals",  // check if the route exist yet
     emptyMessage: "Nothing due for renewal",
     fields: [
+      {
+        name: "renewal_type",
+        label: "Type",
+        type: "select",
+        required: true,
+        options: [
+          { value: "subscription", label: "Subscription" },
+          { value: "insurance", label: "Insurance" },
+          { value: "document", label: "Document" },
+          { value: "registration", label: "Registration" },
+          { value: "inspection", label: "Inspection" },
+          { value: "maintenance", label: "Maintenance" },
+          { value: "membership", label: "Membership" },
+          { value: "other", label: "Other" },
+        ],
+      },
       {
         name: "category",
         label: "Category",
         type: "select",
         required: true,
         options: [
-          { value: "insurance", label: "Insurance" },
-          { value: "passport", label: "Passport" },
-          { value: "license", label: "License" },
-          { value: "subscription", label: "Subscription" },
-          { value: "parking", label: "Parking Garage" },
-          { value: "other", label: "Other" },
+          { value: "Vehicle", label: "Vehicle" },
+          { value: "personal", label: "Personal" },
+          { value: "professional", label: "Professional" },
         ],
       },
       {
         name: "subcategory",
         label: "Subcategory",
-        type: "select",
+        type: "text",
         required: false,
-        dependsOn: { field: "category", in: ["insurance", "passport", "subscription"] },
-        options: (values) => {
-          if (values.category === "insurance") {
-            return ["Auto", "Home", "Medical", "Dental", "Vision"];
-          }
-          if (values.category === "passport") {
-            return ["OCI", "Visa"];
-          }
-          if (values.category === "subscription") {
-            return ["Costco", "Amazon", "Sam's Club", "BJ's", "Walmart", "Cable", "Other"];
-          }
-          return [];
-        },
       },
-      { name: "title", label: "Item", type: "text", required: true },
+      {
+        name: "title",
+        label: "Item",
+        type: "text",
+        required: false,
+      },
       {
         name: "family_member_id",
         label: "For",
@@ -216,92 +266,79 @@ const sectionFields = {
         source: "familyMembers",
         required: false,
       },
-      { name: "provider_name", label: "Provider", type: "text", required: false },
-      { name: "start_date", label: "Start date", type: "date", required: false },
-      { name: "expiry_date", label: "Expiration date", type: "date", required: true },
-      { name: "amount", label: "Amount", type: "number", required: false },
-      { name: "auto_renew", label: "Auto-renews", type: "checkbox", required: false },
       {
-        name: "lead_time_days",
-        label: "Remind me this many days before (e.g. insurance ~30, license ~90, passport ~180)",
+        name: "provider_name",
+        label: "Provider",
+        type: "text",
+        required: false,
+      },
+      {
+        name: "start_date",
+        label: "Start Date",
+        type: "date",
+        required: false,
+      },
+      {
+        name: "expiry_date",
+        label: "Expiration Date",
+        type: "date",
+        required: true,
+      },
+      {
+        name: "renewal_frequency",
+        label: "Frequency",
+        type: "select",
+        required: false,
+        options: [
+          { value: "monthly", label: "Monthly" },
+          { value: "quarterly", label: "Quarterly" },
+          { value: "6_months", label: "Every 6 Months" },
+          { value: "yearly", label: "Yearly" },
+          { value: "2_years", label: "Every 2 Years" },
+          { value: "5_years", label: "Every 5 Years" },
+          { value: "10_years", label: "Every 10 Years" },
+          { value: "one_time", label: "One Time" },
+          { value: "custom", label: "Custom" },
+        ],
+      },
+      {
+        name: "amount",
+        label: "Amount",
         type: "number",
         required: false,
       },
       {
-        name: "address",
-        label: "Address",
-        type: "text",
+        name: "auto_renew",
+        label: "Auto-Renews",
+        type: "checkbox",
         required: false,
-        dependsOn: { field: "category", in: ["passport", "license"] },
-      },
-
-      // Category-specific fields — collapse into the `attributes` JSON
-      // column instead of their own DB columns, so adding a new one later
-      // never requires a schema change.
-      {
-        name: "license_plate",
-        label: "License Plate",
-        type: "text",
-        required: false,
-        packInto: "attributes",
-        dependsOn: { field: "category", value: "insurance" },
       },
       {
-        name: "policy_number",
-        label: "Policy Number",
-        type: "text",
+        name: "reminder_days_before",
+        label: "Remind Me Before (Days)",
+        type: "number",
         required: false,
-        packInto: "attributes",
-        dependsOn: { field: "category", value: "insurance" },
       },
       {
-        name: "passport_number",
-        label: "Passport Number",
-        type: "text",
+        name: "notes",
+        label: "Notes",
+        type: "textarea",
         required: false,
-        packInto: "attributes",
-        dependsOn: { field: "category", value: "passport" },
       },
-      {
-        name: "license_number",
-        label: "License Number",
-        type: "text",
-        required: false,
-        packInto: "attributes",
-        dependsOn: { field: "category", value: "license" },
-      },
-      {
-        name: "state",
-        label: "State",
-        type: "text",
-        required: false,
-        packInto: "attributes",
-        dependsOn: { field: "category", value: "license" },
-      },
-      {
-        name: "membership_number",
-        label: "Membership Number",
-        type: "text",
-        required: false,
-        packInto: "attributes",
-        dependsOn: { field: "category", value: "subscription" },
-      },
-      {
-        name: "spot_number",
-        label: "Spot / Unit Number",
-        type: "text",
-        required: false,
-        packInto: "attributes",
-        dependsOn: { field: "category", value: "parking" },
-      },
-
-      { name: "notes", label: "Notes", type: "textarea", required: false },
     ],
     mapRowToItem: (row) => ({
-      id: row.renewal_id,
-      primary: row.title,
-      secondary: row.subcategory ? `${row.category} — ${row.subcategory}` : row.category,
-      meta: fmtDate(row.expiry_date),
+      id: row.id,
+      primary: row.for,
+      secondary: [
+        row.category,
+        row.subcategory,
+        row.renewal_type,
+      ]
+        .filter(Boolean)
+        .join(" — "),
+      meta: row.expiry_date
+        ? fmtDate(row.expiry_date)
+        : undefined,
     }),
   },
 

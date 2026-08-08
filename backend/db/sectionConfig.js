@@ -7,6 +7,20 @@
 // to the matching entry in frontend/src/config/sectionFields.js. Nothing
 // else needs to change.
 
+/*
+    category            TEXT NOT NULL,  -- financial | health | education | home | personal | other
+    title               TEXT NOT NULL,
+    description         TEXT,
+    goal_type           TEXT, -- short_term | long_term 
+    target_value        NUMERIC,
+    current_value       NUMERIC NOT NULL DEFAULT 0,
+    unit                TEXT, -- $, %, lbs, miles, books, courses, etc.
+    target_date         TEXT, -- ISO-8601: YYYY-MM-DD
+    status              TEXT NOT NULL DEFAULT 'in_progress', -- in_progress | completed | abandoned | paused
+    completed_on        TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    priority            INTEGER NOT NULL DEFAULT 0,
+
+*/
 module.exports = {
   routine: {
     tableName: "daily_routine",
@@ -23,14 +37,14 @@ module.exports = {
   },
   goals: {
     tableName: "goals",
-    columns: ["title", "family_member_id", "target_date", "description", "target_value"],
+    columns: ["category", "title", "family_member_id", "description", "goal_type", "target_year", "target_quarter", "target_date", "target_value"],
     requiredColumns: ["title"],
     orderBy: "(target_date IS NULL) ASC, target_date ASC",
   },
   events: {
     tableName: "events",
-    columns: ["title", "event_type", "event_date", "family_member_id"],
-    requiredColumns: ["title", "event_type", "event_date"],
+    columns: ["person_name", "title", "event_type", "event_date", "is_recurring_yearly"],
+    requiredColumns: ["person_name", "event_type", "event_date"],
     orderBy: "event_date ASC",
   },
   appointments: {
@@ -54,6 +68,7 @@ module.exports = {
     tableName: "renewals",
     columns: [
       "family_member_id",
+      "renewal_type",
       "category",
       "subcategory",
       "title",
@@ -62,12 +77,33 @@ module.exports = {
       "expiry_date",
       "amount",
       "auto_renew",
-      "lead_time_days",
-      "address",
-      "attributes",
+      "reminder_days_before",
       "notes",
+      "status",
+      "renewal_frequency",
+
     ],
-    requiredColumns: ["title", "category", "expiry_date"],
+/* id                      INTEGER PRIMARY KEY AUTOINCREMENT,
+  family_member_id        INTEGER REFERENCES family_members(id),
+  renewal_type            TEXT,                 -- subscription | insurance | document | registration | inspection | maintenance | membership | other
+  category                TEXT NOT NULL,        -- Vehicle | personal | professional
+  subcategory             TEXT,                 -- Visa -H1, I797, passport, driving license
+  title                   TEXT NOT NULL,        -- "Auto Insurance - Honda Civic"
+  provider_id             TEXT,                 -- will be used later, when providers table is created and provide name may be replaced by provider_id in the table  
+  provider_name           TEXT,                 -- can you add dropdown for provider_name instead of typing in the textbox?
+  start_date              DATE,
+  expiry_date             DATE NOT NULL,
+  amount                  REAL CHECK (amount IS NULL OR amount > 0),
+  auto_renew              INTEGER NOT NULL DEFAULT 0 CHECK (auto_renew IN (0, 1)),
+  reminder_days_before    INTEGER NOT NULL DEFAULT 30,
+  notes                   TEXT,
+  status                  TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'renewed', 'expired', 'cancelled')),
+  created_at              TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at              TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  renewal_frequency       INTEGER           --monthly | quarterly | 6_months | yearly | 2_years | 5_years | 10_years | one_time | custom
+);
+ */    
+    requiredColumns: ["category", "expiry_date"],
     jsonColumns: ["attributes"],
     orderBy: "expiry_date ASC",
   },

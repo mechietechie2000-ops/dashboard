@@ -15,7 +15,7 @@ try {
 
   // 2. Read and apply schema(s)
   const schemaPaths = [
-    path.resolve(__dirname, "..", "schema.sql"),
+    // path.resolve(__dirname, "..", "schema.sql"), -- main sql is home_dashboard_schema.sql 
     path.resolve(__dirname, "..", "home_dashboard_schema.sql"),
   ];
   for (const schemaPath of schemaPaths) {
@@ -28,10 +28,10 @@ try {
   // 3. Apply any migrations not covered by the (additive-only) schema files
   // above — e.g. renaming/altering tables that already have data. Each
   // migration is idempotent and safe to run on every boot.
-  const migrations = [require("../migrations/001_reminders_appointments")];
+/*   const migrations = [require("../migrations/001_reminders_appointments")];
   for (const migration of migrations) {
     migration.run(db);
-  }
+  } */
 } catch (err) {
   console.error("[sqliteDriver] error:", err.message);
 }
