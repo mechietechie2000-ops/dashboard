@@ -24,10 +24,10 @@
 module.exports = {
   routine: {
     tableName: "daily_routine",
-    columns: ["task_name", "person", "frequency", "day_of_week", "task_time"],
-    requiredColumns: ["task_name", "person", "frequency", "task_time"],
+    columns: ["title", "family_member_id", "frequency", "day_of_week", "scheduled_time", "mute", "announce", "description"],
+    requiredColumns: ["title", "family_member_id", "frequency", "scheduled_time"],
     where: "active = 1",
-    orderBy: "task_time ASC",
+    orderBy: "scheduled_time ASC",
   },
   reminders: {
     tableName: "reminders",
@@ -83,26 +83,6 @@ module.exports = {
       "renewal_frequency",
 
     ],
-/* id                      INTEGER PRIMARY KEY AUTOINCREMENT,
-  family_member_id        INTEGER REFERENCES family_members(id),
-  renewal_type            TEXT,                 -- subscription | insurance | document | registration | inspection | maintenance | membership | other
-  category                TEXT NOT NULL,        -- Vehicle | personal | professional
-  subcategory             TEXT,                 -- Visa -H1, I797, passport, driving license
-  title                   TEXT NOT NULL,        -- "Auto Insurance - Honda Civic"
-  provider_id             TEXT,                 -- will be used later, when providers table is created and provide name may be replaced by provider_id in the table  
-  provider_name           TEXT,                 -- can you add dropdown for provider_name instead of typing in the textbox?
-  start_date              DATE,
-  expiry_date             DATE NOT NULL,
-  amount                  REAL CHECK (amount IS NULL OR amount > 0),
-  auto_renew              INTEGER NOT NULL DEFAULT 0 CHECK (auto_renew IN (0, 1)),
-  reminder_days_before    INTEGER NOT NULL DEFAULT 30,
-  notes                   TEXT,
-  status                  TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'renewed', 'expired', 'cancelled')),
-  created_at              TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at              TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  renewal_frequency       INTEGER           --monthly | quarterly | 6_months | yearly | 2_years | 5_years | 10_years | one_time | custom
-);
- */    
     requiredColumns: ["category", "expiry_date"],
     jsonColumns: ["attributes"],
     // renewals only stores family_member_id (FK); join family_members so

@@ -129,14 +129,14 @@ const RoutineTaskRow = ({ task, onDone, onSkipRequest, onToggleMute, onToggleAnn
               color: "#fff",
             }}
           >
-            {task.person?.[0]?.toUpperCase() || "?"}
+            {task.family_member_id?.[0]?.toUpperCase() || "?"}
           </Box>
           <Box sx={{ minWidth: 0 }}>
             <Typography variant="h5" fontWeight="600" noWrap>
               {task.task_name}
             </Typography>
             <Typography variant="body2" color={colors.grey[300]}>
-              {task.task_time} &middot; {task.person}
+              {task.scheduled_time} &middot; {task.family_member_id}
             </Typography>
           </Box>
         </Box>
@@ -187,7 +187,7 @@ const RoutineModule = () => {
     setTasks(rows);
     setTotalToday((prev) => (prev === null ? rows.length : prev));
 
-    const people = [...new Set(rows.map((r) => r.person))];
+    const people = [...new Set(rows.map((r) => r.family_member_id))];
     const entries = await Promise.all(
       people.map(async (p) => [p, (await api(`/api/routine/streak/${encodeURIComponent(p)}`)).streak])
     );
@@ -237,7 +237,7 @@ const RoutineModule = () => {
   const handleUndo = () => {
     if (!pendingUndo) return;
     clearTimeout(pendingUndo.timeoutId);
-    setTasks((prev) => [...prev, pendingUndo.task].sort((a, b) => a.task_time.localeCompare(b.task_time)));
+    setTasks((prev) => [...prev, pendingUndo.task].sort((a, b) => a.scheduled_time.localeCompare(b.scheduled_time)));
     if (pendingUndo.action === "done") setDoneCount((c) => Math.max(0, c - 1));
     setPendingUndo(null);
   };
@@ -274,11 +274,11 @@ const RoutineModule = () => {
         </Box>
 
         <Box display="flex" gap="10px" flexWrap="wrap">
-          {Object.entries(streaks).map(([person, streak]) => (
+          {Object.entries(streaks).map(([family_member_id, streak]) => (
             <Chip
-              key={person}
+              key={family_member_id}
               icon={<LocalFireDepartmentOutlinedIcon sx={{ color: colors.redAccent[400] + " !important" }} />}
-              label={`${person}: ${streak}d`}
+              label={`${family_member_id}: ${streak}d`}
               sx={{ backgroundColor: colors.primary[400], color: colors.grey[100], fontWeight: 600 }}
             />
           ))}

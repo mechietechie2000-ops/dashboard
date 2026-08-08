@@ -36,11 +36,11 @@ import RecordVoiceOverOutlinedIcon from "@mui/icons-material/RecordVoiceOverOutl
 import { tokens } from "../../theme";
 
 const INITIAL_FORM = {
-  task_name: "",
+  title: "",
   person: "",
   frequency: "daily",
   day_of_week: "Monday",
-  task_time: "08:00",
+  scheduled_time: "08:00",
   mute: false,
   announce: false,
 };
@@ -87,11 +87,11 @@ const RoutineAdmin = () => {
   const handleOpenEdit = (routine) => {
     setEditingId(routine.id);
     setFormData({
-      task_name: routine.task_name || "",
+      title: routine.title || "",
       person: routine.person || "",
       frequency: routine.frequency || "daily",
       day_of_week: routine.day_of_week || "Monday",
-      task_time: routine.task_time || "08:00",
+      scheduled_time: routine.scheduled_time || "08:00",
       mute: Boolean(routine.mute),
       announce: Boolean(routine.announce),
     });
@@ -103,7 +103,7 @@ const RoutineAdmin = () => {
   };
 
   const handleSave = async () => {
-    if (!formData.task_name || !formData.person) return;
+    if (!formData.title || !formData.person) return;
 
     if (editingId) {
       await api(`/api/routine/${editingId}`, {
@@ -189,13 +189,13 @@ const RoutineAdmin = () => {
                   borderColor: colors.primary[500],
                 }}
               >
-                <TableCell sx={{ color: colors.grey[100], fontWeight: "600" }}>{row.task_name}</TableCell>
+                <TableCell sx={{ color: colors.grey[100], fontWeight: "600" }}>{row.title}</TableCell>
                 <TableCell sx={{ color: colors.grey[200] }}>{row.person}</TableCell>
                 <TableCell sx={{ color: colors.grey[200], textTransform: "capitalize" }}>{row.frequency}</TableCell>
                 <TableCell sx={{ color: colors.grey[200] }}>
                   {row.frequency === "weekly" ? row.day_of_week : "—"}
                 </TableCell>
-                <TableCell sx={{ color: colors.grey[200] }}>{row.task_time}</TableCell>
+                <TableCell sx={{ color: colors.grey[200] }}>{row.scheduled_time}</TableCell>
                 <TableCell>
                   {row.mute ? (
                     <VolumeOffOutlinedIcon fontSize="small" sx={{ color: colors.redAccent[400] }} />
@@ -254,8 +254,8 @@ const RoutineAdmin = () => {
             variant="outlined"
             fullWidth
             required
-            value={formData.task_name}
-            onChange={(e) => setFormData({ ...formData, task_name: e.target.value })}
+            value={formData.title}
+            onChange={(e) => setFormData({ ...formData, title: e.target.value })}
             sx={{
                 // 1. Unfocused / Default state for regular & required fields
                 "& .MuiInputLabel-root": { 
@@ -327,8 +327,8 @@ const RoutineAdmin = () => {
             <TextField
               label="Time"
               type="time"
-              value={formData.task_time}
-              onChange={(e) => setFormData({ ...formData, task_time: e.target.value })}
+              value={formData.scheduled_time}
+              onChange={(e) => setFormData({ ...formData, scheduled_time: e.target.value })}
               InputLabelProps={{ shrink: true }}
               inputProps={{ step: 300 }}
               sx={{

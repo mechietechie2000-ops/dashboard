@@ -656,4 +656,23 @@ index 5146e64..349b4fa 100755
      </Box>
    );
  };
-
+diff --git a/frontend/src/services/api.js b/frontend/src/services/api.js
+index c330430..02a086e 100644
+--- a/frontend/src/services/api.js
++++ b/frontend/src/services/api.js
+@@ -71,4 +71,14 @@ api.get = async (endpoint, options = {}) => {
+ api.post = async (endpoint, body, options = {}) => {
+   const data = await api(endpoint, { ...options, method: 'POST', body });
+   return { data };
++};
++
++api.put = async (endpoint, body, options = {}) => {
++  const data = await api(endpoint, { ...options, method: 'PUT', body });
++  return { data };
++};
++
++api.delete = async (endpoint, options = {}) => {
++  const data = await api(endpoint, { ...options, method: 'DELETE' });
++  return { data };
+ };
+ 

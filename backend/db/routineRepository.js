@@ -21,9 +21,9 @@ async function runDailyReset() {
   const unmarked = await db.all(`SELECT * FROM daily_routine_temp WHERE status = 'new'`);
   for (const row of unmarked) {
     await db.run(
-      `INSERT INTO daily_routine_log (routine_id, task_name, person, log_date, status, reason)
+      `INSERT INTO daily_routine_log (routine_id, title, person, log_date, status, reason)
        VALUES (?, ?, ?, ?, 'no_action', 'NO ACTION TAKEN')`,
-      [row.routine_id, row.task_name, row.person, today]
+      [row.routine_id, row.title, row.person, today]
     );
   }
 
@@ -44,9 +44,9 @@ async function runDailyReset() {
   );
   for (const task of todaysTasks) {
     await db.run(
-      `INSERT INTO daily_routine_temp (routine_id, task_name, person, task_time, status, mute, announce)
+      `INSERT INTO daily_routine_temp (routine_id, title, family_member_id, scheduled_time, status, mute, announce)
        VALUES (?, ?, ?, ?, 'new', ?, ?)`,
-      [task.routine_id, task.task_name, task.person, task.task_time, task.mute, task.announce]
+      [task.routine_id, task.title, task.family_member_id, task.scheduled_time, task.mute, task.announce]
     );
   }
 
@@ -67,7 +67,7 @@ async function hasResetRunToday() {
 
 // ---------- Today's working list ----------
 async function getTodayTasks() {
-  const rows = await db.all(`SELECT * FROM daily_routine_temp ORDER BY task_time ASC`);
+  const rows = await db.all(`SELECT * FROM daily_routine_temp ORDER BY scheduled_time ASC`);
   const now = Date.now();
   return rows
     .map((r) => ({
@@ -79,7 +79,7 @@ async function getTodayTasks() {
       const aBottom = !!a.mute || a.isSnoozed;
       const bBottom = !!b.mute || b.isSnoozed;
       if (aBottom !== bBottom) return aBottom ? 1 : -1;
-      return a.task_time.localeCompare(b.task_time);
+      return a.scheduled_time.localeCompare(b.scheduled_time);
     });
 }
 
@@ -87,9 +87,9 @@ async function markDone(tempId) {
   const row = await db.get(`SELECT * FROM daily_routine_temp WHERE temp_id = ?`, [tempId]);
   if (!row) throw new Error("Task not found");
   await db.run(
-    `INSERT INTO daily_routine_log (routine_id, task_name, person, log_date, status, reason)
+    `INSERT INTO daily_routine_log (routine_id, title, person, log_date, status, reason)
      VALUES (?, ?, ?, ?, 'done', NULL)`,
-    [row.routine_id, row.task_name, row.person, todayStr()]
+    [row.routine_id, row.title, row.person, todayStr()]
   );
   await db.run(`DELETE FROM daily_routine_temp WHERE temp_id = ?`, [tempId]);
   return { ok: true };
@@ -100,9 +100,9 @@ async function markSkipped(tempId, reason) {
   if (!row) throw new Error("Task not found");
   if (!reason) throw new Error("A skip reason is required");
   await db.run(
-    `INSERT INTO daily_routine_log (routine_id, task_name, person, log_date, status, reason)
+    `INSERT INTO daily_routine_log (routine_id, title, person, log_date, status, reason)
      VALUES (?, ?, ?, ?, 'skipped', ?)`,
-    [row.routine_id, row.task_name, row.person, todayStr(), reason]
+    [row.routine_id, row.title, row.person, todayStr(), reason]
   );
   await db.run(`DELETE FROM daily_routine_temp WHERE temp_id = ?`, [tempId]);
   return { ok: true };
@@ -132,8 +132,8 @@ async function snoozeTask(tempId, minutes = 10) {
 }
 
 // ---------- Streaks ----------
-// Consecutive days (ending today) where every logged task for this person was 'done'
-async function getStreak(person) {
+// Consecutive days (ending today) where every logged task for this family_member_id was 'done'
+async function getStreak(family_member_id) {
   const rows = await db.all(
     `SELECT log_date, status FROM daily_routine_log WHERE person = ? ORDER BY log_date DESC`,
     [person]
@@ -161,35 +161,35 @@ async function getStreak(person) {
 
 // ---------- Master routine CRUD (the recurring templates) ----------
 async function listRoutines() {
-  return db.all(`SELECT * FROM daily_routine WHERE active = 1 ORDER BY task_time ASC`);
+  return db.all(`SELECT * FROM daily_routine WHERE active = 1 ORDER BY scheduled_time ASC`);
 }
 
 async function addRoutine(data) {
-  const { task_name, person, frequency, day_of_week, task_time, mute = 0, announce = 0 } = data;
-  if (!task_name || !person || !frequency || !task_time) {
-    throw new Error("task_name, person, frequency, and task_time are required");
+  const { title, family_member_id, frequency, day_of_week, scheduled_time, mute = 0, announce = 0 } = data;
+  if (!title || !family_member_id || !frequency || !scheduled_time) {
+    throw new Error("title, family_member_id, frequency, and scheduled_time are required");
   }
   const result = await db.run(
-    `INSERT INTO daily_routine (task_name, person, frequency, day_of_week, task_time, mute, announce, active)
+    `INSERT INTO daily_routine (title, family_member_id, frequency, day_of_week, scheduled_time, mute, announce, active)
      VALUES (?, ?, ?, ?, ?, ?, ?, 1)`,
-    [task_name, person, frequency, day_of_week || null, task_time, mute ? 1 : 0, announce ? 1 : 0]
+    [title, family_member_id, frequency, day_of_week || null, scheduled_time, mute ? 1 : 0, announce ? 1 : 0]
   );
   return { routine_id: result.lastID };
 }
 
 async function updateRoutine(routineId, data) {
-  const { task_name, person, frequency, day_of_week, task_time, mute, announce, active } = data;
+  const { title, family_member_id, frequency, day_of_week, scheduled_time, mute, announce, active } = data;
   await db.run(
     `UPDATE daily_routine
-     SET task_name = ?, person = ?, frequency = ?, day_of_week = ?, task_time = ?,
+     SET title = ?, family_member_id = ?, frequency = ?, day_of_week = ?, scheduled_time = ?,
          mute = ?, announce = ?, active = ?
      WHERE routine_id = ?`,
     [
-      task_name,
-      person,
+      title,
+      family_member_id,
       frequency,
       day_of_week || null,
-      task_time,
+      scheduled_time,
       mute ? 1 : 0,
       announce ? 1 : 0,
       active === undefined ? 1 : active ? 1 : 0,

@@ -38,23 +38,35 @@ const sectionFields = {
     viewAllLink: "/routine",
     emptyMessage: "No routine items today",
     fields: [
-      { name: "task_name", label: "Task", type: "text", required: true },
-      { name: "person", label: "Person", type: "text", required: true },
+      { name: "title", label: "Task", type: "text", required: true },
+      {
+        name: "family_member_id",
+        label: "For",
+        type: "asyncSelect",
+        source: "familyMembers",
+        required: false,
+      },  
       {
         name: "frequency",
         label: "Frequency",
         type: "select",
         required: true,
-        options: ["daily", "weekly"],
+        options: [
+          { value: "daily", label: "Daily" },
+          { value: "weekly", label: "Weekly" },
+      ]        
       },
       { name: "day_of_week", label: "Day of week", type: "text", required: false },
-      { name: "task_time", label: "Time (HH:MM)", type: "text", required: true },
+      { name: "scheduled_time", label: "Time (HH:MM)", type: "text", required: true },
+      { name: "mute", label: "Mute", type: "radio", required: false },
+      { name: "announce", label: "Announce", type: "radio", required: false },
+      { name: "description", label: "Description", type: "text", required: false },
     ],
     mapRowToItem: (row) => ({
-      id: row.id,
-      primary: row.task_name,
-      secondary: row.person,
-      meta: row.task_time,
+      id: row.family_member_name,
+      primary: row.title,
+      secondary: row.family_member_id,
+      meta: row.scheduled_time,
     }),
   },
 
