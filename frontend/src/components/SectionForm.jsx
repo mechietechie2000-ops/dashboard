@@ -48,13 +48,38 @@ const resolveOptions = (field, values) =>
  * (group a set of fields into one nested JSON object on submit, e.g. all
  * category-specific fields collapse into `attributes`).
  */
-const SectionForm = ({ sectionKey, onSubmit, onCancel }) => {
+const SectionForm = ({ sectionKey, initialValues, onSubmit, onCancel }) => {
   const config = sectionFields[sectionKey];
-  const [values, setValues] = useState({});
+  const isEditing = Boolean(initialValues);
+  const [values, setValues] = useState(initialValues || {});
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
   const [asyncOptions, setAsyncOptions] = useState({});
   const [submitError, setSubmitError] = useState(null);
+
+  // Re-seed local form state whenever the record being edited changes (e.g.
+  // switching from "add" to editing a specific row, or between rows).
+  useEffect(() => {
+    if (!initialValues || !config) {
+      setValues(initialValues || {});
+      return;
+    }
+    const seeded = { ...initialValues };
+    for (const field of config.fields) {
+      if (
+        (field.type === "select" || field.type === "asyncSelect") &&
+        seeded[field.name] !== undefined &&
+        seeded[field.name] !== null
+      ) {
+        // Raw DB values (e.g. family_member_id) come back as numbers; option
+        // values are strings, so an un-coerced value won't match and the
+        // select will render blank even though the record has a value.
+        seeded[field.name] = String(seeded[field.name]);
+      }
+    }
+    setValues(seeded);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialValues, sectionKey]);
 
   useEffect(() => {
     if (!config) return;
@@ -221,7 +246,7 @@ const SectionForm = ({ sectionKey, onSubmit, onCancel }) => {
           </Button>
         )}
         <Button type="submit" variant="contained" disabled={submitting}>
-          {submitting ? "Saving..." : "Save"}
+          {submitting ? "Saving..." : isEditing ? "Update" : "Save"}
         </Button>
       </Box>
     </Box>

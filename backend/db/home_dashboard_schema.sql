@@ -212,7 +212,7 @@ CREATE TABLE IF NOT EXISTS daily_routine_temp (
   routine_id        INTEGER NOT NULL,
   title             TEXT NOT NULL,
   family_member_id  INTEGER,
-  scheduled_time         TEXT NOT NULL,
+  scheduled_time    TEXT NOT NULL,
   status            TEXT DEFAULT 'new' CHECK(status IN ('new','done','skipped')),
   mute              INTEGER DEFAULT 0,
   snoozed_until     TEXT,             -- ISO timestamp, NULL if not snoozed

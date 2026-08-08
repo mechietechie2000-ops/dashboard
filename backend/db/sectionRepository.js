@@ -30,7 +30,11 @@ function parseJsonColumns(cfg, rows) {
 
 async function listRecords(sectionKey, { limit } = {}) {
   const cfg = getConfig(sectionKey);
-  let sql = `SELECT * FROM ${cfg.tableName}`;
+  // `select`/`joins` are optional per-section overrides (see sectionConfig.js)
+  // for sections that need to resolve a foreign key to a display value, e.g.
+  // renewals.family_member_id -> family_members.first_name.
+  let sql = `SELECT ${cfg.select || "*"} FROM ${cfg.tableName}`;
+  if (cfg.joins) sql += ` ${cfg.joins}`;
   if (cfg.where) sql += ` WHERE ${cfg.where}`;
   sql += ` ORDER BY ${cfg.orderBy}`;
   if (limit) sql += ` LIMIT ${Number(limit)}`;
@@ -62,4 +66,33 @@ async function insertRecord(sectionKey, values) {
   return { id: result.lastID };
 }
 
-module.exports = { listRecords, insertRecord };
+async function updateRecord(sectionKey, id, values) {
+  const cfg = getConfig(sectionKey);
+
+  const cols = cfg.columns.filter((c) => values[c] !== undefined);
+  if (cols.length === 0) {
+    const err = new Error("No updatable fields provided");
+    err.status = 400;
+    throw err;
+  }
+
+  const setClause = cols.map((c) => `${c} = ?`).join(", ");
+  const params = cols.map((c) => {
+    const v = values[c];
+    return v !== null && typeof v === "object" ? JSON.stringify(v) : v;
+  });
+  params.push(id);
+
+  const sql = `UPDATE ${cfg.tableName} SET ${setClause} WHERE id = ?`;
+  const result = await db.run(sql, params);
+  return { changes: result.changes };
+}
+
+async function deleteRecord(sectionKey, id) {
+  const cfg = getConfig(sectionKey);
+  const sql = `DELETE FROM ${cfg.tableName} WHERE id = ?`;
+  const result = await db.run(sql, [id]);
+  return { changes: result.changes };
+}
+
+module.exports = { listRecords, insertRecord, updateRecord, deleteRecord };

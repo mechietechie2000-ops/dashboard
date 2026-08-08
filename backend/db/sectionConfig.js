@@ -105,6 +105,10 @@ module.exports = {
  */    
     requiredColumns: ["category", "expiry_date"],
     jsonColumns: ["attributes"],
+    // renewals only stores family_member_id (FK); join family_members so
+    // listRecords can also return a display name for the frontend.
+    select: "renewals.*, family_members.first_name AS family_member_name",
+    joins: "LEFT JOIN family_members ON family_members.id = renewals.family_member_id",
     orderBy: "expiry_date ASC",
   },
   bills: {

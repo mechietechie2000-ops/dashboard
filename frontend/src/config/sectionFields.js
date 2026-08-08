@@ -51,7 +51,7 @@ const sectionFields = {
       { name: "task_time", label: "Time (HH:MM)", type: "text", required: true },
     ],
     mapRowToItem: (row) => ({
-      id: row.routine_id,
+      id: row.id,
       primary: row.task_name,
       secondary: row.person,
       meta: row.task_time,
@@ -328,7 +328,10 @@ const sectionFields = {
     ],
     mapRowToItem: (row) => ({
       id: row.id,
-      primary: row.for,
+      // family_member_name comes from the LEFT JOIN in sectionConfig.js
+      // (renewals only stores family_member_id). Fall back to the item's
+      // own title/category when no family member is set on the record.
+      primary: row.family_member_name || row.title || row.category,
       secondary: [
         row.category,
         row.subcategory,
