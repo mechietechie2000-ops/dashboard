@@ -1,0 +1,21 @@
+name: Notify Deployment
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    # runs-on: self-hosted
+
+    steps:
+      - name: Trigger private deployment
+        env:
+          GH_TOKEN: ${{ secrets.DEPLOY_TOKEN }}
+        run: |
+          gh api \
+            --method POST \
+            /repos/yourname/planner-deploy/dispatches \
+            -f event_type=deploy

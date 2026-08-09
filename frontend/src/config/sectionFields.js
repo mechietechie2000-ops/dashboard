@@ -259,17 +259,123 @@ const sectionFields = {
         label: 'Category',
         type: 'select',
         required: true,
-        options: [
+        options: (values) => {
+          switch (values.renewal_type) {
+            case 'subscription':
+              return [
+                { value: 'youtube', label: 'Youtube' },
+                { value: 'cable', label: 'Cable' },
+                { value: 'others', label: 'Others' },
+              ];
+            case 'insurance':
+              return [
+                { value: 'auto', label: 'Auto' },
+                { value: 'home', label: 'Home' },
+                { value: 'life', label: 'Life' },
+                { value: 'travel', label: 'Travel' },
+                { value: 'appliance', label: 'Appliance' },
+                { value: 'others', label: 'Others' },
+              ];
+            case 'document':
+              return [
+                { value: 'personal', label: 'Personal' },
+                { value: 'professional', label: 'Professional' },
+                { value: 'educational', label: 'Educational' },
+                { value: 'travel', label: 'Travel' },
+                { value: 'appliance', label: 'Appliance' },
+                { value: 'others', label: 'Others' },
+              ];
+            case 'registration':
+              return [
+                { value: 'auto', label: 'Auto' },
+                { value: 'home', label: 'Home' },
+                { value: 'life', label: 'Life' },
+                { value: 'travel', label: 'Travel' },
+                { value: 'appliance', label: 'Appliance' },
+                { value: 'others', label: 'Others' },
+              ];
+            case 'inspection':
+              return [
+                { value: 'auto', label: 'Auto' },
+                { value: 'home', label: 'Home' },
+                { value: 'others', label: 'Others' },
+              ];
+            case 'maintenance':
+              return [
+                { value: 'auto', label: 'Auto' },
+                { value: 'home', label: 'Home' },
+                { value: 'appliance', label: 'Appliance' },
+                { value: 'others', label: 'Others' },
+              ];
+            case 'membership':
+              return [
+                { value: 'costco', label: 'Costco' },
+                { value: 'amazon', label: 'Amazon' },
+                { value: 'sixflags', label: 'SixFlags' },
+                { value: 'education', label: 'Education' },
+                { value: 'others', label: 'Others' },
+              ];
+            case 'others':
+              return [
+                { value: 'auto', label: 'Auto' },
+                { value: 'home', label: 'Home' },
+                { value: 'life', label: 'Life' },
+                { value: 'travel', label: 'Travel' },
+                { value: 'appliance', label: 'Appliance' },
+                { value: 'others', label: 'Others' },
+              ];
+            default:
+              return [];
+          }
+        },
+        /*         options: [
           { value: 'Vehicle', label: 'Vehicle' },
           { value: 'personal', label: 'Personal' },
           { value: 'professional', label: 'Professional' },
-        ],
+          { value: 'extra_curriculam', label: 'Extra Curriculam' },
+        ], */
       },
       {
         name: 'subcategory',
         label: 'Subcategory',
-        type: 'text',
+        type: 'select',
         required: false,
+        options: (values) => {
+          switch (values.category) {
+            case 'personal':
+              return [
+                { value: 'passport', label: 'Passport' },
+                { value: 'oci', label: 'OCI' },
+                { value: 'driver_license', label: 'Driver License' },
+                { value: 'h1b', label: 'H1' },
+                { value: 'h4', label: 'H4' },
+              ];
+            case 'extra_curriculam':
+              return [
+                { value: 'swimming', label: 'Swimming' },
+                { value: 'karate', label: 'Karate' },
+                { value: 'gymnastics', label: 'Gymnastics' },
+                { value: 'music', label: 'Music' },
+              ];
+            case 'auto':
+              return [
+                { value: 'honda_accord', label: 'Honda Accord' },
+                { value: 'kia_carnival', label: 'Kia Carnival' },
+              ];
+            case 'registration':
+              return [
+                { value: 'car_registration', label: 'Car Registration' },
+                { value: 'auto_insurance', label: 'Auto Insurance' },
+              ];
+            case 'home':
+              return [
+                { value: 'fire_alarm', label: 'Fire Alarm' },
+                { value: 'dryer', label: 'Dryer' },
+              ];
+            default:
+              return [];
+          }
+        },
       },
       {
         name: 'title',
