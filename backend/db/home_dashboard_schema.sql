@@ -229,9 +229,10 @@ CREATE TABLE IF NOT EXISTS daily_routine_log (
   routine_id     INTEGER NOT NULL,
   title          TEXT NOT NULL,
   person         TEXT NOT NULL,
-  log_date       TEXT NOT NULL,    -- 'YYYY-MM-DD'
-  status         TEXT NOT NULL,    -- 'done' | 'skipped' | 'no_action'
-  reason         TEXT,             -- lazy/tired/office work/guest/outdoor/no reason/NO ACTION TAKEN
+  family_member_id INTEGER REFERENCES family_members(id),   -- ADD THIS
+  log_date       TEXT NOT NULL,
+  status         TEXT NOT NULL,
+  reason         TEXT,
   FOREIGN KEY(routine_id) REFERENCES daily_routine(id)
 );
 

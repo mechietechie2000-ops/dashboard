@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Box,
   Typography,
@@ -15,18 +15,18 @@ import {
   FormControl,
   InputLabel,
   useTheme,
-} from "@mui/material";
-import CheckCircleIcon from "@mui/icons-material/CheckCircle";
-import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
-import CloseIcon from "@mui/icons-material/Close";
-import VolumeOffOutlinedIcon from "@mui/icons-material/VolumeOffOutlined";
-import VolumeUpOutlinedIcon from "@mui/icons-material/VolumeUpOutlined";
-import SnoozeOutlinedIcon from "@mui/icons-material/SnoozeOutlined";
-import RecordVoiceOverOutlinedIcon from "@mui/icons-material/RecordVoiceOverOutlined";
-import LocalFireDepartmentOutlinedIcon from "@mui/icons-material/LocalFireDepartmentOutlined";
-import { tokens } from "../../theme";
+} from '@mui/material';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
+import CloseIcon from '@mui/icons-material/Close';
+import VolumeOffOutlinedIcon from '@mui/icons-material/VolumeOffOutlined';
+import VolumeUpOutlinedIcon from '@mui/icons-material/VolumeUpOutlined';
+import SnoozeOutlinedIcon from '@mui/icons-material/SnoozeOutlined';
+import RecordVoiceOverOutlinedIcon from '@mui/icons-material/RecordVoiceOverOutlined';
+import LocalFireDepartmentOutlinedIcon from '@mui/icons-material/LocalFireDepartmentOutlined';
+import { tokens } from '../../theme';
 
-const SKIP_REASONS = ["lazy", "tired", "office work", "guest", "outdoor", "no reason"];
+const SKIP_REASONS = ['lazy', 'tired', 'office work', 'guest', 'outdoor', 'no reason'];
 const UNDO_WINDOW_MS = 4500;
 const SWIPE_THRESHOLD = 90;
 
@@ -38,21 +38,29 @@ function announceTask(taskName) {
 
 async function api(path, options) {
   const res = await fetch(path, {
-    headers: { "Content-Type": "application/json" },
+    headers: { 'Content-Type': 'application/json' },
     ...options,
   });
   if (!res.ok) throw new Error(`Request failed: ${path}`);
   return res.json();
 }
 
-const RoutineTaskRow = ({ task, onDone, onSkipRequest, onToggleMute, onToggleAnnounce, onSnooze, colors }) => {
+const RoutineTaskRow = ({
+  task,
+  onDone,
+  onSkipRequest,
+  onToggleMute,
+  onToggleAnnounce,
+  onSnooze,
+  colors,
+}) => {
   const [dragX, setDragX] = useState(0);
   const dragging = useRef(false);
   const startX = useRef(0);
 
   const onPointerDown = (e) => {
     dragging.current = true;
-    startX.current = (e.touches ? e.touches[0].clientX : e.clientX);
+    startX.current = e.touches ? e.touches[0].clientX : e.clientX;
   };
   const onPointerMove = (e) => {
     if (!dragging.current) return;
@@ -73,15 +81,15 @@ const RoutineTaskRow = ({ task, onDone, onSkipRequest, onToggleMute, onToggleAnn
   const sunk = task.mute || task.isSnoozed;
 
   return (
-    <Box sx={{ position: "relative", mb: "10px", overflow: "hidden", borderRadius: "10px" }}>
+    <Box sx={{ position: 'relative', mb: '10px', overflow: 'hidden', borderRadius: '10px' }}>
       {/* Swipe backgrounds */}
       <Box
         sx={{
-          position: "absolute",
+          position: 'absolute',
           inset: 0,
-          display: "flex",
-          justifyContent: dragX > 0 ? "flex-start" : "flex-end",
-          alignItems: "center",
+          display: 'flex',
+          justifyContent: dragX > 0 ? 'flex-start' : 'flex-end',
+          alignItems: 'center',
           px: 3,
           backgroundColor: dragX > 0 ? colors.greenAccent[600] : colors.redAccent[500],
           opacity: Math.min(Math.abs(dragX) / SWIPE_THRESHOLD, 1),
@@ -99,41 +107,41 @@ const RoutineTaskRow = ({ task, onDone, onSkipRequest, onToggleMute, onToggleAnn
         onTouchMove={onPointerMove}
         onTouchEnd={onPointerUp}
         sx={{
-          position: "relative",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: "12px",
-          p: "14px 16px",
-          borderRadius: "10px",
+          position: 'relative',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '12px',
+          p: '14px 16px',
+          borderRadius: '10px',
           backgroundColor: colors.primary[400],
           transform: `translateX(${dragX}px)`,
-          transition: dragging.current ? "none" : "transform 0.2s ease",
+          transition: dragging.current ? 'none' : 'transform 0.2s ease',
           opacity: sunk ? 0.55 : 1,
-          cursor: "grab",
-          userSelect: "none",
+          cursor: 'grab',
+          userSelect: 'none',
         }}
       >
-        <Box sx={{ display: "flex", alignItems: "center", gap: "12px", minWidth: 0 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
           <Box
             sx={{
               width: 44,
               height: 44,
               flexShrink: 0,
-              borderRadius: "50%",
+              borderRadius: '50%',
               backgroundColor: colors.blueAccent[600],
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontWeight: "bold",
-              color: "#fff",
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontWeight: 'bold',
+              color: '#fff',
             }}
           >
-            {task.family_member_id?.[0]?.toUpperCase() || "?"}
+            {task.family_member_id?.[0]?.toUpperCase() || '?'}
           </Box>
           <Box sx={{ minWidth: 0 }}>
             <Typography variant="h5" fontWeight="600" noWrap>
-              {task.task_name}
+              {task.title}
             </Typography>
             <Typography variant="body2" color={colors.grey[300]}>
               {task.scheduled_time} &middot; {task.family_member_id}
@@ -141,7 +149,7 @@ const RoutineTaskRow = ({ task, onDone, onSkipRequest, onToggleMute, onToggleAnn
           </Box>
         </Box>
 
-        <Box sx={{ display: "flex", alignItems: "center", gap: "2px", flexShrink: 0 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: '2px', flexShrink: 0 }}>
           <IconButton size="small" onClick={() => onToggleAnnounce(task)} title="Announce (TTS)">
             <RecordVoiceOverOutlinedIcon
               fontSize="small"
@@ -179,17 +187,20 @@ const RoutineModule = () => {
   const [doneCount, setDoneCount] = useState(0);
   const [streaks, setStreaks] = useState({});
   const [skipTarget, setSkipTarget] = useState(null);
-  const [skipReason, setSkipReason] = useState("");
+  const [skipReason, setSkipReason] = useState('');
   const [pendingUndo, setPendingUndo] = useState(null); // { task, action, timeoutId }
 
   const loadTasks = async () => {
-    const rows = await api("/api/routine/today");
+    const rows = await api('/api/routine/today');
     setTasks(rows);
     setTotalToday((prev) => (prev === null ? rows.length : prev));
 
     const people = [...new Set(rows.map((r) => r.family_member_id))];
     const entries = await Promise.all(
-      people.map(async (p) => [p, (await api(`/api/routine/streak/${encodeURIComponent(p)}`)).streak])
+      people.map(async (p) => [
+        p,
+        (await api(`/api/routine/streak/${encodeURIComponent(p)}`)).streak,
+      ])
     );
     setStreaks(Object.fromEntries(entries));
   };
@@ -201,59 +212,61 @@ const RoutineModule = () => {
   const commitPending = (pending) => {
     const { task, action } = pending;
     const call =
-      action === "done"
-        ? api(`/api/routine/today/${task.temp_id}/done`, { method: "POST" })
-        : api(`/api/routine/today/${task.temp_id}/skip`, {
-            method: "POST",
+      action === 'done'
+        ? api(`/api/routine/today/${task.id}/done`, { method: 'POST' })
+        : api(`/api/routine/today/${task.id}/skip`, {
+            method: 'POST',
             body: JSON.stringify({ reason: pending.reason }),
           });
     call.catch(() => loadTasks()); // resync on failure
   };
 
   const queueRemoval = (task, action, reason) => {
-    setTasks((prev) => prev.filter((t) => t.temp_id !== task.temp_id));
-    if (action === "done") setDoneCount((c) => c + 1);
+    setTasks((prev) => prev.filter((t) => t.id !== task.id));
+    if (action === 'done') setDoneCount((c) => c + 1);
 
     const timeoutId = setTimeout(() => {
       commitPending({ task, action, reason });
-      setPendingUndo((cur) => (cur && cur.task.temp_id === task.temp_id ? null : cur));
+      setPendingUndo((cur) => (cur && cur.task.id === task.id ? null : cur));
     }, UNDO_WINDOW_MS);
 
     setPendingUndo({ task, action, reason, timeoutId });
   };
 
-  const handleDone = (task) => queueRemoval(task, "done");
+  const handleDone = (task) => queueRemoval(task, 'done');
 
   const handleSkipRequest = (task) => {
     setSkipTarget(task);
-    setSkipReason("");
+    setSkipReason('');
   };
   const confirmSkip = () => {
     if (!skipReason) return;
-    queueRemoval(skipTarget, "skipped", skipReason);
+    queueRemoval(skipTarget, 'skipped', skipReason);
     setSkipTarget(null);
   };
 
   const handleUndo = () => {
     if (!pendingUndo) return;
     clearTimeout(pendingUndo.timeoutId);
-    setTasks((prev) => [...prev, pendingUndo.task].sort((a, b) => a.scheduled_time.localeCompare(b.scheduled_time)));
-    if (pendingUndo.action === "done") setDoneCount((c) => Math.max(0, c - 1));
+    setTasks((prev) =>
+      [...prev, pendingUndo.task].sort((a, b) => a.scheduled_time.localeCompare(b.scheduled_time))
+    );
+    if (pendingUndo.action === 'done') setDoneCount((c) => Math.max(0, c - 1));
     setPendingUndo(null);
   };
 
   const handleToggleMute = async (task) => {
-    await api(`/api/routine/today/${task.temp_id}/mute`, { method: "POST" });
+    await api(`/api/routine/today/${task.id}/mute`, { method: 'POST' });
     loadTasks();
   };
   const handleToggleAnnounce = async (task) => {
-    if (!task.announce) announceTask(task.task_name);
-    await api(`/api/routine/today/${task.temp_id}/announce`, { method: "POST" });
+    if (!task.announce) announceTask(task.title);
+    await api(`/api/routine/today/${task.id}/announce`, { method: 'POST' });
     loadTasks();
   };
   const handleSnooze = async (task) => {
-    await api(`/api/routine/today/${task.temp_id}/snooze`, {
-      method: "POST",
+    await api(`/api/routine/today/${task.id}/snooze`, {
+      method: 'POST',
       body: JSON.stringify({ minutes: 10 }),
     });
     loadTasks();
@@ -263,7 +276,14 @@ const RoutineModule = () => {
 
   return (
     <Box m="20px">
-      <Box display="flex" justifyContent="space-between" alignItems="center" flexWrap="wrap" gap={2} mb="20px">
+      <Box
+        display="flex"
+        justifyContent="space-between"
+        alignItems="center"
+        flexWrap="wrap"
+        gap={2}
+        mb="20px"
+      >
         <Box>
           <Typography variant="h2" fontWeight="bold">
             Today's Routine
@@ -277,9 +297,17 @@ const RoutineModule = () => {
           {Object.entries(streaks).map(([family_member_id, streak]) => (
             <Chip
               key={family_member_id}
-              icon={<LocalFireDepartmentOutlinedIcon sx={{ color: colors.redAccent[400] + " !important" }} />}
+              icon={
+                <LocalFireDepartmentOutlinedIcon
+                  sx={{ color: colors.redAccent[400] + ' !important' }}
+                />
+              }
               label={`${family_member_id}: ${streak}d`}
-              sx={{ backgroundColor: colors.primary[400], color: colors.grey[100], fontWeight: 600 }}
+              sx={{
+                backgroundColor: colors.primary[400],
+                color: colors.grey[100],
+                fontWeight: 600,
+              }}
             />
           ))}
         </Box>
@@ -290,16 +318,16 @@ const RoutineModule = () => {
           height: 8,
           borderRadius: 4,
           backgroundColor: colors.primary[400],
-          overflow: "hidden",
-          mb: "24px",
+          overflow: 'hidden',
+          mb: '24px',
         }}
       >
         <Box
           sx={{
-            height: "100%",
+            height: '100%',
             width: `${progressPct}%`,
             backgroundColor: colors.greenAccent[500],
-            transition: "width 0.4s ease",
+            transition: 'width 0.4s ease',
           }}
         />
       </Box>
@@ -312,7 +340,7 @@ const RoutineModule = () => {
 
       {tasks.map((task) => (
         <RoutineTaskRow
-          key={task.temp_id}
+          key={task.id}
           task={task}
           colors={colors}
           onDone={handleDone}
@@ -331,18 +359,18 @@ const RoutineModule = () => {
           sx: {
             backgroundColor: colors.primary[400],
             color: colors.grey[100],
-            backgroundImage: "none",
-            borderRadius: "12px",
-            padding: "8px",
-            minWidth: "320px",
+            backgroundImage: 'none',
+            borderRadius: '12px',
+            padding: '8px',
+            minWidth: '320px',
           },
         }}
       >
         <DialogTitle variant="h3" fontWeight="bold" sx={{ color: colors.grey[100], pb: 1 }}>
-          Why skip "{skipTarget?.task_name}"?
+          Why skip "{skipTarget?.title}"?
         </DialogTitle>
         <DialogContent>
-          <Typography variant="body1" color={colors.grey[300]} sx={{ mb: 2, fontSize: "1rem" }}>
+          <Typography variant="body1" color={colors.grey[300]} sx={{ mb: 2, fontSize: '1rem' }}>
             Please select a reason for skipping this task.
           </Typography>
           <FormControl fullWidth sx={{ mt: 1 }}>
@@ -350,8 +378,8 @@ const RoutineModule = () => {
               id="skip-reason-label"
               sx={{
                 color: colors.grey[300],
-                fontSize: "1rem",
-                "&.Mui-focused": { color: colors.greenAccent[500] },
+                fontSize: '1rem',
+                '&.Mui-focused': { color: colors.greenAccent[500] },
               }}
             >
               Reason
@@ -363,17 +391,17 @@ const RoutineModule = () => {
               onChange={(e) => setSkipReason(e.target.value)}
               sx={{
                 color: colors.grey[100],
-                fontSize: "1.1rem",
-                "& .MuiOutlinedInput-notchedOutline": {
+                fontSize: '1.1rem',
+                '& .MuiOutlinedInput-notchedOutline': {
                   borderColor: colors.grey[500],
                 },
-                "&:hover .MuiOutlinedInput-notchedOutline": {
+                '&:hover .MuiOutlinedInput-notchedOutline': {
                   borderColor: colors.greenAccent[500],
                 },
-                "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
+                '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
                   borderColor: colors.greenAccent[500],
                 },
-                "& .MuiSelect-icon": {
+                '& .MuiSelect-icon': {
                   color: colors.grey[100],
                 },
               }}
@@ -391,13 +419,13 @@ const RoutineModule = () => {
                   key={r}
                   value={r}
                   sx={{
-                    fontSize: "1rem",
-                    textTransform: "capitalize",
-                    "&:hover": {
+                    fontSize: '1rem',
+                    textTransform: 'capitalize',
+                    '&:hover': {
                       backgroundColor: colors.primary[400],
                     },
-                    "&.Mui-selected": {
-                      backgroundColor: colors.blueAccent[700] + " !important",
+                    '&.Mui-selected': {
+                      backgroundColor: colors.blueAccent[700] + ' !important',
                     },
                   }}
                 >
@@ -410,7 +438,7 @@ const RoutineModule = () => {
         <DialogActions sx={{ px: 3, pb: 2 }}>
           <Button
             onClick={() => setSkipTarget(null)}
-            sx={{ color: colors.grey[300], fontSize: "0.95rem", fontWeight: "600" }}
+            sx={{ color: colors.grey[300], fontSize: '0.95rem', fontWeight: '600' }}
           >
             Cancel
           </Button>
@@ -420,12 +448,12 @@ const RoutineModule = () => {
             onClick={confirmSkip}
             sx={{
               backgroundColor: colors.redAccent[500],
-              color: "#fff",
-              fontSize: "0.95rem",
-              fontWeight: "bold",
+              color: '#fff',
+              fontSize: '0.95rem',
+              fontWeight: 'bold',
               px: 3,
-              "&:hover": { backgroundColor: colors.redAccent[600] },
-              "&.Mui-disabled": {
+              '&:hover': { backgroundColor: colors.redAccent[600] },
+              '&.Mui-disabled': {
                 backgroundColor: colors.grey[700],
                 color: colors.grey[500],
               },
@@ -439,7 +467,7 @@ const RoutineModule = () => {
       {/* Undo snackbar */}
       <Snackbar
         open={!!pendingUndo}
-        message={pendingUndo ? `${pendingUndo.task.task_name} marked ${pendingUndo.action}` : ""}
+        message={pendingUndo ? `${pendingUndo.task.title} marked ${pendingUndo.action}` : ''}
         action={
           <Button color="secondary" size="small" onClick={handleUndo}>
             Undo
