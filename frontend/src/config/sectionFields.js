@@ -63,7 +63,7 @@ const sectionFields = {
       { name: "description", label: "Description", type: "text", required: false },
     ],
     mapRowToItem: (row) => ({
-      id: row.family_member_name,
+      id: row.id,
       primary: row.title,
       secondary: row.family_member_id,
       meta: row.scheduled_time,

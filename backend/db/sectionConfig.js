@@ -26,7 +26,9 @@ module.exports = {
     tableName: "daily_routine",
     columns: ["title", "family_member_id", "frequency", "day_of_week", "scheduled_time", "mute", "announce", "description"],
     requiredColumns: ["title", "family_member_id", "frequency", "scheduled_time"],
-    where: "active = 1",
+    select: "daily_routine.*, family_members.first_name AS family_member_name",
+    joins: "LEFT JOIN family_members ON family_members.id = daily_routine.family_member_id",
+    where: "daily_routine.active = 1",
     orderBy: "scheduled_time ASC",
   },
   reminders: {

@@ -174,7 +174,7 @@ async function addRoutine(data) {
      VALUES (?, ?, ?, ?, ?, ?, ?, 1)`,
     [title, family_member_id, frequency, day_of_week || null, scheduled_time, mute ? 1 : 0, announce ? 1 : 0]
   );
-  return { routine_id: result.lastID };
+  return { id: result.lastID };
 }
 
 async function updateRoutine(routineId, data) {
@@ -183,7 +183,7 @@ async function updateRoutine(routineId, data) {
     `UPDATE daily_routine
      SET title = ?, family_member_id = ?, frequency = ?, day_of_week = ?, scheduled_time = ?,
          mute = ?, announce = ?, active = ?
-     WHERE routine_id = ?`,
+     WHERE id = ?`,
     [
       title,
       family_member_id,
@@ -201,7 +201,7 @@ async function updateRoutine(routineId, data) {
 
 async function deleteRoutine(routineId) {
   // Soft delete so history in daily_routine_log stays intact
-  await db.run(`UPDATE daily_routine SET active = 0 WHERE routine_id = ?`, [routineId]);
+  await db.run(`UPDATE daily_routine SET active = 0 WHERE id = ?`, [routineId]);
   return { ok: true };
 }
 
