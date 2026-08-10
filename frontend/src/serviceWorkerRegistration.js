@@ -124,6 +124,12 @@ export function unregister() {
   }
 }
 
+// NOTE: no longer called from index.js. This registered public/push-sw.js
+// as a second service worker, but it defaulted to the same scope ('/') as
+// the main service worker, and two different scripts registering at the
+// same scope collide (the later registration effectively takes over),
+// which made push delivery unreliable. Push handling now lives in
+// src/service-worker.js instead. Kept here, unused, for reference.
 export function registerPushSW() {
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {

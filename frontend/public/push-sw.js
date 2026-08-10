@@ -1,3 +1,9 @@
+// NOTE: unused as of the push-sw scope-collision fix. This file is no
+// longer registered (see index.js / serviceWorkerRegistration.js) — its
+// push/notificationclick handlers were merged into src/service-worker.js,
+// which is now the single service worker for this app. Kept here, unused,
+// for reference.
+
 self.addEventListener('push', (event) => {
   let data = {};
   try {

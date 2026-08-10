@@ -8,9 +8,12 @@ function urlBase64ToUint8Array(base64String) {
 }
 
 async function getPushRegistration() {
+  // Push handling now lives in the main service worker (service-worker.js)
+  // instead of a separate push-sw.js — see index.js / service-worker.js
+  // comments for why. Match on service-worker.js instead of push-sw.js.
   const registrations = await navigator.serviceWorker.getRegistrations();
   const registration = registrations.find((reg) =>
-    reg.active?.scriptURL.includes('push-sw.js')
+    reg.active?.scriptURL.includes('service-worker.js')
   );
   if (!registration) throw new Error('Push service worker not registered yet');
   return registration;

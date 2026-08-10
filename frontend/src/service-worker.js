@@ -60,3 +60,44 @@ self.addEventListener('message', (event) => {
     self.skipWaiting();
   }
 });
+
+// --- Web Push ---
+// Merged in from public/push-sw.js. Previously this app registered a second
+// service worker (push-sw.js) for push handling, but since both scripts
+// registered with the default scope ('/'), the two registrations collided —
+// whichever registered last would effectively take over the scope, causing
+// unreliable push delivery. Push/notification handling now lives in this
+// single service worker instead. public/push-sw.js is left in the repo,
+// unused, for reference (see comments in serviceWorkerRegistration.js).
+
+self.addEventListener('push', (event) => {
+  let data = {};
+  try {
+    data = event.data ? event.data.json() : {};
+  } catch (e) {
+    data = { title: 'Notification', body: event.data?.text() || '' };
+  }
+
+  const title = data.title || 'New notification';
+  const options = {
+    body: data.body || '',
+    icon: '/logo192.png',
+    badge: '/logo192.png',
+    data: { url: data.url || '/' },
+  };
+
+  event.waitUntil(self.registration.showNotification(title, options));
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const url = event.notification.data?.url || '/';
+  event.waitUntil(
+    clients.matchAll({ type: 'window' }).then((clientList) => {
+      for (const client of clientList) {
+        if (client.url === url && 'focus' in client) return client.focus();
+      }
+      if (clients.openWindow) return clients.openWindow(url);
+    })
+  );
+});
