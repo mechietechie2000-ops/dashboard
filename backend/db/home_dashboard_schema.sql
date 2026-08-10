@@ -252,3 +252,30 @@ CREATE TABLE IF NOT EXISTS events (
     updated_at             TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 CREATE INDEX IF NOT EXISTS idx_events_date ON events(event_date);
+
+
+
+-- ---------------------------------------------------------------------
+-- 14. Appointments
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS appointments (
+    id                      INTEGER PRIMARY KEY AUTOINCREMENT,
+    family_member_id        INTEGER REFERENCES family_members(id) ON DELETE SET NULL,
+    category                TEXT NOT NULL,      -- 'doctor', 'auto', 'personal', 'other', 'exam'
+    title                   TEXT NOT NULL,             -- "Dentist - Dr. Smith"
+    provider_name           TEXT, -- e.g., 'Walmart', 'Dr. Smith', 'Kia Service'
+    appointment_datetime    TEXT NOT NULL,             -- ISO-8601: YYYY-MM-DD HH:MM:SS
+    notes                   TEXT, -- location, contact number etc
+    status                  TEXT NOT NULL DEFAULT 'scheduled', -- scheduled | completed | cancelled
+    reminder_days_before    INTEGER DEFAULT 7 CHECK (reminder_days_before >= 0),
+    reminder_sent           INTEGER DEFAULT 0 CHECK (reminder_sent IN (0, 1)), -- Boolean flag (0=False, 1=True)
+    amount                  REAL DEFAULT 0.00 CHECK (amount >= 0),
+    created_at              TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at              TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_appointments_datetime ON appointments(status, appointment_datetime);
+
+-- Indexes for fast querying (by upcoming date, category, and person)
+-- CREATE INDEX IF NOT EXISTS idx_appointments_datetime ON appointments(appointment_datetime);
+-- CREATE INDEX IF NOT EXISTS idx_appointments_category ON appointments(category);
+-- CREATE INDEX IF NOT EXISTS idx_appointments_person ON appointments(family_member_id);

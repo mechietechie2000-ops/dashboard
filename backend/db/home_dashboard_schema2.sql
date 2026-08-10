@@ -47,39 +47,6 @@ CREATE TABLE IF NOT EXISTS activity (
 
 
 -- ---------------------------------------------------------------------
--- 5. Appointments
--- ---------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS appointments (
-    id                      INTEGER PRIMARY KEY AUTOINCREMENT,
-    family_member_id        INTEGER REFERENCES family_members(id) ON DELETE SET NULL,
-    title                   TEXT NOT NULL,             -- "Dentist - Dr. Smith"
-    provider_name           TEXT,
-    appointment_type        TEXT,                      -- medical | dental | vet | other
-    appointment_datetime    TEXT NOT NULL,             -- ISO-8601: YYYY-MM-DD HH:MM:SS
-    location                TEXT,
-    notes                   TEXT,
-    status                  TEXT NOT NULL DEFAULT 'scheduled', -- scheduled | completed | cancelled
-    created_at              TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at              TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-CREATE INDEX IF NOT EXISTS idx_appointments_datetime ON appointments(status, appointment_datetime);
-
-CREATE TABLE IF NOT EXISTS appointments (
-  appointment_id INTEGER PRIMARY KEY,
-  category STRING NOT NULL DEFAULT 'Doctor',
-  patient_name STRING NOT NULL,
-  doctor_name STRING NOT NULL,
-  appointment_date DATE NOT NULL,
-  purpose TEXT,
-  amount_charged INT,
-  address string,
-  contact_number INT,
-  doctor_special STRING,
-  insurance STRING
-);
-
-
--- ---------------------------------------------------------------------
 -- 7. Upcoming Payments / Bills
 -- ---------------------------------------------------------------------
 
