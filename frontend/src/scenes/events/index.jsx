@@ -1,4 +1,4 @@
-/*
+
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Box,
@@ -26,8 +26,10 @@ import SnoozeOutlinedIcon from "@mui/icons-material/SnoozeOutlined";
 import RecordVoiceOverOutlinedIcon from "@mui/icons-material/RecordVoiceOverOutlined";
 import LocalFireDepartmentOutlinedIcon from "@mui/icons-material/LocalFireDepartmentOutlined";
 import { tokens } from "../../theme";
-*/
 
+const eventModule = () => {}
+
+export default eventModule
 
 // This is not developed yet
 

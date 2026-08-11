@@ -8,9 +8,16 @@ import CloudUploadOutlinedIcon from "@mui/icons-material/CloudUploadOutlined";
 import CalendarTodayOutlinedIcon from "@mui/icons-material/CalendarTodayOutlined";
 import { tokens } from "../../theme";
 
-// Index -> route. `null` entries (Add task, Search) have no destination yet —
-// they're placeholders until those features exist, so onChange no-ops for them.
-const ROUTES = ["/", "/add-task", null, "/digiLocker", "/calendar"];
+// Index -> route. `null` entries (Search) have no destination yet — they're
+// placeholders until those features exist, so onChange no-ops for them.
+//
+// "Add" used to route to /add-task (the category-based AddTaskForm — see
+// scenes/tasks/AddTask.jsx). That form still exists and its route is still
+// registered in App.js for later use, but it was never wired into the
+// generic sectionFields/SectionForm system this app otherwise uses, so
+// bottom-nav "+" now opens the Todo Task quick-add instead (generic
+// SectionForm, consistent with every other section's "+").
+const ROUTES = ["/", "/todo-task/new", null, "/digiLocker", "/calendar"];
 
 export const BOTTOM_NAV_HEIGHT = 56; // MUI BottomNavigation's default height
 
@@ -34,7 +41,7 @@ const BottomNav = () => {
     setValue(newValue);
     const target = ROUTES[newValue];
     if (target) navigate(target);
-    // else: placeholder tab (Add task / Search) — nothing to do yet.
+    // else: Search — no destination yet.
   };
 
   return (
@@ -57,7 +64,7 @@ const BottomNav = () => {
         sx={{ backgroundColor: colors.primary[400], height: BOTTOM_NAV_HEIGHT, marginBottom:2, marginLeft:2, marginRight:2 }}
       >
         <BottomNavigationAction label="Home" icon={<HomeOutlinedIcon />} />
-        <BottomNavigationAction label="Add" icon={<AddCircleOutlineIcon />} />
+        <BottomNavigationAction label="Todo" icon={<AddCircleOutlineIcon />} />
         <BottomNavigationAction label="Search" icon={<SearchIcon />} />
         <BottomNavigationAction label="Upload" icon={<CloudUploadOutlinedIcon />} />
         <BottomNavigationAction label="Calendar" icon={<CalendarTodayOutlinedIcon />} />
