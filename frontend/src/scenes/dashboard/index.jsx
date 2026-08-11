@@ -1,284 +1,230 @@
-import { Box, Button, IconButton, Typography, useTheme } from "@mui/material";
+import { useEffect, useState, useCallback } from "react";
+import { Box, Button, IconButton, Modal, Snackbar, useTheme } from "@mui/material";
+import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
+import RestartAltIcon from "@mui/icons-material/RestartAlt";
 import { tokens } from "../../theme";
-import { mockTransactions } from "../../data/mockData";
-import DownloadOutlinedIcon from "@mui/icons-material/DownloadOutlined";
-import EmailIcon from "@mui/icons-material/Email";
-// import PointOfSaleIcon from "@mui/icons-material/PointOfSale";
-import PersonAddIcon from "@mui/icons-material/PersonAdd";
-// import TrafficIcon from "@mui/icons-material/Traffic";
 import Header from "../../components/Header";
-// import LineChart from "../../components/LineChart";
-// import GeographyChart from "../../components/GeographyChart";
-// import BarChart from "../../components/BarChart";
-// import StatBox from "../../components/StatBox";
-// import ProgressCircle from "../../components/ProgressCircle";
+import DashboardSection from "../../components/DashboardSection";
+import SectionForm from "../../components/SectionForm";
+import sectionFields from "../../config/sectionFields";
+import { listRecords, insertRecord, updateRecord, deleteRecord } from "../../data/sectionRepository";
+import { runDailyResetManual } from "../../data/routineRepository";
 
-const Dashboard = () => {
+const SECTION_KEYS = [
+  "routine",
+  "reminders",
+  "goals",
+  "events",
+  "appointments",
+  "renewals",
+  "bills",
+  "extracurricular",
+  "library",
+];
+
+const UNDO_WINDOW_MS = 4500;
+
+const HomeDashboard = () => {
   const theme = useTheme();
   const colors = tokens(theme.palette.mode);
 
+  const [itemsBySection, setItemsBySection] = useState({});
+  const [activeSection, setActiveSection] = useState(null);
+  const [editingItem, setEditingItem] = useState(null); // raw row being edited, or null when adding
+  const [pendingUndo, setPendingUndo] = useState(null); // { sectionKey, item, timeoutId }
+  const [resetting, setResetting] = useState(false);
+  const [resetMessage, setResetMessage] = useState("");
+
+  const loadSection = useCallback(async (sectionKey) => {
+    try {
+      const items = await listRecords(sectionKey);
+      setItemsBySection((prev) => ({ ...prev, [sectionKey]: items }));
+    } catch (err) {
+      console.error(`Failed to load ${sectionKey}:`, err);
+      setItemsBySection((prev) => ({ ...prev, [sectionKey]: [] }));
+    }
+  }, []);
+
+  useEffect(() => {
+    SECTION_KEYS.forEach(loadSection);
+  }, [loadSection]);
+
+  const openAdd = (sectionKey) => {
+    setEditingItem(null);
+    setActiveSection(sectionKey);
+  };
+
+  const openEdit = (sectionKey, item) => {
+    setEditingItem(item.raw);
+    setActiveSection(sectionKey);
+  };
+
+  const closeForm = () => {
+    setActiveSection(null);
+    setEditingItem(null);
+  };
+
+  const handleSubmit = async (sectionKey, values) => {
+    if (editingItem) {
+      await updateRecord(sectionKey, editingItem.id, values);
+    } else {
+      await insertRecord(sectionKey, values);
+    }
+    await loadSection(sectionKey);
+    closeForm();
+  };
+
+  // Optimistically remove the item and delay the actual API call so the
+  // Snackbar's "Undo" can cancel it outright — mirrors the pattern already
+  // used for routine tasks in scenes/routine/index.jsx.
+  const queueDelete = (sectionKey, item) => {
+    setItemsBySection((prev) => ({
+      ...prev,
+      [sectionKey]: (prev[sectionKey] || []).filter((i) => i.id !== item.id),
+    }));
+
+    const timeoutId = setTimeout(async () => {
+      try {
+        await deleteRecord(sectionKey, item.id);
+      } catch (err) {
+        console.error(`Failed to delete ${sectionKey} item ${item.id}:`, err);
+        loadSection(sectionKey); // resync with the server if the delete failed
+      }
+      setPendingUndo((cur) => (cur && cur.item.id === item.id ? null : cur));
+    }, UNDO_WINDOW_MS);
+
+    setPendingUndo({ sectionKey, item, timeoutId });
+  };
+
+  const handleUndoDelete = () => {
+    if (!pendingUndo) return;
+    clearTimeout(pendingUndo.timeoutId);
+    setItemsBySection((prev) => ({
+      ...prev,
+      [pendingUndo.sectionKey]: [...(prev[pendingUndo.sectionKey] || []), pendingUndo.item],
+    }));
+    setPendingUndo(null);
+  };
+
+  const handleDailyReset = async () => {
+    if (resetting) return;
+    setResetting(true);
+    try {
+      const result = await runDailyResetManual();
+      setResetMessage(
+        result.skipped
+          ? "Already reset for today."
+          : `Reset complete — ${result.tasksLoaded} task(s) loaded for today.`
+      );
+      await loadSection("routine");
+    } catch (err) {
+      setResetMessage(err.message || "Reset failed — please try again.");
+    } finally {
+      setResetting(false);
+    }
+  };
+
   return (
-    <Box m="20px">
-      {/* HEADER */}
-      <Box display="flex" justifyContent="space-between" alignItems="center">
-        <Header title="DASHBOARD" subtitle="Welcome Home!" />
+    <Box m={{ xs: "0px", sm: "20px" }}>
+      <Header title="HOME" subtitle="Welcome back!" />
 
-        <Box>
-          <Button
-            sx={{
-              backgroundColor: colors.blueAccent[700],
-              color: colors.grey[100],
-              fontSize: "14px",
-              fontWeight: "bold",
-              padding: "10px 20px",
-            }}
-          >
-            <DownloadOutlinedIcon sx={{ mr: "10px" }} />
-            Download Reports
-          </Button>
-        </Box>
-      </Box>
-
-      {/* GRID & CHARTS */}
       <Box
         display="grid"
-        gridTemplateColumns="repeat(12, 1fr)"
-        gridAutoRows="140px"
+        gridTemplateColumns={{ xs: "1fr", sm: "repeat(2, 1fr)", md: "repeat(3, 1fr)" }}
+        gridAutoRows="minmax(240px, auto)"
         gap="20px"
+        mt="10px"
       >
-        {/* ROW 1 */}
-        <Box
-          gridColumn="span 3"
-          backgroundColor={colors.primary[400]}
-          display="flex"
-          alignItems="center"
-          justifyContent="center"
-        >
-          <StatBox
-            title="12,361"
-            subtitle="Emails Sent"
-            progress="0.75"
-            increase="+14%"
-            icon={
-              <EmailIcon
-                sx={{ color: colors.greenAccent[600], fontSize: "26px" }}
+        {SECTION_KEYS.map((sectionKey) => {
+          const config = sectionFields[sectionKey];
+          return (
+            <Box key={sectionKey} position="relative"sx={{ minWidth: 0, // CRITICAL: Prevents CSS Grid item from stretching beyond screen width 
+              }}
+            >
+              <DashboardSection
+                title={config.label}
+                icon={config.icon}
+                items={itemsBySection[sectionKey] || []}
+                emptyMessage={config.emptyMessage}
+                viewAllLink={config.viewAllLink}
+                onEditRequest={(item) => openEdit(sectionKey, item)}
+                onDeleteRequest={(item) => queueDelete(sectionKey, item)}
               />
-            }
-          />
-        </Box>
-        <Box
-          gridColumn="span 3"
-          backgroundColor={colors.primary[400]}
-          display="flex"
-          alignItems="center"
-          justifyContent="center"
-        >
-          <StatBox
-            title="431,225"
-            subtitle="Sales Obtained"
-            progress="0.50"
-            increase="+21%"
-            icon={
-              <PointOfSaleIcon
-                sx={{ color: colors.greenAccent[600], fontSize: "26px" }}
-              />
-            }
-          />
-        </Box>
-        <Box
-          gridColumn="span 3"
-          backgroundColor={colors.primary[400]}
-          display="flex"
-          alignItems="center"
-          justifyContent="center"
-        >
-          <StatBox
-            title="32,441"
-            subtitle="New Clients"
-            progress="0.30"
-            increase="+5%"
-            icon={
-              <PersonAddIcon
-                sx={{ color: colors.greenAccent[600], fontSize: "26px" }}
-              />
-            }
-          />
-        </Box>
-        <Box
-          gridColumn="span 3"
-          backgroundColor={colors.primary[400]}
-          display="flex"
-          alignItems="center"
-          justifyContent="center"
-        >
-          <StatBox
-            title="1,325,134"
-            subtitle="Traffic Received"
-            progress="0.80"
-            increase="+43%"
-            icon={
-              <TrafficIcon
-                sx={{ color: colors.greenAccent[600], fontSize: "26px" }}
-              />
-            }
-          />
-        </Box>
-
-        {/* ROW 2 */}
-        <Box
-          gridColumn="span 8"
-          gridRow="span 2"
-          backgroundColor={colors.primary[400]}
-        >
-          <Box
-            mt="25px"
-            p="0 30px"
-            display="flex "
-            justifyContent="space-between"
-            alignItems="center"
-          >
-            <Box>
-              <Typography
-                variant="h5"
-                fontWeight="600"
-                color={colors.grey[100]}
+              <IconButton
+                onClick={() => openAdd(sectionKey)}
+                size="small"
+                sx={{ position: "absolute", top: 12, right: config.viewAllLink ? 90 : 12 }}
+                aria-label={`Add ${config.label}`}
               >
-                Revenue Generated
-              </Typography>
-              <Typography
-                variant="h3"
-                fontWeight="bold"
-                color={colors.greenAccent[500]}
-              >
-                $59,342.32
-              </Typography>
-            </Box>
-            <Box>
-              <IconButton>
-                <DownloadOutlinedIcon
-                  sx={{ fontSize: "26px", color: colors.greenAccent[500] }}
-                />
+                <AddCircleOutlineIcon sx={{ color: colors.greenAccent[500] }} />
               </IconButton>
-            </Box>
-          </Box>
-          <Box height="250px" m="-20px 0 0 0">
-            <LineChart isDashboard={true} />
-          </Box>
-        </Box>
-        <Box
-          gridColumn="span 4"
-          gridRow="span 2"
-          backgroundColor={colors.primary[400]}
-          overflow="auto"
-        >
-          <Box
-            display="flex"
-            justifyContent="space-between"
-            alignItems="center"
-            borderBottom={`4px solid ${colors.primary[500]}`}
-            colors={colors.grey[100]}
-            p="15px"
-          >
-            <Typography color={colors.grey[100]} variant="h5" fontWeight="600">
-              Recent Transactions
-            </Typography>
-          </Box>
-          {mockTransactions.map((transaction, i) => (
-            <Box
-              key={`${transaction.txId}-${i}`}
-              display="flex"
-              justifyContent="space-between"
-              alignItems="center"
-              borderBottom={`4px solid ${colors.primary[500]}`}
-              p="15px"
-            >
-              <Box>
-                <Typography
-                  color={colors.greenAccent[500]}
-                  variant="h5"
-                  fontWeight="600"
+              {sectionKey === "routine" && (
+                <IconButton
+                  onClick={handleDailyReset}
+                  disabled={resetting}
+                  size="small"
+                  sx={{
+                    position: "absolute",
+                    top: 12,
+                    right: (config.viewAllLink ? 90 : 12) + 40,
+                  }}
+                  aria-label="Reset today's routine"
+                  title="Reset today's routine"
                 >
-                  {transaction.txId}
-                </Typography>
-                <Typography color={colors.grey[100]}>
-                  {transaction.user}
-                </Typography>
-              </Box>
-              <Box color={colors.grey[100]}>{transaction.date}</Box>
-              <Box
-                backgroundColor={colors.greenAccent[500]}
-                p="5px 10px"
-                borderRadius="4px"
-              >
-                ${transaction.cost}
-              </Box>
+                  <RestartAltIcon sx={{ color: colors.grey[300], opacity: resetting ? 0.4 : 1 }} />
+                </IconButton>
+              )}
             </Box>
-          ))}
-        </Box>
-
-        {/* ROW 3 */}
-        <Box
-          gridColumn="span 4"
-          gridRow="span 2"
-          backgroundColor={colors.primary[400]}
-          p="30px"
-        >
-          <Typography variant="h5" fontWeight="600">
-            Campaign
-          </Typography>
-          <Box
-            display="flex"
-            flexDirection="column"
-            alignItems="center"
-            mt="25px"
-          >
-            <ProgressCircle size="125" />
-            <Typography
-              variant="h5"
-              color={colors.greenAccent[500]}
-              sx={{ mt: "15px" }}
-            >
-              $48,352 revenue generated
-            </Typography>
-            <Typography>Includes extra misc expenditures and costs</Typography>
-          </Box>
-        </Box>
-        <Box
-          gridColumn="span 4"
-          gridRow="span 2"
-          backgroundColor={colors.primary[400]}
-        >
-          <Typography
-            variant="h5"
-            fontWeight="600"
-            sx={{ padding: "30px 30px 0 30px" }}
-          >
-            Sales Quantity
-          </Typography>
-          <Box height="250px" mt="-20px">
-            <BarChart isDashboard={true} />
-          </Box>
-        </Box>
-        <Box
-          gridColumn="span 4"
-          gridRow="span 2"
-          backgroundColor={colors.primary[400]}
-          padding="30px"
-        >
-          <Typography
-            variant="h5"
-            fontWeight="600"
-            sx={{ marginBottom: "15px" }}
-          >
-            Geography Based Traffic
-          </Typography>
-          <Box height="200px">
-            <GeographyChart isDashboard={true} />
-          </Box>
-        </Box>
+          );
+        })}
       </Box>
+
+      <Modal open={Boolean(activeSection)} onClose={closeForm}>
+        <Box
+          sx={{
+            position: "absolute",
+            top: "50%",
+            left: "50%",
+            transform: "translate(-50%, -50%)",
+            width: { xs: "90%", sm: 420 },
+            bgcolor: colors.primary[400],
+            borderRadius: "4px",
+            p: "24px",
+            maxHeight: "90vh",
+            overflowY: "auto",
+
+          }}
+        >
+          {activeSection && (
+            <SectionForm
+              sectionKey={activeSection}
+              initialValues={editingItem}
+              onSubmit={handleSubmit}
+              onCancel={closeForm}
+            />
+          )}
+        </Box>
+      </Modal>
+
+      <Snackbar
+        open={!!resetMessage}
+        message={resetMessage}
+        autoHideDuration={4000}
+        onClose={() => setResetMessage("")}
+      />
+
+      <Snackbar
+        open={!!pendingUndo}
+        message={pendingUndo ? `${pendingUndo.item.primary || "Item"} deleted` : ""}
+        autoHideDuration={UNDO_WINDOW_MS}
+        action={
+          <Button color="secondary" size="small" onClick={handleUndoDelete}>
+            Undo
+          </Button>
+        }
+      />
     </Box>
   );
 };
 
-export default Dashboard;
+export default HomeDashboard;

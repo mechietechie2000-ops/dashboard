@@ -23,4 +23,22 @@ router.post(
   handle((req) => repo.insertRecord(req.params.sectionKey, req.body))
 );
 
+router.delete(
+  "/api/sections/:sectionKey/:id",
+  handle((req) =>
+    repo.deleteRecord(req.params.sectionKey, req.params.id)
+  )
+);
+
+router.put(
+  "/api/sections/:sectionKey/:id",
+  handle((req) =>
+    repo.updateRecord(
+      req.params.sectionKey,
+      req.params.id,
+      req.body
+    )
+  )
+);
+
 module.exports = router;

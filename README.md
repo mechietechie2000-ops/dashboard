@@ -13,6 +13,24 @@ launchctl load ~/Library/LaunchAgents/com.dashboard.dailyreset.plist
 
 # Daily Routine Reset node-cron
 
+
+# Entry point of App 
+- public/index.html -> ../index.js -> ../App.js -> Routes (/ -> HomeDashboard)
+- App.js -> Login(auth), User Registration, Routes, Top Navbar, Sidebar, Botton Navbar
+- /(HomeDashboard) -> src/home/index.jsx
+
+# in Section (9) - it's generic code for all 9 sections including routes and frontend 
+# backend (routes/section.js (select/DML))
+# backend (db/sectionConfig.js (table, column, orderby clause))
+# backend (db/sectionRepository.js (DML, Select - query formation with dynamic columns for each table)) - parsing
+
+# frontend (config/sectionFields.js) -  Frontend form mapping with actual table columns
+# frontend (component/SectionForm.js) - 
+
+# If you want to fix Section
+ 1. db/sectionConfig.js  (update column names)
+ 2. config/sectionFields.js (update column name, Frontend fields)
+
 # Rule of Thumb
 Root package.json: Holds project-wide orchestrators and tooling (like concurrently).
 

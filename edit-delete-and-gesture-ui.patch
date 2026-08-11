@@ -1,0 +1,678 @@
+diff --git a/backend/db/sectionConfig.js b/backend/db/sectionConfig.js
+index d3b28aa..2ad02a8 100644
+--- a/backend/db/sectionConfig.js
++++ b/backend/db/sectionConfig.js
+@@ -105,6 +105,10 @@ module.exports = {
+  */    
+     requiredColumns: ["category", "expiry_date"],
+     jsonColumns: ["attributes"],
++    // renewals only stores family_member_id (FK); join family_members so
++    // listRecords can also return a display name for the frontend.
++    select: "renewals.*, family_members.first_name AS family_member_name",
++    joins: "LEFT JOIN family_members ON family_members.id = renewals.family_member_id",
+     orderBy: "expiry_date ASC",
+   },
+   bills: {
+diff --git a/backend/db/sectionRepository.js b/backend/db/sectionRepository.js
+index e8f85e1..774a984 100644
+--- a/backend/db/sectionRepository.js
++++ b/backend/db/sectionRepository.js
+@@ -30,7 +30,11 @@ function parseJsonColumns(cfg, rows) {
+ 
+ async function listRecords(sectionKey, { limit } = {}) {
+   const cfg = getConfig(sectionKey);
+-  let sql = `SELECT * FROM ${cfg.tableName}`;
++  // `select`/`joins` are optional per-section overrides (see sectionConfig.js)
++  // for sections that need to resolve a foreign key to a display value, e.g.
++  // renewals.family_member_id -> family_members.first_name.
++  let sql = `SELECT ${cfg.select || "*"} FROM ${cfg.tableName}`;
++  if (cfg.joins) sql += ` ${cfg.joins}`;
+   if (cfg.where) sql += ` WHERE ${cfg.where}`;
+   sql += ` ORDER BY ${cfg.orderBy}`;
+   if (limit) sql += ` LIMIT ${Number(limit)}`;
+@@ -62,4 +66,33 @@ async function insertRecord(sectionKey, values) {
+   return { id: result.lastID };
+ }
+ 
+-module.exports = { listRecords, insertRecord };
++async function updateRecord(sectionKey, id, values) {
++  const cfg = getConfig(sectionKey);
++
++  const cols = cfg.columns.filter((c) => values[c] !== undefined);
++  if (cols.length === 0) {
++    const err = new Error("No updatable fields provided");
++    err.status = 400;
++    throw err;
++  }
++
++  const setClause = cols.map((c) => `${c} = ?`).join(", ");
++  const params = cols.map((c) => {
++    const v = values[c];
++    return v !== null && typeof v === "object" ? JSON.stringify(v) : v;
++  });
++  params.push(id);
++
++  const sql = `UPDATE ${cfg.tableName} SET ${setClause} WHERE id = ?`;
++  const result = await db.run(sql, params);
++  return { changes: result.changes };
++}
++
++async function deleteRecord(sectionKey, id) {
++  const cfg = getConfig(sectionKey);
++  const sql = `DELETE FROM ${cfg.tableName} WHERE id = ?`;
++  const result = await db.run(sql, [id]);
++  return { changes: result.changes };
++}
++
++module.exports = { listRecords, insertRecord, updateRecord, deleteRecord };
+diff --git a/frontend/src/components/DashboardSection.jsx b/frontend/src/components/DashboardSection.jsx
+index cf8a43b..190ff66 100644
+--- a/frontend/src/components/DashboardSection.jsx
++++ b/frontend/src/components/DashboardSection.jsx
+@@ -1,20 +1,170 @@
+-import { Box, Typography, useTheme } from "@mui/material";
++import { useRef, useState } from "react";
++import { Box, Typography, IconButton, useTheme } from "@mui/material";
++import CloseIcon from "@mui/icons-material/Close";
+ import { Link } from "react-router-dom";
+ import { tokens } from "../theme";
+ 
++const SWIPE_THRESHOLD = 90;
++const LONG_PRESS_MS = 500;
++const MOVE_CANCEL_PX = 10;
++const isTouchDevice =
++  typeof window !== "undefined" &&
++  ("ontouchstart" in window || navigator.maxTouchPoints > 0);
++
++/**
++ * One row's interaction shell: no visible edit/delete icons by default.
++ * - Desktop: hover reveals a small delete "x"; double-click opens the
++ *   section's edit form (via onEditRequest).
++ * - Touch: swipe-left past the threshold deletes; a long-press (that
++ *   doesn't turn into a swipe) opens the edit form.
++ */
++const SectionItemRow = ({ item, colors, isLast, onEditRequest, onDeleteRequest, children }) => {
++  const [dragX, setDragX] = useState(0);
++  const [hovered, setHovered] = useState(false);
++  const dragging = useRef(false);
++  const startX = useRef(0);
++  const longPressTimer = useRef(null);
++  const longPressFired = useRef(false);
++
++  const clearLongPress = () => {
++    if (longPressTimer.current) clearTimeout(longPressTimer.current);
++    longPressTimer.current = null;
++  };
++
++  const onTouchStart = (e) => {
++    dragging.current = true;
++    longPressFired.current = false;
++    startX.current = e.touches[0].clientX;
++    longPressTimer.current = setTimeout(() => {
++      longPressFired.current = true;
++      dragging.current = false;
++      setDragX(0);
++      if (navigator.vibrate) navigator.vibrate(15);
++      onEditRequest(item);
++    }, LONG_PRESS_MS);
++  };
++
++  const onTouchMove = (e) => {
++    if (!dragging.current) return;
++    const x = e.touches[0].clientX - startX.current;
++    if (Math.abs(x) > MOVE_CANCEL_PX) clearLongPress();
++    setDragX(x);
++  };
++
++  const onTouchEnd = () => {
++    clearLongPress();
++    if (!dragging.current) return;
++    dragging.current = false;
++    if (!longPressFired.current && dragX < -SWIPE_THRESHOLD) {
++      onDeleteRequest(item);
++    }
++    setDragX(0);
++  };
++
++  const onTouchCancel = () => {
++    clearLongPress();
++    dragging.current = false;
++    setDragX(0);
++  };
++
++  const touchHandlers = isTouchDevice
++    ? { onTouchStart, onTouchMove, onTouchEnd, onTouchCancel }
++    : {};
++
++  const desktopHandlers = isTouchDevice
++    ? {}
++    : {
++        onMouseEnter: () => setHovered(true),
++        onMouseLeave: () => setHovered(false),
++        onDoubleClick: () => onEditRequest(item),
++      };
++
++  return (
++    <Box
++      sx={{
++        position: "relative",
++        overflow: "hidden",
++        borderRadius: "6px",
++        borderBottom: isLast ? "none" : `1px solid ${colors.primary[500]}`,
++      }}
++    >
++      {isTouchDevice && dragX < 0 && (
++        <Box
++          sx={{
++            position: "absolute",
++            inset: 0,
++            display: "flex",
++            justifyContent: "flex-end",
++            alignItems: "center",
++            pr: 3,
++            backgroundColor: colors.redAccent[500],
++            opacity: Math.min(Math.abs(dragX) / SWIPE_THRESHOLD, 1),
++          }}
++        >
++          <CloseIcon sx={{ color: "#fff" }} />
++        </Box>
++      )}
++
++      <Box
++        {...touchHandlers}
++        {...desktopHandlers}
++        sx={{
++          position: "relative",
++          display: "flex",
++          justifyContent: "space-between",
++          alignItems: "flex-start",
++          gap: "10px",
++          py: "10px",
++          px: isTouchDevice ? 0 : "2px",
++          backgroundColor: colors.primary[400],
++          transform: isTouchDevice ? `translateX(${dragX}px)` : "none",
++          transition: dragging.current ? "none" : "transform 0.2s ease",
++          cursor: isTouchDevice ? "grab" : "default",
++          userSelect: "none",
++        }}
++      >
++        {children}
++
++        {!isTouchDevice && hovered && (
++          <IconButton
++            size="small"
++            aria-label="Delete"
++            onClick={() => onDeleteRequest(item)}
++            sx={{
++              position: "absolute",
++              right: -6,
++              top: -6,
++              backgroundColor: colors.primary[500],
++              "&:hover": { backgroundColor: colors.redAccent[700] },
++            }}
++          >
++            <CloseIcon fontSize="small" sx={{ color: colors.redAccent[400] }} />
++          </IconButton>
++        )}
++      </Box>
++    </Box>
++  );
++};
++
+ /**
+  * A single dashboard panel: header (icon + title + optional "View all" link)
+  * followed by a vertical list of items, or an empty-state message
+  * when there's nothing to show.
+  *
+  * Each item is expected to look like:
+- *   { id, primary, secondary?, meta? }
++ *   { id, primary, secondary?, meta?, raw? }
+  * - primary: main line of text (e.g. "Mom's Birthday")
+  * - secondary: smaller supporting text under primary (e.g. "Birthday")
+  * - meta: right-aligned text, usually a date/amount (e.g. "Aug 12")
++ * - raw: the untransformed DB row, used to prefill the edit form
++ *
++ * Edit/delete are triggered by interaction, not visible icons:
++ * double-click + hover-x on desktop, long-press + swipe-left on touch.
++ * Pass onEditRequest/onDeleteRequest to enable them; omit either to leave
++ * that action off for a given section.
+  *
+  * Pass a custom `renderItem(item, index)` if a section needs a different
+- * row layout than the default.
++ * row layout than the default (edit/delete gestures won't apply to it).
+  */
+ const DashboardSection = ({
+   title,
+@@ -23,67 +173,92 @@ const DashboardSection = ({
+   emptyMessage = "Nothing here yet",
+   viewAllLink,
+   renderItem,
++  onEditRequest,
++  onDeleteRequest,
+ }) => {
+   const theme = useTheme();
+   const colors = tokens(theme.palette.mode);
+ 
+-  const defaultRenderItem = (item, i) => (
+-    <Box
+-      key={item.id ?? i}
+-      display="flex"
+-      justifyContent="space-between"
+-      alignItems="flex-start" // Changed to flex-start so meta stays top-aligned when primary wraps
+-      borderBottom={
+-        i === items.length - 1 ? "none" : `1px solid ${colors.primary[500]}`
+-      }
+-      py="10px"
+-      gap="10px"
+-    >
+-      <Box
+-        minWidth={0} // Allows flex child to shrink properly inside grid box
+-        sx={{
+-          wordBreak: "break-word",
+-          overflowWrap: "anywhere",
+-        }}
+-      >
+-        <Typography
+-          color={colors.grey[100]}
+-          fontWeight="600"
+-          title={item.primary}
++  const defaultRenderItem = (item, i) => {
++    const row = (
++      <>
++        <Box
++          minWidth={0}
+           sx={{
+-            fontSize: { xs: "1.25rem", sm: "0.875rem" },   // bigger on mobile, normal on desktop
+             wordBreak: "break-word",
+             overflowWrap: "anywhere",
+           }}
+         >
+-          {item.primary}
+-        </Typography>
+-        {item.secondary && (
+           <Typography
+-            variant="body2"
+-            color={colors.grey[300]}
++            color={colors.grey[100]}
++            fontWeight="600"
++            title={item.primary}
+             sx={{
+-              fontSize: { xs: "0.9rem", sm: "0.75rem" },
++              fontSize: { xs: "1.25rem", sm: "0.875rem" },
+               wordBreak: "break-word",
+               overflowWrap: "anywhere",
+             }}
+           >
+-            {item.secondary}
++            {item.primary}
++          </Typography>
++          {item.secondary && (
++            <Typography
++              variant="body2"
++              color={colors.grey[300]}
++              sx={{
++                fontSize: { xs: "0.9rem", sm: "0.75rem" },
++                wordBreak: "break-word",
++                overflowWrap: "anywhere",
++              }}
++            >
++              {item.secondary}
++            </Typography>
++          )}
++        </Box>
++        {item.meta && (
++          <Typography
++            variant="body2"
++            color={colors.greenAccent[500]}
++            whiteSpace="nowrap"
++            sx={{ flexShrink: 0, fontSize: { xs: "0.9rem", sm: "0.75rem" } }}
++          >
++            {item.meta}
+           </Typography>
+         )}
+-      </Box>
+-      {item.meta && (
+-        <Typography
+-          variant="body2"
+-          color={colors.greenAccent[500]}
+-          whiteSpace="nowrap"
+-          sx={{ flexShrink: 0, fontSize: { xs: "0.9rem", sm: "0.75rem" } }} // Prevents meta tag (e.g., date or price) from squishing
++      </>
++    );
++
++    if (!onEditRequest && !onDeleteRequest) {
++      // No handlers wired up (e.g. a section not yet edit/delete-enabled)
++      // — render the plain row, same as before.
++      return (
++        <Box
++          key={item.id ?? i}
++          display="flex"
++          justifyContent="space-between"
++          alignItems="flex-start"
++          borderBottom={i === items.length - 1 ? "none" : `1px solid ${colors.primary[500]}`}
++          py="10px"
++          gap="10px"
+         >
+-          {item.meta}
+-        </Typography>
+-      )}
+-    </Box>
+-  );
++          {row}
++        </Box>
++      );
++    }
++
++    return (
++      <SectionItemRow
++        key={item.id ?? i}
++        item={item}
++        colors={colors}
++        isLast={i === items.length - 1}
++        onEditRequest={onEditRequest || (() => {})}
++        onDeleteRequest={onDeleteRequest || (() => {})}
++      >
++        {row}
++      </SectionItemRow>
++    );
++  };
+ 
+   return (
+     <Box
+@@ -94,7 +269,7 @@ const DashboardSection = ({
+       flexDirection="column"
+       height="100%"
+       sx={{
+-        overflow: "hidden", // Prevents card overflow from pushing screen bounds
++        overflow: "hidden",
+       }}
+     >
+       {/* HEADER */}
+@@ -169,4 +344,4 @@ const DashboardSection = ({
+   );
+ };
+ 
+-export default DashboardSection;
+\ No newline at end of file
++export default DashboardSection;
+diff --git a/frontend/src/components/SectionForm.jsx b/frontend/src/components/SectionForm.jsx
+index 266773b..2e71676 100644
+--- a/frontend/src/components/SectionForm.jsx
++++ b/frontend/src/components/SectionForm.jsx
+@@ -48,14 +48,39 @@ const resolveOptions = (field, values) =>
+  * (group a set of fields into one nested JSON object on submit, e.g. all
+  * category-specific fields collapse into `attributes`).
+  */
+-const SectionForm = ({ sectionKey, onSubmit, onCancel }) => {
++const SectionForm = ({ sectionKey, initialValues, onSubmit, onCancel }) => {
+   const config = sectionFields[sectionKey];
+-  const [values, setValues] = useState({});
++  const isEditing = Boolean(initialValues);
++  const [values, setValues] = useState(initialValues || {});
+   const [errors, setErrors] = useState({});
+   const [submitting, setSubmitting] = useState(false);
+   const [asyncOptions, setAsyncOptions] = useState({});
+   const [submitError, setSubmitError] = useState(null);
+ 
++  // Re-seed local form state whenever the record being edited changes (e.g.
++  // switching from "add" to editing a specific row, or between rows).
++  useEffect(() => {
++    if (!initialValues || !config) {
++      setValues(initialValues || {});
++      return;
++    }
++    const seeded = { ...initialValues };
++    for (const field of config.fields) {
++      if (
++        (field.type === "select" || field.type === "asyncSelect") &&
++        seeded[field.name] !== undefined &&
++        seeded[field.name] !== null
++      ) {
++        // Raw DB values (e.g. family_member_id) come back as numbers; option
++        // values are strings, so an un-coerced value won't match and the
++        // select will render blank even though the record has a value.
++        seeded[field.name] = String(seeded[field.name]);
++      }
++    }
++    setValues(seeded);
++    // eslint-disable-next-line react-hooks/exhaustive-deps
++  }, [initialValues, sectionKey]);
++
+   useEffect(() => {
+     if (!config) return;
+     config.fields
+@@ -221,7 +246,7 @@ const SectionForm = ({ sectionKey, onSubmit, onCancel }) => {
+           </Button>
+         )}
+         <Button type="submit" variant="contained" disabled={submitting}>
+-          {submitting ? "Saving..." : "Save"}
++          {submitting ? "Saving..." : isEditing ? "Update" : "Save"}
+         </Button>
+       </Box>
+     </Box>
+diff --git a/frontend/src/config/sectionFields.js b/frontend/src/config/sectionFields.js
+index 7f63dff..d818f9a 100644
+--- a/frontend/src/config/sectionFields.js
++++ b/frontend/src/config/sectionFields.js
+@@ -51,7 +51,7 @@ const sectionFields = {
+       { name: "task_time", label: "Time (HH:MM)", type: "text", required: true },
+     ],
+     mapRowToItem: (row) => ({
+-      id: row.routine_id,
++      id: row.id,
+       primary: row.task_name,
+       secondary: row.person,
+       meta: row.task_time,
+@@ -328,7 +328,10 @@ const sectionFields = {
+     ],
+     mapRowToItem: (row) => ({
+       id: row.id,
+-      primary: row.for,
++      // family_member_name comes from the LEFT JOIN in sectionConfig.js
++      // (renewals only stores family_member_id). Fall back to the item's
++      // own title/category when no family member is set on the record.
++      primary: row.family_member_name || row.title || row.category,
+       secondary: [
+         row.category,
+         row.subcategory,
+diff --git a/frontend/src/data/sectionRepository.js b/frontend/src/data/sectionRepository.js
+index 22d7bef..097eb8c 100644
+--- a/frontend/src/data/sectionRepository.js
++++ b/frontend/src/data/sectionRepository.js
+@@ -12,10 +12,23 @@ export async function listRecords(sectionKey, { limit } = {}) {
+   const query = limit ? `?limit=${limit}` : "";
+   const { data } = await api.get(`/sections/${sectionKey}${query}`);
+   const rows = data || [];
+-  return rows.map(config.mapRowToItem);
++  // `raw` keeps the untransformed row alongside the display shape so an
++  // edit form can be prefilled with actual column values (mapRowToItem's
++  // { id, primary, secondary, meta } output is lossy by design).
++  return rows.map((row) => ({ ...config.mapRowToItem(row), raw: row }));
+ }
+ 
+ export async function insertRecord(sectionKey, values) {
+   const { data } = await api.post(`/sections/${sectionKey}`, values);
+   return data;
+ }
++
++export async function updateRecord(sectionKey, id, values) {
++  const { data } = await api.put(`/sections/${sectionKey}/${id}`, values);
++  return data;
++}
++
++export async function deleteRecord(sectionKey, id) {
++  const { data } = await api.delete(`/sections/${sectionKey}/${id}`);
++  return data;
++}
+diff --git a/frontend/src/scenes/dashboard/index.jsx b/frontend/src/scenes/dashboard/index.jsx
+index 5146e64..349b4fa 100755
+--- a/frontend/src/scenes/dashboard/index.jsx
++++ b/frontend/src/scenes/dashboard/index.jsx
+@@ -1,5 +1,5 @@
+ import { useEffect, useState, useCallback } from "react";
+-import { Box, IconButton, Modal, Snackbar, useTheme } from "@mui/material";
++import { Box, Button, IconButton, Modal, Snackbar, useTheme } from "@mui/material";
+ import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
+ import RestartAltIcon from "@mui/icons-material/RestartAlt";
+ import { tokens } from "../../theme";
+@@ -7,7 +7,7 @@ import Header from "../../components/Header";
+ import DashboardSection from "../../components/DashboardSection";
+ import SectionForm from "../../components/SectionForm";
+ import sectionFields from "../../config/sectionFields";
+-import { listRecords, insertRecord } from "../../data/sectionRepository";
++import { listRecords, insertRecord, updateRecord, deleteRecord } from "../../data/sectionRepository";
+ import { runDailyResetManual } from "../../data/routineRepository";
+ 
+ const SECTION_KEYS = [
+@@ -22,12 +22,16 @@ const SECTION_KEYS = [
+   "library",
+ ];
+ 
++const UNDO_WINDOW_MS = 4500;
++
+ const HomeDashboard = () => {
+   const theme = useTheme();
+   const colors = tokens(theme.palette.mode);
+ 
+   const [itemsBySection, setItemsBySection] = useState({});
+   const [activeSection, setActiveSection] = useState(null);
++  const [editingItem, setEditingItem] = useState(null); // raw row being edited, or null when adding
++  const [pendingUndo, setPendingUndo] = useState(null); // { sectionKey, item, timeoutId }
+   const [resetting, setResetting] = useState(false);
+   const [resetMessage, setResetMessage] = useState("");
+ 
+@@ -45,10 +49,61 @@ const HomeDashboard = () => {
+     SECTION_KEYS.forEach(loadSection);
+   }, [loadSection]);
+ 
++  const openAdd = (sectionKey) => {
++    setEditingItem(null);
++    setActiveSection(sectionKey);
++  };
++
++  const openEdit = (sectionKey, item) => {
++    setEditingItem(item.raw);
++    setActiveSection(sectionKey);
++  };
++
++  const closeForm = () => {
++    setActiveSection(null);
++    setEditingItem(null);
++  };
++
+   const handleSubmit = async (sectionKey, values) => {
+-    await insertRecord(sectionKey, values);
++    if (editingItem) {
++      await updateRecord(sectionKey, editingItem.id, values);
++    } else {
++      await insertRecord(sectionKey, values);
++    }
+     await loadSection(sectionKey);
+-    setActiveSection(null);
++    closeForm();
++  };
++
++  // Optimistically remove the item and delay the actual API call so the
++  // Snackbar's "Undo" can cancel it outright — mirrors the pattern already
++  // used for routine tasks in scenes/routine/index.jsx.
++  const queueDelete = (sectionKey, item) => {
++    setItemsBySection((prev) => ({
++      ...prev,
++      [sectionKey]: (prev[sectionKey] || []).filter((i) => i.id !== item.id),
++    }));
++
++    const timeoutId = setTimeout(async () => {
++      try {
++        await deleteRecord(sectionKey, item.id);
++      } catch (err) {
++        console.error(`Failed to delete ${sectionKey} item ${item.id}:`, err);
++        loadSection(sectionKey); // resync with the server if the delete failed
++      }
++      setPendingUndo((cur) => (cur && cur.item.id === item.id ? null : cur));
++    }, UNDO_WINDOW_MS);
++
++    setPendingUndo({ sectionKey, item, timeoutId });
++  };
++
++  const handleUndoDelete = () => {
++    if (!pendingUndo) return;
++    clearTimeout(pendingUndo.timeoutId);
++    setItemsBySection((prev) => ({
++      ...prev,
++      [pendingUndo.sectionKey]: [...(prev[pendingUndo.sectionKey] || []), pendingUndo.item],
++    }));
++    setPendingUndo(null);
+   };
+ 
+   const handleDailyReset = async () => {
+@@ -92,9 +147,11 @@ const HomeDashboard = () => {
+                 items={itemsBySection[sectionKey] || []}
+                 emptyMessage={config.emptyMessage}
+                 viewAllLink={config.viewAllLink}
++                onEditRequest={(item) => openEdit(sectionKey, item)}
++                onDeleteRequest={(item) => queueDelete(sectionKey, item)}
+               />
+               <IconButton
+-                onClick={() => setActiveSection(sectionKey)}
++                onClick={() => openAdd(sectionKey)}
+                 size="small"
+                 sx={{ position: "absolute", top: 12, right: config.viewAllLink ? 90 : 12 }}
+                 aria-label={`Add ${config.label}`}
+@@ -122,7 +179,7 @@ const HomeDashboard = () => {
+         })}
+       </Box>
+ 
+-      <Modal open={Boolean(activeSection)} onClose={() => setActiveSection(null)}>
++      <Modal open={Boolean(activeSection)} onClose={closeForm}>
+         <Box
+           sx={{
+             position: "absolute",
+@@ -141,8 +198,9 @@ const HomeDashboard = () => {
+           {activeSection && (
+             <SectionForm
+               sectionKey={activeSection}
++              initialValues={editingItem}
+               onSubmit={handleSubmit}
+-              onCancel={() => setActiveSection(null)}
++              onCancel={closeForm}
+             />
+           )}
+         </Box>
+@@ -154,6 +212,17 @@ const HomeDashboard = () => {
+         autoHideDuration={4000}
+         onClose={() => setResetMessage("")}
+       />
++
++      <Snackbar
++        open={!!pendingUndo}
++        message={pendingUndo ? `${pendingUndo.item.primary || "Item"} deleted` : ""}
++        autoHideDuration={UNDO_WINDOW_MS}
++        action={
++          <Button color="secondary" size="small" onClick={handleUndoDelete}>
++            Undo
++          </Button>
++        }
++      />
+     </Box>
+   );
+ };
+diff --git a/frontend/src/services/api.js b/frontend/src/services/api.js
+index c330430..02a086e 100644
+--- a/frontend/src/services/api.js
++++ b/frontend/src/services/api.js
+@@ -71,4 +71,14 @@ api.get = async (endpoint, options = {}) => {
+ api.post = async (endpoint, body, options = {}) => {
+   const data = await api(endpoint, { ...options, method: 'POST', body });
+   return { data };
++};
++
++api.put = async (endpoint, body, options = {}) => {
++  const data = await api(endpoint, { ...options, method: 'PUT', body });
++  return { data };
++};
++
++api.delete = async (endpoint, options = {}) => {
++  const data = await api(endpoint, { ...options, method: 'DELETE' });
++  return { data };
+ };
+ 

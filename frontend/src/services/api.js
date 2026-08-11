@@ -72,3 +72,13 @@ api.post = async (endpoint, body, options = {}) => {
   const data = await api(endpoint, { ...options, method: 'POST', body });
   return { data };
 };
+
+api.put = async (endpoint, body, options = {}) => {
+  const data = await api(endpoint, { ...options, method: 'PUT', body });
+  return { data };
+};
+
+api.delete = async (endpoint, options = {}) => {
+  const data = await api(endpoint, { ...options, method: 'DELETE' });
+  return { data }
+};
