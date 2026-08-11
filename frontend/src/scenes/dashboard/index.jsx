@@ -1,5 +1,14 @@
-import { useEffect, useState, useCallback } from "react";
-import { Box, Button, IconButton, Modal, Snackbar, useTheme } from "@mui/material";
+import { useEffect, useState, useCallback, useMemo } from "react";
+import {
+  Box,
+  Button,
+  IconButton,
+  MenuItem,
+  Modal,
+  Select,
+  Snackbar,
+  useTheme,
+} from "@mui/material";
 import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
 import RestartAltIcon from "@mui/icons-material/RestartAlt";
 import { tokens } from "../../theme";
@@ -20,9 +29,52 @@ const SECTION_KEYS = [
   "bills",
   "extracurricular",
   "library",
+  "todo_task",
 ];
 
 const UNDO_WINDOW_MS = 4500;
+
+const DATE_RANGE_OPTIONS = [
+  { value: 7, label: "Next 7 days" },
+  { value: 30, label: "Next 30 days" },
+  { value: 90, label: "Next 90 days" },
+  { value: 0, label: "All" },
+];
+
+// Any field (quick-add `fields` or `detailFields`) marked
+// `dashboardFilterable: true` becomes a dropdown filter here automatically
+// — this isn't specific to Todo Task, any section with `dashboardFilter`
+// set in sectionFields.js gets the same widget for free.
+const getFilterableFields = (config) => [
+  ...(config.fields || []),
+  ...(config.detailFields || []),
+].filter((f) => f.dashboardFilterable);
+
+const withinRangeDays = (dateStr, rangeDays) => {
+  if (!rangeDays) return true; // 0/undefined = "All"
+  if (!dateStr) return true; // don't hide undated items behind a date filter
+  const target = new Date(dateStr);
+  if (Number.isNaN(target.getTime())) return true;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const end = new Date(today);
+  end.setDate(end.getDate() + rangeDays);
+  return target >= today && target <= end;
+};
+
+const applyDashboardFilters = (items, config, filterState) => {
+  if (!config.dashboardFilter) return items;
+  const { dateField, defaultRangeDays } = config.dashboardFilter;
+  const rangeDays = filterState.rangeDays ?? defaultRangeDays ?? 0;
+  return items.filter((item) => {
+    if (dateField && !withinRangeDays(item.raw?.[dateField], rangeDays)) return false;
+    for (const field of getFilterableFields(config)) {
+      const selected = filterState[field.name];
+      if (selected && String(item.raw?.[field.name]) !== String(selected)) return false;
+    }
+    return true;
+  });
+};
 
 const HomeDashboard = () => {
   const theme = useTheme();
@@ -34,6 +86,29 @@ const HomeDashboard = () => {
   const [pendingUndo, setPendingUndo] = useState(null); // { sectionKey, item, timeoutId }
   const [resetting, setResetting] = useState(false);
   const [resetMessage, setResetMessage] = useState("");
+  // Keyed by sectionKey -> { rangeDays, [filterableFieldName]: value }.
+  // Only sections with `dashboardFilter` in sectionFields.js ever read from
+  // this; everything else ignores it, same as before.
+  const [filtersBySection, setFiltersBySection] = useState({});
+
+  const setSectionFilter = (sectionKey, key, value) => {
+    setFiltersBySection((prev) => ({
+      ...prev,
+      [sectionKey]: { ...prev[sectionKey], [key]: value },
+    }));
+  };
+
+  const displayItemsBySection = useMemo(() => {
+    const result = {};
+    for (const sectionKey of SECTION_KEYS) {
+      const config = sectionFields[sectionKey];
+      const items = itemsBySection[sectionKey] || [];
+      result[sectionKey] = config?.dashboardFilter
+        ? applyDashboardFilters(items, config, filtersBySection[sectionKey] || {})
+        : items;
+    }
+    return result;
+  }, [itemsBySection, filtersBySection]);
 
   const loadSection = useCallback(async (sectionKey) => {
     try {
@@ -137,43 +212,91 @@ const HomeDashboard = () => {
       >
         {SECTION_KEYS.map((sectionKey) => {
           const config = sectionFields[sectionKey];
+          const filterState = filtersBySection[sectionKey] || {};
+          const filterableFields = config.dashboardFilter ? getFilterableFields(config) : [];
           return (
-            <Box key={sectionKey} position="relative"sx={{ minWidth: 0, // CRITICAL: Prevents CSS Grid item from stretching beyond screen width 
-              }}
+            <Box
+              key={sectionKey}
+              display="flex"
+              flexDirection="column"
+              sx={{ minWidth: 0 /* CRITICAL: prevents CSS grid item from stretching beyond screen width */ }}
             >
-              <DashboardSection
-                title={config.label}
-                icon={config.icon}
-                items={itemsBySection[sectionKey] || []}
-                emptyMessage={config.emptyMessage}
-                viewAllLink={config.viewAllLink}
-                onEditRequest={(item) => openEdit(sectionKey, item)}
-                onDeleteRequest={(item) => queueDelete(sectionKey, item)}
-              />
-              <IconButton
-                onClick={() => openAdd(sectionKey)}
-                size="small"
-                sx={{ position: "absolute", top: 12, right: config.viewAllLink ? 90 : 12 }}
-                aria-label={`Add ${config.label}`}
-              >
-                <AddCircleOutlineIcon sx={{ color: colors.greenAccent[500] }} />
-              </IconButton>
-              {sectionKey === "routine" && (
-                <IconButton
-                  onClick={handleDailyReset}
-                  disabled={resetting}
-                  size="small"
-                  sx={{
-                    position: "absolute",
-                    top: 12,
-                    right: (config.viewAllLink ? 90 : 12) + 40,
-                  }}
-                  aria-label="Reset today's routine"
-                  title="Reset today's routine"
-                >
-                  <RestartAltIcon sx={{ color: colors.grey[300], opacity: resetting ? 0.4 : 1 }} />
-                </IconButton>
+              {config.dashboardFilter && (
+                <Box display="flex" flexWrap="wrap" gap="6px" mb="8px">
+                  <Select
+                    size="small"
+                    value={filterState.rangeDays ?? config.dashboardFilter.defaultRangeDays ?? 0}
+                    onChange={(e) => setSectionFilter(sectionKey, "rangeDays", Number(e.target.value))}
+                    sx={{ minWidth: 130, fontSize: "0.8rem", color: colors.grey[100] }}
+                  >
+                    {DATE_RANGE_OPTIONS.map((opt) => (
+                      <MenuItem key={opt.value} value={opt.value} sx={{ fontSize: "0.8rem" }}>
+                        {opt.label}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                  {filterableFields.map((field) => (
+                    <Select
+                      key={field.name}
+                      size="small"
+                      displayEmpty
+                      value={filterState[field.name] || ""}
+                      onChange={(e) => setSectionFilter(sectionKey, field.name, e.target.value)}
+                      sx={{ minWidth: 110, fontSize: "0.8rem", color: colors.grey[100] }}
+                    >
+                      <MenuItem value="" sx={{ fontSize: "0.8rem" }}>
+                        All {field.label}
+                      </MenuItem>
+                      {(typeof field.options === "function" ? field.options({}) : field.options || []).map(
+                        (opt) => {
+                          const optValue = typeof opt === "object" ? opt.value : opt;
+                          const optLabel = typeof opt === "object" ? opt.label : opt;
+                          return (
+                            <MenuItem key={optValue} value={optValue} sx={{ fontSize: "0.8rem" }}>
+                              {optLabel}
+                            </MenuItem>
+                          );
+                        }
+                      )}
+                    </Select>
+                  ))}
+                </Box>
               )}
+              <Box position="relative" flex={1} minHeight={0}>
+                <DashboardSection
+                  title={config.label}
+                  icon={config.icon}
+                  items={displayItemsBySection[sectionKey] || []}
+                  emptyMessage={config.emptyMessage}
+                  viewAllLink={config.viewAllLink}
+                  onEditRequest={(item) => openEdit(sectionKey, item)}
+                  onDeleteRequest={(item) => queueDelete(sectionKey, item)}
+                />
+                <IconButton
+                  onClick={() => openAdd(sectionKey)}
+                  size="small"
+                  sx={{ position: "absolute", top: 12, right: config.viewAllLink ? 90 : 12 }}
+                  aria-label={`Add ${config.label}`}
+                >
+                  <AddCircleOutlineIcon sx={{ color: colors.greenAccent[500] }} />
+                </IconButton>
+                {sectionKey === "routine" && (
+                  <IconButton
+                    onClick={handleDailyReset}
+                    disabled={resetting}
+                    size="small"
+                    sx={{
+                      position: "absolute",
+                      top: 12,
+                      right: (config.viewAllLink ? 90 : 12) + 40,
+                    }}
+                    aria-label="Reset today's routine"
+                    title="Reset today's routine"
+                  >
+                    <RestartAltIcon sx={{ color: colors.grey[300], opacity: resetting ? 0.4 : 1 }} />
+                  </IconButton>
+                )}
+              </Box>
             </Box>
           );
         })}

@@ -120,6 +120,29 @@ module.exports = {
     requiredColumns: ["book_title", "due_date"],
     orderBy: "due_date ASC",
   },
+  // 10th section. `columns` intentionally omits entry_date/created_at/
+  // updated_at (DB-defaulted, not client-writable) and todo_task_history
+  // (populated by a trigger in home_dashboard_schema.sql — see that file).
+  todo_task: {
+    tableName: "todo_task",
+    columns: [
+      "title",
+      "priority",
+      "description",
+      "category",
+      "status",
+      "target_date",
+      "blocker",
+      "notes",
+      "family_member_id",
+      "start_date",
+      "completion_date",
+    ],
+    requiredColumns: ["title"],
+    select: "todo_task.*, family_members.first_name AS family_member_name",
+    joins: "LEFT JOIN family_members ON family_members.id = todo_task.family_member_id",
+    orderBy: "(target_date IS NULL) ASC, target_date ASC",
+  },
 
   // -------------------------------------------------------------------
   // AddTaskForm categories (see backend/db/task_categories_schema.sql).

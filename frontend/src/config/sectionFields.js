@@ -7,6 +7,7 @@ import AutorenewOutlinedIcon from '@mui/icons-material/AutorenewOutlined';
 import PaymentsOutlinedIcon from '@mui/icons-material/PaymentsOutlined';
 import SportsHandballRoundedIcon from '@mui/icons-material/SportsHandballRounded';
 import LocalLibraryOutlinedIcon from '@mui/icons-material/LocalLibraryOutlined';
+import ChecklistOutlinedIcon from '@mui/icons-material/ChecklistOutlined';
 
 const fmtDate = (value) => {
   if (!value) return undefined;
@@ -503,7 +504,7 @@ const sectionFields = {
   library: {
     tableName: 'library_loans',
     label: 'Library Return Day',
-    icon: <LocalLibraryOutlinedIcon />,
+    icon: <ChecklistOutlinedIcon />,
     emptyMessage: 'No books currently borrowed',
     fields: [
       { name: 'book_title', label: 'Book title', type: 'text', required: true },
@@ -515,6 +516,91 @@ const sectionFields = {
       primary: row.book_title,
       secondary: row.borrower,
       meta: fmtDate(row.due_date),
+    }),
+  },
+
+  // 10th section. `fields` is the short quick-add set (dashboard card "+"
+  // and /todo-task/new); `detailFields` is new — extra columns that only
+  // show up in the View All detail table/form (see SectionDetailView.jsx).
+  // Existing sections keep working unchanged since nothing reads
+  // detailFields unless it's present.
+  todo_task: {
+    tableName: 'todo_task',
+    label: 'Todo Task',
+    icon: <LocalLibraryOutlinedIcon />,
+    viewAllLink: '/todo-task',
+    emptyMessage: 'No open tasks',
+    // Drives the dashboard-widget filter row (see scenes/dashboard/index.jsx).
+    // dateField is what "next N days" filters against; any field below
+    // marked dashboardFilterable becomes a dropdown filter automatically.
+    dashboardFilter: { dateField: 'target_date', defaultRangeDays: 30 },
+    fields: [
+      { name: 'title', label: 'Title', type: 'text', required: true },
+      {
+        name: 'priority',
+        label: 'Priority',
+        type: 'select',
+        required: false,
+        dashboardFilterable: true,
+        options: [
+          { value: 'low', label: 'Low' },
+          { value: 'medium', label: 'Medium' },
+          { value: 'high', label: 'High' },
+        ],
+      },
+      { name: 'description', label: 'Desc', type: 'textarea', required: false },
+      {
+        name: 'category',
+        label: 'Category',
+        type: 'select',
+        required: false,
+        dashboardFilterable: true,
+        options: [
+          { value: 'personal', label: 'Personal' },
+          { value: 'home', label: 'Home' },
+          { value: 'financial', label: 'Financial' },
+          { value: 'health', label: 'Health' },
+          { value: 'kids', label: 'Kids' },
+          { value: 'auto', label: 'Auto' },
+          { value: 'other', label: 'Other' },
+        ],
+      },
+      { name: 'target_date', label: 'Target Date', type: 'date', required: false },
+      {
+        name: 'family_member_id',
+        label: 'Person',
+        type: 'asyncSelect',
+        source: 'familyMembers',
+        required: false,
+      },
+    ],
+    // Only rendered on the View All page (SectionDetailView), appended to
+    // `fields` there so editing still goes through the generic SectionForm.
+    detailFields: [
+      {
+        name: 'status',
+        label: 'Status',
+        type: 'select',
+        required: false,
+        dashboardFilterable: true,
+        options: [
+          { value: 'not_started', label: 'Not Started' },
+          { value: 'in_progress', label: 'In Progress' },
+          { value: 'blocked', label: 'Blocked' },
+          { value: 'done', label: 'Done' },
+        ],
+      },
+      { name: 'blocker', label: 'Blocker', type: 'text', required: false },
+      { name: 'start_date', label: 'Start Date', type: 'date', required: false },
+      { name: 'completion_date', label: 'Completion Date', type: 'date', required: false },
+      { name: 'notes', label: 'Notes', type: 'textarea', required: false },
+      { name: 'entry_date', label: 'Entry Date', type: 'text', required: false, readOnly: true },
+    ],
+    mapRowToItem: (row) => ({
+      id: row.id,
+      primary: row.title,
+      secondary: [row.family_member_name, row.category].filter(Boolean).join(' • '),
+      meta: row.target_date ? fmtDate(row.target_date) : undefined,
     }),
   },
 };

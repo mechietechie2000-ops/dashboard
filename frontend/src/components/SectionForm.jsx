@@ -49,9 +49,16 @@ const resolveOptions = (field, values) =>
  * like Renewals: `dependsOn` (conditionally show a field) and `packInto`
  * (group a set of fields into one nested JSON object on submit, e.g. all
  * category-specific fields collapse into `attributes`).
+ *
+ * By default the fields rendered are `sectionFields[sectionKey].fields`
+ * (the quick-add set). Pass `fieldsOverride` to render a different list
+ * against the same section — e.g. SectionDetailView.jsx passes
+ * `[...config.fields, ...config.detailFields]` so a "View all" page can
+ * edit every column without a separate hand-built form.
  */
-const SectionForm = ({ sectionKey, initialValues, onSubmit, onCancel }) => {
+const SectionForm = ({ sectionKey, initialValues, onSubmit, onCancel, fieldsOverride }) => {
   const config = sectionFields[sectionKey];
+  const fields = fieldsOverride || (config && config.fields) || [];
   const isEditing = Boolean(initialValues);
   const [values, setValues] = useState(initialValues || {});
   const [errors, setErrors] = useState({});
@@ -67,7 +74,7 @@ const SectionForm = ({ sectionKey, initialValues, onSubmit, onCancel }) => {
       return;
     }
     const seeded = { ...initialValues };
-    for (const field of config.fields) {
+    for (const field of fields) {
       if (
         (field.type === 'select' || field.type === 'asyncSelect') &&
         seeded[field.name] !== undefined &&
@@ -84,8 +91,8 @@ const SectionForm = ({ sectionKey, initialValues, onSubmit, onCancel }) => {
   }, [initialValues, sectionKey]);
 
   useEffect(() => {
-    if (!config) return;
-    config.fields
+    if (!fields.length) return;
+    fields
       .filter((field) => field.type === 'asyncSelect' && field.source)
       .forEach((field) => {
         const load = ASYNC_OPTION_SOURCES[field.source];
@@ -95,9 +102,9 @@ const SectionForm = ({ sectionKey, initialValues, onSubmit, onCancel }) => {
           .catch(() => setAsyncOptions((prev) => ({ ...prev, [field.name]: [] })));
       });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sectionKey]);
+  }, [sectionKey, fieldsOverride]);
 
-  if (!config) return null;
+  if (!config && !fieldsOverride) return null;
 
   const handleChange = (name) => (e) => {
     setValues((prev) => ({ ...prev, [name]: e.target.value }));
@@ -109,7 +116,7 @@ const SectionForm = ({ sectionKey, initialValues, onSubmit, onCancel }) => {
 
   const validate = () => {
     const nextErrors = {};
-    for (const field of config.fields) {
+    for (const field of fields) {
       if (!isFieldVisible(field, values)) continue;
       if (field.required && !values[field.name]) {
         nextErrors[field.name] = `${field.label} is required`;
@@ -125,8 +132,8 @@ const SectionForm = ({ sectionKey, initialValues, onSubmit, onCancel }) => {
   // user didn't pick) are dropped entirely rather than sent as stale values.
   const buildPayload = () => {
     const payload = {};
-    for (const field of config.fields) {
-      if (!isFieldVisible(field, values)) continue;
+    for (const field of fields) {
+      if (!isFieldVisible(field, values) || field.readOnly) continue;
       const value = values[field.name];
       if (value === undefined || value === '') continue;
       if (field.packInto) {
@@ -155,7 +162,7 @@ const SectionForm = ({ sectionKey, initialValues, onSubmit, onCancel }) => {
 
   return (
     <Box component="form" onSubmit={handleSubmit} display="flex" flexDirection="column" gap="16px">
-      {config.fields.map((field) => {
+      {fields.map((field) => {
         if (!isFieldVisible(field, values)) return null;
 
         const common = {
@@ -166,6 +173,7 @@ const SectionForm = ({ sectionKey, initialValues, onSubmit, onCancel }) => {
           error: Boolean(errors[field.name]),
           helperText: errors[field.name],
           fullWidth: true,
+          disabled: Boolean(field.readOnly),
         };
 
         if (field.type === 'select') {

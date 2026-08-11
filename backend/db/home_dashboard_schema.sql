@@ -279,3 +279,66 @@ CREATE INDEX IF NOT EXISTS idx_appointments_datetime ON appointments(status, app
 -- CREATE INDEX IF NOT EXISTS idx_appointments_datetime ON appointments(appointment_datetime);
 -- CREATE INDEX IF NOT EXISTS idx_appointments_category ON appointments(category);
 -- CREATE INDEX IF NOT EXISTS idx_appointments_person ON appointments(family_member_id);
+
+-- ---------------------------------------------------------------------
+-- 15. Todo Task
+-- Column names follow the lower_snake_case convention used by every other
+-- table in this file (daily_routine, appointments, renewals, etc.) rather
+-- than the CamelCase/ALL_CAPS spellings from the requirements doc
+-- (Title -> title, Target_Date -> target_date, StartDate -> start_date,
+-- Desc -> description, to match the rest of the schema instead of
+-- introducing a one-off style).
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS todo_task (
+    id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+    family_member_id    INTEGER REFERENCES family_members(id) ON DELETE SET NULL,
+    title               TEXT NOT NULL,
+    priority            TEXT NOT NULL DEFAULT 'medium' CHECK (priority IN ('low', 'medium', 'high')),
+    description         TEXT,
+    category            TEXT,                       -- personal | home | financial | health | kids | auto | other
+    status              TEXT NOT NULL DEFAULT 'not_started' CHECK (status IN ('not_started', 'in_progress', 'blocked', 'done')),
+    target_date         TEXT,                       -- ISO-8601: YYYY-MM-DD
+    blocker             TEXT,
+    notes               TEXT,
+    start_date          TEXT,                       -- ISO-8601: YYYY-MM-DD
+    completion_date     TEXT,                       -- ISO-8601: YYYY-MM-DD
+    entry_date          TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_at          TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at          TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_todo_task_status_target ON todo_task(status, target_date);
+CREATE INDEX IF NOT EXISTS idx_todo_task_family_member ON todo_task(family_member_id);
+
+-- ---------------------------------------------------------------------
+-- 16. Todo Task History
+-- Append-only log of status changes on todo_task, kept for report
+-- generation (e.g. "how long did this sit in Blocked"). Populated
+-- automatically by the trigger below so the generic sectionRepository
+-- (which only knows how to do plain INSERT/UPDATE/DELETE) never has to
+-- know this table exists.
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS todo_task_history (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    todo_id       INTEGER NOT NULL REFERENCES todo_task(id) ON DELETE CASCADE,
+    old_status    TEXT,
+    new_status    TEXT NOT NULL,
+    changed_at    TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_todo_task_history_todo ON todo_task_history(todo_id, changed_at);
+
+CREATE TRIGGER IF NOT EXISTS trg_todo_task_status_history
+AFTER UPDATE OF status ON todo_task
+WHEN OLD.status IS NOT NEW.status
+BEGIN
+    INSERT INTO todo_task_history (todo_id, old_status, new_status)
+    VALUES (OLD.id, OLD.status, NEW.status);
+END;
+
+-- SQLite has recursive_triggers OFF by default, so this can't re-fire
+-- itself or trg_todo_task_status_history above.
+CREATE TRIGGER IF NOT EXISTS trg_todo_task_updated_at
+AFTER UPDATE ON todo_task
+WHEN OLD.updated_at IS NEW.updated_at
+BEGIN
+    UPDATE todo_task SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
+END;
