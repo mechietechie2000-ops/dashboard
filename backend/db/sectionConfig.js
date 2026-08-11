@@ -7,20 +7,7 @@
 // to the matching entry in frontend/src/config/sectionFields.js. Nothing
 // else needs to change.
 
-/*
-    category            TEXT NOT NULL,  -- financial | health | education | home | personal | other
-    title               TEXT NOT NULL,
-    description         TEXT,
-    goal_type           TEXT, -- short_term | long_term 
-    target_value        NUMERIC,
-    current_value       NUMERIC NOT NULL DEFAULT 0,
-    unit                TEXT, -- $, %, lbs, miles, books, courses, etc.
-    target_date         TEXT, -- ISO-8601: YYYY-MM-DD
-    status              TEXT NOT NULL DEFAULT 'in_progress', -- in_progress | completed | abandoned | paused
-    completed_on        TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    priority            INTEGER NOT NULL DEFAULT 0,
 
-*/
 module.exports = {
   routine: {
     tableName: "daily_routine",
@@ -53,18 +40,16 @@ module.exports = {
     tableName: "appointments",
     columns: [
       "category",
+      "title",
       "family_member_id",
-      "doctor_name",
-      "appointment_date",
-      "purpose",
-      "amount_charged",
-      "address",
-      "contact_number",
-      "doctor_special",
-      "insurance",
+      "provider_name",
+      "appointment_datetime",
+      "amount",
     ],
-    requiredColumns: ["doctor_name", "appointment_date"],
-    orderBy: "appointment_date ASC",
+    requiredColumns: ["family_member_id", "appointment_datetime"],
+    select: "appointments.*, family_members.first_name AS family_member_name",
+    joins: "LEFT JOIN family_members ON family_members.id = appointments.family_member_id",    
+    orderBy: "appointment_datetime ASC",
   },
   renewals: {
     tableName: "renewals",
@@ -123,6 +108,7 @@ module.exports = {
   // 10th section. `columns` intentionally omits entry_date/created_at/
   // updated_at (DB-defaulted, not client-writable) and todo_task_history
   // (populated by a trigger in home_dashboard_schema.sql — see that file).
+  
   todo_task: {
     tableName: "todo_task",
     columns: [
@@ -144,6 +130,7 @@ module.exports = {
     orderBy: "(target_date IS NULL) ASC, target_date ASC",
   },
 
+  /*
   // -------------------------------------------------------------------
   // AddTaskForm categories (see backend/db/task_categories_schema.sql).
   // sectionKey matches the `category` value AddTaskForm sends, so the
@@ -298,5 +285,5 @@ module.exports = {
     ],
     requiredColumns: ["title", "start_date", "end_date"],
     orderBy: "start_date ASC",
-  },
+  },*/
 };

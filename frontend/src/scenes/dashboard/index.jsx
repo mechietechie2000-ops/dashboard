@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback, useMemo } from "react";
 import {
   Box,
   Button,
+  Drawer,
   IconButton,
   MenuItem,
   Modal,
@@ -11,6 +12,7 @@ import {
 } from "@mui/material";
 import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
 import RestartAltIcon from "@mui/icons-material/RestartAlt";
+import FilterListIcon from "@mui/icons-material/FilterList";
 import { tokens } from "../../theme";
 import Header from "../../components/Header";
 import DashboardSection from "../../components/DashboardSection";
@@ -90,12 +92,18 @@ const HomeDashboard = () => {
   // Only sections with `dashboardFilter` in sectionFields.js ever read from
   // this; everything else ignores it, same as before.
   const [filtersBySection, setFiltersBySection] = useState({});
+  // Which section's filter sheet is open (a sectionKey, or null when closed).
+  const [filterSheetFor, setFilterSheetFor] = useState(null);
 
   const setSectionFilter = (sectionKey, key, value) => {
     setFiltersBySection((prev) => ({
       ...prev,
       [sectionKey]: { ...prev[sectionKey], [key]: value },
     }));
+  };
+
+  const resetSectionFilters = (sectionKey) => {
+    setFiltersBySection((prev) => ({ ...prev, [sectionKey]: {} }));
   };
 
   const displayItemsBySection = useMemo(() => {
@@ -212,8 +220,13 @@ const HomeDashboard = () => {
       >
         {SECTION_KEYS.map((sectionKey) => {
           const config = sectionFields[sectionKey];
+          const hasFilter = Boolean(config.dashboardFilter);
           const filterState = filtersBySection[sectionKey] || {};
-          const filterableFields = config.dashboardFilter ? getFilterableFields(config) : [];
+          const activeFilterCount = hasFilter
+            ? Object.values(filterState).filter((v) => v !== undefined && v !== "").length
+            : 0;
+          // Icons stack right-to-left: View all, Add, Filter, (Reset for routine).
+          const addRight = (config.viewAllLink ? 90 : 12) + (hasFilter ? 40 : 0);
           return (
             <Box
               key={sectionKey}
@@ -221,47 +234,6 @@ const HomeDashboard = () => {
               flexDirection="column"
               sx={{ minWidth: 0 /* CRITICAL: prevents CSS grid item from stretching beyond screen width */ }}
             >
-              {config.dashboardFilter && (
-                <Box display="flex" flexWrap="wrap" gap="6px" mb="8px">
-                  <Select
-                    size="small"
-                    value={filterState.rangeDays ?? config.dashboardFilter.defaultRangeDays ?? 0}
-                    onChange={(e) => setSectionFilter(sectionKey, "rangeDays", Number(e.target.value))}
-                    sx={{ minWidth: 130, fontSize: "0.8rem", color: colors.grey[100] }}
-                  >
-                    {DATE_RANGE_OPTIONS.map((opt) => (
-                      <MenuItem key={opt.value} value={opt.value} sx={{ fontSize: "0.8rem" }}>
-                        {opt.label}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                  {filterableFields.map((field) => (
-                    <Select
-                      key={field.name}
-                      size="small"
-                      displayEmpty
-                      value={filterState[field.name] || ""}
-                      onChange={(e) => setSectionFilter(sectionKey, field.name, e.target.value)}
-                      sx={{ minWidth: 110, fontSize: "0.8rem", color: colors.grey[100] }}
-                    >
-                      <MenuItem value="" sx={{ fontSize: "0.8rem" }}>
-                        All {field.label}
-                      </MenuItem>
-                      {(typeof field.options === "function" ? field.options({}) : field.options || []).map(
-                        (opt) => {
-                          const optValue = typeof opt === "object" ? opt.value : opt;
-                          const optLabel = typeof opt === "object" ? opt.label : opt;
-                          return (
-                            <MenuItem key={optValue} value={optValue} sx={{ fontSize: "0.8rem" }}>
-                              {optLabel}
-                            </MenuItem>
-                          );
-                        }
-                      )}
-                    </Select>
-                  ))}
-                </Box>
-              )}
               <Box position="relative" flex={1} minHeight={0}>
                 <DashboardSection
                   title={config.label}
@@ -272,10 +244,22 @@ const HomeDashboard = () => {
                   onEditRequest={(item) => openEdit(sectionKey, item)}
                   onDeleteRequest={(item) => queueDelete(sectionKey, item)}
                 />
+                {hasFilter && (
+                  <IconButton
+                    onClick={() => setFilterSheetFor(sectionKey)}
+                    size="small"
+                    sx={{ position: "absolute", top: 12, right: config.viewAllLink ? 130 : 52 }}
+                    aria-label={`Filter ${config.label}`}
+                  >
+                    <FilterListIcon
+                      sx={{ color: activeFilterCount ? colors.blueAccent[400] : colors.grey[300] }}
+                    />
+                  </IconButton>
+                )}
                 <IconButton
                   onClick={() => openAdd(sectionKey)}
                   size="small"
-                  sx={{ position: "absolute", top: 12, right: config.viewAllLink ? 90 : 12 }}
+                  sx={{ position: "absolute", top: 12, right: addRight }}
                   aria-label={`Add ${config.label}`}
                 >
                   <AddCircleOutlineIcon sx={{ color: colors.greenAccent[500] }} />
@@ -285,11 +269,7 @@ const HomeDashboard = () => {
                     onClick={handleDailyReset}
                     disabled={resetting}
                     size="small"
-                    sx={{
-                      position: "absolute",
-                      top: 12,
-                      right: (config.viewAllLink ? 90 : 12) + 40,
-                    }}
+                    sx={{ position: "absolute", top: 12, right: addRight + 40 }}
                     aria-label="Reset today's routine"
                     title="Reset today's routine"
                   >
@@ -301,6 +281,87 @@ const HomeDashboard = () => {
           );
         })}
       </Box>
+
+      {/* Filter sheet — slides up from the bottom, shared across sections;
+          which section it's filtering is tracked by filterSheetFor. Built
+          off the same dashboardFilter/dashboardFilterable config as before,
+          just relocated out of the always-visible card row. */}
+      <Drawer
+        anchor="bottom"
+        open={Boolean(filterSheetFor)}
+        onClose={() => setFilterSheetFor(null)}
+        PaperProps={{
+          sx: {
+            backgroundColor: colors.primary[400],
+            borderRadius: "16px 16px 0 0",
+            p: "16px 20px",
+            maxHeight: "70vh",
+          },
+        }}
+      >
+        {filterSheetFor && (() => {
+          const config = sectionFields[filterSheetFor];
+          const filterState = filtersBySection[filterSheetFor] || {};
+          const filterableFields = getFilterableFields(config);
+          return (
+            <Box display="flex" flexDirection="column" gap="14px">
+              <Box sx={{ fontWeight: "bold", color: colors.grey[100] }}>Filter {config.label}</Box>
+              <Box display="flex" flexDirection="column" gap="10px">
+                <Select
+                  size="small"
+                  fullWidth
+                  value={filterState.rangeDays ?? config.dashboardFilter.defaultRangeDays ?? 0}
+                  onChange={(e) => setSectionFilter(filterSheetFor, "rangeDays", Number(e.target.value))}
+                  sx={{ color: colors.grey[100] }}
+                >
+                  {DATE_RANGE_OPTIONS.map((opt) => (
+                    <MenuItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </MenuItem>
+                  ))}
+                </Select>
+                {filterableFields.map((field) => (
+                  <Select
+                    key={field.name}
+                    size="small"
+                    fullWidth
+                    displayEmpty
+                    value={filterState[field.name] || ""}
+                    onChange={(e) => setSectionFilter(filterSheetFor, field.name, e.target.value)}
+                    sx={{ color: colors.grey[100] }}
+                  >
+                    <MenuItem value="">All {field.label}</MenuItem>
+                    {(typeof field.options === "function" ? field.options({}) : field.options || []).map(
+                      (opt) => {
+                        const optValue = typeof opt === "object" ? opt.value : opt;
+                        const optLabel = typeof opt === "object" ? opt.label : opt;
+                        return (
+                          <MenuItem key={optValue} value={optValue}>
+                            {optLabel}
+                          </MenuItem>
+                        );
+                      }
+                    )}
+                  </Select>
+                ))}
+              </Box>
+              <Box display="flex" gap="10px" mt="4px" mb="8px">
+                <Button fullWidth variant="outlined" onClick={() => resetSectionFilters(filterSheetFor)}>
+                  Reset
+                </Button>
+                <Button
+                  fullWidth
+                  variant="contained"
+                  onClick={() => setFilterSheetFor(null)}
+                  sx={{ backgroundColor: colors.blueAccent[600], "&:hover": { backgroundColor: colors.blueAccent[700] } }}
+                >
+                  Apply
+                </Button>
+              </Box>
+            </Box>
+          );
+        })()}
+      </Drawer>
 
       <Modal open={Boolean(activeSection)} onClose={closeForm}>
         <Box

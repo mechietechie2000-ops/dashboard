@@ -41,7 +41,7 @@ const BottomNav = () => {
     setValue(newValue);
     const target = ROUTES[newValue];
     if (target) navigate(target);
-    // else: placeholder tab (Add task / Search) — nothing to do yet.
+    // else: Search — no destination yet.
   };
 
   return (

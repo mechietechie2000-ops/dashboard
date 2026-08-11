@@ -219,16 +219,17 @@ const sectionFields = {
         required: false,
         options: ['Doctor', 'Auto', 'Other'],
       },
-      { name: 'patient_name', label: 'Patient', type: 'text', required: true },
-      { name: 'doctor_name', label: 'Doctor', type: 'text', required: true },
-      { name: 'appointment_date', label: 'Date', type: 'date', required: true },
-      { name: 'purpose', label: 'Purpose', type: 'text', required: false },
+      { name: 'family_member_id', label: 'For', type: 'asyncSelect', source: 'familyMembers', required: true},
+      { name: 'title', label: 'Title', type: 'text', required: true },
+      { name: 'provider_name', label: 'Provider Name', type: 'text', required: true },
+      { name: 'appointment_datetime', label: 'Appointment Date', type: 'date', required: true },
     ],
     mapRowToItem: (row) => ({
-      id: row.appointment_id,
-      primary: `${row.doctor_name}${row.doctor_special ? ` — ${row.doctor_special}` : ''}`,
-      secondary: row.purpose || `${row.patient_name}'s appointment`,
-      meta: fmtDate(row.appointment_date),
+      id: row.id,
+      // primary: `${row.doctor_name}${row.doctor_special ? ` — ${row.doctor_special}` : ''}`,
+      primary: `${row.category} ${row.title}`,
+      secondary: `${row.family_member_name}'s appointment`,
+      meta: fmtDate(row.appointment_datetime),
     }),
   },
 
@@ -456,8 +457,9 @@ const sectionFields = {
       // family_member_name comes from the LEFT JOIN in sectionConfig.js
       // (renewals only stores family_member_id). Fall back to the item's
       // own title/category when no family member is set on the record.
-      primary: row.family_member_name || row.title || row.category,
-      secondary: [row.category, row.subcategory, row.renewal_type].filter(Boolean).join(' — '),
+      primary: `${row.category} ${row.renewal_type}`,
+      secondary: row.subcategory,
+      //secondary: [row.category, row.subcategory, row.renewal_type].filter(Boolean).join(' — '),
       meta: row.expiry_date ? fmtDate(row.expiry_date) : undefined,
     }),
   },
@@ -504,7 +506,7 @@ const sectionFields = {
   library: {
     tableName: 'library_loans',
     label: 'Library Return Day',
-    icon: <ChecklistOutlinedIcon />,
+    icon: <LocalLibraryOutlinedIcon />,
     emptyMessage: 'No books currently borrowed',
     fields: [
       { name: 'book_title', label: 'Book title', type: 'text', required: true },
