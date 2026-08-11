@@ -1,0 +1,166 @@
+From e30fb83b6b444d5da2ee3b28b310791f7124f32b Mon Sep 17 00:00:00 2001
+From: "Claude (patch)" <sandarbh1-collab@users.noreply.github.com>
+Date: Mon, 10 Aug 2026 21:59:02 +0000
+Subject: [PATCH] Fix push notification service worker scope collision
+
+- Merge push/notificationclick handlers from push-sw.js into the main
+  service-worker.js. Both were previously registered at the default
+  scope ('/'), which caused the two registrations to collide and made
+  push delivery unreliable depending on load timing.
+- Comment out registerPushSW() call in index.js instead of removing it,
+  and leave push-sw.js in place, for future reference.
+- Update pushService.js's getPushRegistration() to match against
+  service-worker.js instead of push-sw.js.
+- Fix manifest.json icon 'sizes' values (192X192/512X512 -> 192x192/512x512)
+  to match the web app manifest spec.
+---
+ frontend/public/manifest.json             |  4 +--
+ frontend/public/push-sw.js                |  6 ++++
+ frontend/src/index.js                     |  9 ++++-
+ frontend/src/service-worker.js            | 41 +++++++++++++++++++++++
+ frontend/src/serviceWorkerRegistration.js |  6 ++++
+ frontend/src/services/pushService.js      |  5 ++-
+ 6 files changed, 67 insertions(+), 4 deletions(-)
+
+diff --git a/frontend/public/manifest.json b/frontend/public/manifest.json
+index dd7dc42..9b44786 100755
+--- a/frontend/public/manifest.json
++++ b/frontend/public/manifest.json
+@@ -11,13 +11,13 @@
+   "icons": [
+     {
+       "src": "logo192.png",
+-      "sizes": "192X192",
++      "sizes": "192x192",
+       "type": "image/png",
+       "purpose": "any"
+     },
+     {
+       "src": "logo512.png",
+-      "sizes": "512X512",
++      "sizes": "512x512",
+       "type": "image/png",
+       "purpose": "any"
+     }
+diff --git a/frontend/public/push-sw.js b/frontend/public/push-sw.js
+index 810d8f6..2f4c4b1 100644
+--- a/frontend/public/push-sw.js
++++ b/frontend/public/push-sw.js
+@@ -1,3 +1,9 @@
++// NOTE: unused as of the push-sw scope-collision fix. This file is no
++// longer registered (see index.js / serviceWorkerRegistration.js) — its
++// push/notificationclick handlers were merged into src/service-worker.js,
++// which is now the single service worker for this app. Kept here, unused,
++// for reference.
++
+ self.addEventListener('push', (event) => {
+   let data = {};
+   try {
+diff --git a/frontend/src/index.js b/frontend/src/index.js
+index 5485ac8..345a210 100755
+--- a/frontend/src/index.js
++++ b/frontend/src/index.js
+@@ -7,7 +7,14 @@ import * as serviceWorkerRegistration from './serviceWorkerRegistration';
+ import { registerPushSW } from './serviceWorkerRegistration';
+ 
+ serviceWorkerRegistration.register();
+-registerPushSW();
++// registerPushSW() used to register a second service worker (push-sw.js)
++// for push notifications, but it shared the same default scope ('/') as
++// the main service worker above, causing the two registrations to collide
++// and making push delivery unreliable. Push handling has been merged into
++// the main service-worker.js instead (see src/service-worker.js). Left
++// commented out, and registerPushSW()/push-sw.js left in place, for
++// reference in case we want a dedicated push worker again later.
++// registerPushSW();
+ 
+ const root = ReactDOM.createRoot(document.getElementById("root"));
+ root.render(
+diff --git a/frontend/src/service-worker.js b/frontend/src/service-worker.js
+index da33586..ede1be1 100644
+--- a/frontend/src/service-worker.js
++++ b/frontend/src/service-worker.js
+@@ -59,4 +59,45 @@ self.addEventListener('message', (event) => {
+   if (event.data && event.data.type === 'SKIP_WAITING') {
+     self.skipWaiting();
+   }
++});
++
++// --- Web Push ---
++// Merged in from public/push-sw.js. Previously this app registered a second
++// service worker (push-sw.js) for push handling, but since both scripts
++// registered with the default scope ('/'), the two registrations collided —
++// whichever registered last would effectively take over the scope, causing
++// unreliable push delivery. Push/notification handling now lives in this
++// single service worker instead. public/push-sw.js is left in the repo,
++// unused, for reference (see comments in serviceWorkerRegistration.js).
++
++self.addEventListener('push', (event) => {
++  let data = {};
++  try {
++    data = event.data ? event.data.json() : {};
++  } catch (e) {
++    data = { title: 'Notification', body: event.data?.text() || '' };
++  }
++
++  const title = data.title || 'New notification';
++  const options = {
++    body: data.body || '',
++    icon: '/logo192.png',
++    badge: '/logo192.png',
++    data: { url: data.url || '/' },
++  };
++
++  event.waitUntil(self.registration.showNotification(title, options));
++});
++
++self.addEventListener('notificationclick', (event) => {
++  event.notification.close();
++  const url = event.notification.data?.url || '/';
++  event.waitUntil(
++    clients.matchAll({ type: 'window' }).then((clientList) => {
++      for (const client of clientList) {
++        if (client.url === url && 'focus' in client) return client.focus();
++      }
++      if (clients.openWindow) return clients.openWindow(url);
++    })
++  );
+ });
+\ No newline at end of file
+diff --git a/frontend/src/serviceWorkerRegistration.js b/frontend/src/serviceWorkerRegistration.js
+index 8bf12b3..3a4dc88 100644
+--- a/frontend/src/serviceWorkerRegistration.js
++++ b/frontend/src/serviceWorkerRegistration.js
+@@ -124,6 +124,12 @@ export function unregister() {
+   }
+ }
+ 
++// NOTE: no longer called from index.js. This registered public/push-sw.js
++// as a second service worker, but it defaulted to the same scope ('/') as
++// the main service worker, and two different scripts registering at the
++// same scope collide (the later registration effectively takes over),
++// which made push delivery unreliable. Push handling now lives in
++// src/service-worker.js instead. Kept here, unused, for reference.
+ export function registerPushSW() {
+   if ('serviceWorker' in navigator) {
+     window.addEventListener('load', () => {
+diff --git a/frontend/src/services/pushService.js b/frontend/src/services/pushService.js
+index 6535c85..192b9ae 100644
+--- a/frontend/src/services/pushService.js
++++ b/frontend/src/services/pushService.js
+@@ -8,9 +8,12 @@ function urlBase64ToUint8Array(base64String) {
+ }
+ 
+ async function getPushRegistration() {
++  // Push handling now lives in the main service worker (service-worker.js)
++  // instead of a separate push-sw.js — see index.js / service-worker.js
++  // comments for why. Match on service-worker.js instead of push-sw.js.
+   const registrations = await navigator.serviceWorker.getRegistrations();
+   const registration = registrations.find((reg) =>
+-    reg.active?.scriptURL.includes('push-sw.js')
++    reg.active?.scriptURL.includes('service-worker.js')
+   );
+   if (!registration) throw new Error('Push service worker not registered yet');
+   return registration;
+-- 
+2.43.0
