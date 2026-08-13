@@ -1,0 +1,194 @@
+diff --git a/frontend/src/App.js b/frontend/src/App.js
+index 0c77091..e05c8a7 100755
+--- a/frontend/src/App.js
++++ b/frontend/src/App.js
+@@ -74,7 +74,7 @@ const ProtectedAppLayout = () => {
+   // const isMobile = useMediaQuery("(max-width:768px)");
+ 
+   return (
+-    <Box display="flex" width="100vw" height="100vh" overflow="hidden">
++    <Box display="flex" width="100%" height="100vh" overflow="hidden">
+       {/* SIDEBAR DOCKED ON THE LEFT */}
+       <Sidebar
+         isMobileOpen={isMobileSidebarOpen}
+diff --git a/frontend/src/components/SectionForm.jsx b/frontend/src/components/SectionForm.jsx
+index 6185d4f..51d8615 100644
+--- a/frontend/src/components/SectionForm.jsx
++++ b/frontend/src/components/SectionForm.jsx
+@@ -1,5 +1,6 @@
+ import { useState, useEffect } from 'react';
+-import { Box, Button, Checkbox, FormControlLabel, MenuItem, TextField } from '@mui/material';
++import { Box, Button, Checkbox, FormControlLabel, MenuItem, TextField, useTheme } from '@mui/material';
++import { tokens } from '../theme';
+ import sectionFields from '../config/sectionFields';
+ 
+ // Fetch source registry for "asyncSelect" fields — keyed by field.source.
+@@ -57,6 +58,45 @@ const resolveOptions = (field, values) =>
+  * edit every column without a separate hand-built form.
+  */
+ const SectionForm = ({ sectionKey, initialValues, onSubmit, onCancel, fieldsOverride }) => {
++  const theme = useTheme();
++  const colors = tokens(theme.palette.mode);
++
++  // Every field's focused label/border used to fall back to
++  // theme.palette.primary.main, which is a near-black navy — almost the
++  // same color as the form's own background, so labels/outlines basically
++  // disappeared the moment you focused a field. Force a bright accent for
++  // the focused state, and explicit light text/label colors so nothing
++  // blends into the dark form background at any time.
++  const fieldSx = {
++    '& .MuiInputBase-input': { color: colors.grey[100] },
++    '& .MuiInputLabel-root': { color: colors.grey[300] },
++    '& .MuiInputLabel-root.Mui-focused': { color: colors.blueAccent[300] },
++    '& .MuiOutlinedInput-root': {
++      '& fieldset': { borderColor: colors.grey[600] },
++      '&:hover fieldset': { borderColor: colors.grey[400] },
++      '&.Mui-focused fieldset': { borderColor: colors.blueAccent[300] },
++    },
++    '& .MuiSvgIcon-root': { color: colors.grey[300] },
++  };
++
++  // Shared styling for every <TextField select> dropdown menu so it matches
++  // the form's own palette (rounded corners, same dark background instead
++  // of MUI's default paper) and anchors directly under the field instead of
++  // drifting to the left edge of the screen.
++  const selectMenuProps = {
++    PaperProps: {
++      sx: {
++        bgcolor: colors.primary[400],
++        backgroundImage: 'none',
++        borderRadius: '12px',
++        mt: '4px',
++        border: `1px solid ${colors.grey[700]}`,
++      },
++    },
++    anchorOrigin: { vertical: 'bottom', horizontal: 'left' },
++    transformOrigin: { vertical: 'top', horizontal: 'left' },
++  };
++
+   const config = sectionFields[sectionKey];
+   const fields = fieldsOverride || (config && config.fields) || [];
+   const isEditing = Boolean(initialValues);
+@@ -174,11 +214,12 @@ const SectionForm = ({ sectionKey, initialValues, onSubmit, onCancel, fieldsOver
+           helperText: errors[field.name],
+           fullWidth: true,
+           disabled: Boolean(field.readOnly),
++          sx: fieldSx,
+         };
+ 
+         if (field.type === 'select') {
+           return (
+-            <TextField {...common} select>
++            <TextField {...common} select SelectProps={{ MenuProps: selectMenuProps }}>
+               {resolveOptions(field, values).map((opt) => {
+                 const optValue = typeof opt === 'object' ? opt.value : opt;
+                 const optLabel = typeof opt === 'object' ? opt.label : opt;
+@@ -195,7 +236,12 @@ const SectionForm = ({ sectionKey, initialValues, onSubmit, onCancel, fieldsOver
+         if (field.type === 'asyncSelect') {
+           const opts = asyncOptions[field.name] || [];
+           return (
+-            <TextField {...common} select disabled={opts.length === 0}>
++            <TextField
++              {...common}
++              select
++              disabled={opts.length === 0}
++              SelectProps={{ MenuProps: selectMenuProps }}
++            >
+               {opts.map((opt) => (
+                 <MenuItem key={opt.value} value={opt.value}>
+                   {opt.label}
+@@ -243,7 +289,19 @@ const SectionForm = ({ sectionKey, initialValues, onSubmit, onCancel, fieldsOver
+ 
+       <Box display="flex" gap="10px" justifyContent="flex-end">
+         {onCancel && (
+-          <Button onClick={onCancel} disabled={submitting}>
++          <Button
++            onClick={onCancel}
++            disabled={submitting}
++            variant="outlined"
++            sx={{
++              color: colors.grey[100],
++              borderColor: colors.grey[500],
++              '&:hover': {
++                borderColor: colors.grey[300],
++                backgroundColor: colors.primary[500],
++              },
++            }}
++          >
+             Cancel
+           </Button>
+         )}
+diff --git a/frontend/src/components/SectionQuickAdd.jsx b/frontend/src/components/SectionQuickAdd.jsx
+index eeec208..4639fa8 100644
+--- a/frontend/src/components/SectionQuickAdd.jsx
++++ b/frontend/src/components/SectionQuickAdd.jsx
+@@ -26,7 +26,7 @@ const SectionQuickAdd = ({ sectionKey, redirectTo }) => {
+   return (
+     <Box m={{ xs: "0px", sm: "20px" }} maxWidth="480px">
+       <Header title={`ADD ${config.label.toUpperCase()}`} subtitle={config.emptyMessage ? "" : ""} />
+-      <Paper sx={{ backgroundColor: colors.primary[400], backgroundImage: "none", borderRadius: "10px", p: "24px" }}>
++      <Paper sx={{ backgroundColor: colors.primary[400], backgroundImage: "none", borderRadius: "16px", p: "24px" }}>
+         <SectionForm sectionKey={sectionKey} onSubmit={handleSubmit} onCancel={() => navigate(-1)} />
+       </Paper>
+     </Box>
+diff --git a/frontend/src/index.css b/frontend/src/index.css
+index d3e0bab..428d107 100755
+--- a/frontend/src/index.css
++++ b/frontend/src/index.css
+@@ -1,7 +1,13 @@
+ /* Force flex layout for root app */
+ .app {
+   display: flex !important;
+-  width: 100vw;
++  /* 100% instead of 100vw: 100vw includes the scrollbar's own width on
++     desktop browsers, which is wider than the visible page whenever a
++     scrollbar is present. Opening a Modal (e.g. the "+" add form) removes
++     the page scrollbar, so 100vw suddenly grows by the scrollbar's width
++     and the whole app shifts/overflows — forcing the user to zoom out to
++     see it centered again. 100% avoids that mismatch entirely. */
++  width: 100%;
+   height: 100vh;
+   overflow: hidden;
+ }
+diff --git a/frontend/src/scenes/dashboard/index.jsx b/frontend/src/scenes/dashboard/index.jsx
+index 9f1d5e1..cffbc61 100755
+--- a/frontend/src/scenes/dashboard/index.jsx
++++ b/frontend/src/scenes/dashboard/index.jsx
+@@ -374,20 +374,29 @@ const HomeDashboard = () => {
+         })()}
+       </Drawer>
+ 
+-      <Modal open={Boolean(activeSection)} onClose={closeForm}>
++      <Modal
++        open={Boolean(activeSection)}
++        onClose={closeForm}
++        // Flexbox centering instead of position:absolute + translate(-50%,-50%).
++        // The transform trick was the root cause of the "form is too wide /
++        // have to zoom out" and "dropdown opens from the left" bugs: a CSS
++        // transform on this box establishes a new containing block, which
++        // throws off position calculations for the Select field's popup menu
++        // (rendered in its own portal) and can let the box's true width spill
++        // past the viewport on some screens. Flexbox centering avoids both.
++        sx={{ display: "flex", alignItems: "center", justifyContent: "center", p: 2 }}
++      >
+         <Box
+           sx={{
+-            position: "absolute",
+-            top: "50%",
+-            left: "50%",
+-            transform: "translate(-50%, -50%)",
+-            width: { xs: "90%", sm: 420 },
++            width: "100%",
++            maxWidth: 420,
+             bgcolor: colors.primary[400],
+-            borderRadius: "4px",
++            backgroundImage: "none",
++            borderRadius: "16px",
+             p: "24px",
+             maxHeight: "90vh",
+             overflowY: "auto",
+-
++            outline: "none",
+           }}
+         >
+           {activeSection && (

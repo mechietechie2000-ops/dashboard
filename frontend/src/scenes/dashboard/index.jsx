@@ -363,20 +363,29 @@ const HomeDashboard = () => {
         })()}
       </Drawer>
 
-      <Modal open={Boolean(activeSection)} onClose={closeForm}>
+      <Modal
+        open={Boolean(activeSection)}
+        onClose={closeForm}
+        // Flexbox centering instead of position:absolute + translate(-50%,-50%).
+        // The transform trick was the root cause of the "form is too wide /
+        // have to zoom out" and "dropdown opens from the left" bugs: a CSS
+        // transform on this box establishes a new containing block, which
+        // throws off position calculations for the Select field's popup menu
+        // (rendered in its own portal) and can let the box's true width spill
+        // past the viewport on some screens. Flexbox centering avoids both.
+        sx={{ display: "flex", alignItems: "center", justifyContent: "center", p: 2 }}
+      >
         <Box
           sx={{
-            position: "absolute",
-            top: "50%",
-            left: "50%",
-            transform: "translate(-50%, -50%)",
-            width: { xs: "90%", sm: 420 },
+            width: "100%",
+            maxWidth: 420,
             bgcolor: colors.primary[400],
-            borderRadius: "4px",
+            backgroundImage: "none",
+            borderRadius: "16px",
             p: "24px",
             maxHeight: "90vh",
             overflowY: "auto",
-
+            outline: "none",
           }}
         >
           {activeSection && (

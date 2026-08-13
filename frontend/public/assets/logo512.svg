@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <!-- Dark Background Gradient -->
+    <radialGradient id="bgGrad" cx="50%" cy="50%" r="70%">
+      <stop offset="0%" stop-color="#181820" />
+      <stop offset="100%" stop-color="#050508" />
+    </radialGradient>
+
+    <!-- Glowing Cyan to Purple Gradient for Cards -->
+    <linearGradient id="neonGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00f2fe" />
+      <stop offset="50%" stop-color="#7928ca" />
+      <stop offset="100%" stop-color="#b829ea" />
+    </linearGradient>
+
+    <!-- Soft Glow Filter -->
+    <filter id="cyanGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="#00f2fe" flood-opacity="0.4"/>
+    </filter>
+  </defs>
+
+  <!-- Outer Dark Squircle Frame -->
+  <rect x="24" y="24" width="464" height="464" rx="96" fill="url(#bgGrad)" stroke="#272730" stroke-width="3"/>
+
+  <!-- Inner Dashboard Container Card -->
+  <rect x="72" y="72" width="368" height="368" rx="48" fill="#121218" stroke="#2a2a36" stroke-width="3"/>
+
+  <!-- GRID LAYOUT (Divider Lines) -->
+  <line x1="72" y1="256" x2="440" y2="256" stroke="#2a2a36" stroke-width="4"/>
+  <line x1="256" y1="72" x2="256" y2="440" stroke="#2a2a36" stroke-width="4"/>
+
+  <!-- TOP-LEFT QUADRANT: Glowing Gradient Widget -->
+  <rect x="96" y="96" width="136" height="136" rx="28" fill="url(#neonGradient)" />
+
+  <!-- TOP-RIGHT QUADRANT: Bar Chart -->
+  <rect x="280" y="172" width="20" height="60" rx="8" fill="url(#neonGradient)" />
+  <rect x="312" y="132" width="20" height="100" rx="8" fill="url(#neonGradient)" />
+  <rect x="344" y="108" width="20" height="124" rx="8" fill="url(#neonGradient)" />
+
+  <!-- BOTTOM-LEFT QUADRANT: Bar Chart -->
+  <rect x="104" y="340" width="20" height="60" rx="8" fill="url(#neonGradient)" />
+  <rect x="136" y="316" width="20" height="84" rx="8" fill="url(#neonGradient)" />
+  <rect x="168" y="284" width="20" height="116" rx="8" fill="url(#neonGradient)" />
+
+  <!-- BOTTOM-RIGHT QUADRANT: Checklist -->
+  <!-- Checkmark 1 -->
+  <path d="M280 300 l8 8 l16 -16" stroke="#00f2fe" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" fill="none" filter="url(#cyanGlow)"/>
+  <rect x="320" y="292" width="96" height="12" rx="6" fill="#ffffff" />
+
+  <!-- Checkmark 2 -->
+  <path d="M280 364 l8 8 l16 -16" stroke="#00f2fe" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" fill="none" filter="url(#cyanGlow)"/>
+  <rect x="320" y="356" width="72" height="12" rx="6" fill="#a1a1aa" />
+</svg>
