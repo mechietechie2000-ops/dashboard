@@ -226,7 +226,10 @@ const HomeDashboard = () => {
             ? Object.values(filterState).filter((v) => v !== undefined && v !== "").length
             : 0;
           // Icons stack right-to-left: View all, Add, Filter, (Reset for routine).
-          const addRight = (config.viewAllLink ? 90 : 12) + (hasFilter ? 40 : 0);
+          // Add always sits in the same slot right after "View all"; Filter (when
+          // present) sits one slot further left so the two never overlap.
+          const addRight = config.viewAllLink ? 90 : 12;
+          const filterRight = addRight + 40;
           return (
             <Box
               key={sectionKey}
@@ -248,7 +251,7 @@ const HomeDashboard = () => {
                   <IconButton
                     onClick={() => setFilterSheetFor(sectionKey)}
                     size="small"
-                    sx={{ position: "absolute", top: 12, right: config.viewAllLink ? 130 : 52 }}
+                    sx={{ position: "absolute", top: 12, right: filterRight }}
                     aria-label={`Filter ${config.label}`}
                   >
                     <FilterListIcon
@@ -296,6 +299,14 @@ const HomeDashboard = () => {
             borderRadius: "16px 16px 0 0",
             p: "16px 20px",
             maxHeight: "70vh",
+            // Full-width bottom sheet on mobile; on wider screens it's an
+            // awkward edge-to-edge strip, so cap the width and center it
+            // above the fold instead.
+            width: { xs: "100%", sm: 480 },
+            maxWidth: "100vw",
+            left: { xs: 0, sm: "50%" },
+            right: { xs: 0, sm: "auto" },
+            transform: { sm: "translateX(-50%)" },
           },
         }}
       >

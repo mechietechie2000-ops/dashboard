@@ -108,7 +108,7 @@ const ProtectedAppLayout = () => {
             <Route path="/digiLocker" element={<DigiLocker />} />
             <Route path="/calendar" element={<Calendar />} />
             <Route path="/add-task" element={<AddTask />} />
-            <Route path="/todo-list" element={<TodoList />} />
+            <Route path="/todoList" element={<TodoList />} />
 {/*
             <Route path="/event/admin" element={<EventAdmin />} />
              <Route path="/reports/overview" element={<Dashboard />} />
