@@ -1,5 +1,13 @@
 import { useState, useEffect } from 'react';
-import { Box, Button, Checkbox, FormControlLabel, MenuItem, TextField, useTheme } from '@mui/material';
+import {
+  Box,
+  Button,
+  Checkbox,
+  FormControlLabel,
+  MenuItem,
+  TextField,
+  useTheme,
+} from '@mui/material';
 import { tokens } from '../theme';
 import sectionFields from '../config/sectionFields';
 
@@ -68,7 +76,14 @@ const SectionForm = ({ sectionKey, initialValues, onSubmit, onCancel, fieldsOver
   // the focused state, and explicit light text/label colors so nothing
   // blends into the dark form background at any time.
   const fieldSx = {
-    '& .MuiInputBase-input': { color: colors.grey[100] },
+    '& .MuiInputBase-input': {
+      color: colors.grey[100],
+      // Mobile Safari/Chrome auto-zoom the whole page when a focused input's
+      // font-size is under 16px — that's what was throwing the layout off
+      // the moment you tapped a field. 16px on small screens disables that
+      // browser zoom; desktop keeps the smaller size the rest of the app uses.
+      fontSize: { xs: '16px', sm: '0.875rem' },
+    },
     '& .MuiInputLabel-root': { color: colors.grey[300] },
     '& .MuiInputLabel-root.Mui-focused': { color: colors.blueAccent[300] },
     '& .MuiOutlinedInput-root': {
