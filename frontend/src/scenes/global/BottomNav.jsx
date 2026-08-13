@@ -48,6 +48,8 @@ const BottomNav = () => {
     <Paper
       elevation={8}
       sx={{
+        backgroundColor: colors.primary[400],
+        backgroundImage: 'none',  
         position: 'fixed',
         bottom: 0,
         left: 0,
@@ -68,6 +70,7 @@ const BottomNav = () => {
           marginBottom: 2,
           marginLeft: 2,
           marginRight: 2,
+          borderRadius: '8px',
           '& .MuiBottomNavigationAction-root': {
             color: colors.grey[100],
           },

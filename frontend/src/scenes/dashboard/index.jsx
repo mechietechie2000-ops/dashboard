@@ -23,15 +23,15 @@ import { runDailyResetManual } from "../../data/routineRepository";
 
 const SECTION_KEYS = [
   "routine",
+  "todo_task",
   "reminders",
   "goals",
   "events",
   "appointments",
   "renewals",
   "bills",
-  "extracurricular",
-  "library",
-  "todo_task",
+//  "extracurricular",
+//  "library",
 ];
 
 const UNDO_WINDOW_MS = 4500;

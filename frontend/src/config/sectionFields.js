@@ -11,7 +11,8 @@ import ChecklistOutlinedIcon from '@mui/icons-material/ChecklistOutlined';
 
 const fmtDate = (value) => {
   if (!value) return undefined;
-  const d = new Date(value);
+  // const d = new Date(value);
+  const d = new Date(`${value}T00:00:00`);  
   if (Number.isNaN(d.getTime())) return value;
   return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 };
@@ -57,8 +58,18 @@ const sectionFields = {
           { value: 'weekly', label: 'Weekly' },
         ],
       },
-      { name: 'day_of_week', label: 'Day of week', type: 'text', required: false },
-      { name: 'scheduled_time', label: 'Time (HH:MM)', type: 'text', required: true },
+      { name: 'day_of_week', label: 'Day of week', type: 'select', required: false , 
+        options: [
+          { value: 'Monday', label: 'Monday' },
+          { value: 'Tuesday', label: 'Tuesday' },
+          { value: 'Wednesday', label: 'Wednesday' },
+          { value: 'Thursday', label: 'Thursday' },
+          { value: 'Friday', label: 'Friday' },
+          { value: 'Saturday', label: 'Saturday' },
+          { value: 'Sunday', label: 'Sunday' },
+        ],
+      },
+      { name: 'scheduled_time', label: 'Time (HH:MM)', type: 'time', required: true },
       { name: 'mute', label: 'Mute', type: 'radio', required: false },
       { name: 'announce', label: 'Announce', type: 'radio', required: false },
       { name: 'description', label: 'Description', type: 'text', required: false },
