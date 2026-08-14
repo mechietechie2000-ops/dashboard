@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useRef, useState } from "react";
 import {
   Box,
   Typography,
@@ -14,20 +14,20 @@ import {
   MenuItem,
   ListItemIcon,
   ListItemText,
-} from '@mui/material';
-import CloseIcon from '@mui/icons-material/Close';
-import MoreVertIcon from '@mui/icons-material/MoreVert';
-import EditIcon from '@mui/icons-material/Edit';
-import VisibilityIcon from '@mui/icons-material/Visibility';
-import ContentCopyIcon from '@mui/icons-material/ContentCopy';
-import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
-import { Link } from 'react-router-dom';
-import { tokens } from '../theme';
+} from "@mui/material";
+import CloseIcon from "@mui/icons-material/Close";
+import MoreVertIcon from "@mui/icons-material/MoreVert";
+import EditIcon from "@mui/icons-material/Edit";
+import VisibilityIcon from "@mui/icons-material/Visibility";
+import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
+import { Link } from "react-router-dom";
+import { tokens } from "../theme";
 
 const SWIPE_THRESHOLD = 90;
 const MOVE_CANCEL_PX = 10;
 const isTouchDevice =
-  typeof window !== 'undefined' && ('ontouchstart' in window || navigator.maxTouchPoints > 0);
+  typeof window !== "undefined" &&
+  ("ontouchstart" in window || navigator.maxTouchPoints > 0);
 
 /**
  * One row's interaction shell with a 3-dot context menu.
@@ -38,7 +38,6 @@ const SectionItemRow = ({
   isLast,
   onViewRequest,
   onEditRequest,
-  onCloneRequest,
   onDeleteRequest,
   children,
 }) => {
@@ -85,11 +84,9 @@ const SectionItemRow = ({
 
     if (dragX < -SWIPE_THRESHOLD) {
       onDeleteRequest(item);
-    } 
-    // Single-tap onViewRequest(item) removed completely to prevent accidental opens!
-/*     else if (!touchMoved.current && !menuOpen) {
+    } else if (!touchMoved.current && !menuOpen) {
       onViewRequest(item);
-    } */
+    }
 
     setDragX(0);
   };
@@ -113,26 +110,26 @@ const SectionItemRow = ({
   return (
     <Box
       sx={{
-        position: 'relative',
-        overflow: 'hidden',
-        borderRadius: '6px',
-        borderBottom: isLast ? 'none' : `1px solid ${colors.primary[500]}`,
+        position: "relative",
+        overflow: "hidden",
+        borderRadius: "6px",
+        borderBottom: isLast ? "none" : `1px solid ${colors.primary[500]}`,
       }}
     >
       {isTouchDevice && dragX < 0 && (
         <Box
           sx={{
-            position: 'absolute',
+            position: "absolute",
             inset: 0,
-            display: 'flex',
-            justifyContent: 'flex-end',
-            alignItems: 'center',
+            display: "flex",
+            justifyContent: "flex-end",
+            alignItems: "center",
             pr: 3,
             backgroundColor: colors.redAccent[500],
             opacity: Math.min(Math.abs(dragX) / SWIPE_THRESHOLD, 1),
           }}
         >
-          <CloseIcon sx={{ color: '#fff' }} />
+          <CloseIcon sx={{ color: "#fff" }} />
         </Box>
       )}
 
@@ -140,29 +137,21 @@ const SectionItemRow = ({
         {...touchHandlers}
         {...desktopHandlers}
         sx={{
-          position: 'relative',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          gap: '10px',
-          py: '10px',
-          px: isTouchDevice ? 0 : '2px',
+          position: "relative",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          gap: "10px",
+          py: "10px",
+          px: isTouchDevice ? 0 : "2px",
           backgroundColor: colors.primary[400],
-          transform: isTouchDevice ? `translateX(${dragX}px)` : 'none',
-          transition: dragging.current ? 'none' : 'transform 0.2s ease',
-          cursor: 'pointer',
-          userSelect: 'none',
+          transform: isTouchDevice ? `translateX(${dragX}px)` : "none",
+          transition: dragging.current ? "none" : "transform 0.2s ease",
+          cursor: "pointer",
+          userSelect: "none",
         }}
       >
-        <Box
-          display="flex"
-          justifyContent="space-between"
-          alignItems="flex-start"
-          flex={1}
-          gap="10px"
-          minWidth={0}
-          sx={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}
-        >
+        <Box display="flex" justifyContent="space-between" alignItems="flex-start" flex={1} gap="10px">
           {children}
         </Box>
 
@@ -172,8 +161,8 @@ const SectionItemRow = ({
           onClick={handleMenuClick}
           sx={{
             color: colors.grey[300],
-            '&:hover': { color: colors.grey[100] },
-            flexShrink: 0,
+            flexShrink: 0,ml: 1,
+            "&:hover": { color: colors.grey[100] },
           }}
         >
           <MoreVertIcon fontSize="small" />
@@ -184,39 +173,21 @@ const SectionItemRow = ({
           open={menuOpen}
           onClose={handleMenuClose}
           onClick={(e) => e.stopPropagation()}
-          PaperProps={{
-            sx: {
-              bgcolor: colors.primary[400],
-              color: colors.grey[100],
-              border: `1px solid ${colors.primary[500]}`,
-            },
-          }}
         >
           <MenuItem onClick={handleAction(onViewRequest)}>
-            <ListItemIcon sx={{ color: colors.grey[100] }}>
+            <ListItemIcon>
               <VisibilityIcon fontSize="small" />
             </ListItemIcon>
             <ListItemText>View</ListItemText>
           </MenuItem>
-
           {onEditRequest && (
             <MenuItem onClick={handleAction(onEditRequest)}>
-              <ListItemIcon sx={{ color: colors.grey[100] }}>
+              <ListItemIcon>
                 <EditIcon fontSize="small" />
               </ListItemIcon>
               <ListItemText>Edit</ListItemText>
             </MenuItem>
           )}
-
-          {onCloneRequest && (
-            <MenuItem onClick={handleAction(onCloneRequest)}>
-              <ListItemIcon sx={{ color: colors.greenAccent[400] }}>
-                <ContentCopyIcon fontSize="small" />
-              </ListItemIcon>
-              <ListItemText sx={{ color: colors.greenAccent[400] }}>Clone</ListItemText>
-            </MenuItem>
-          )}
-
           {onDeleteRequest && (
             <MenuItem onClick={handleAction(onDeleteRequest)} sx={{ color: colors.redAccent[400] }}>
               <ListItemIcon sx={{ color: colors.redAccent[400] }}>
@@ -235,12 +206,10 @@ const DashboardSection = ({
   title,
   icon,
   items = [],
-  emptyMessage = 'Nothing here yet',
+  emptyMessage = "Nothing here yet",
   viewAllLink,
-  isCollapsed = false,
   renderItem,
   onEditRequest,
-  onCloneRequest,
   onDeleteRequest,
 }) => {
   const theme = useTheme();
@@ -264,7 +233,7 @@ const DashboardSection = ({
 
   const detailFields = selectedItem?.raw
     ? Object.entries(selectedItem.raw).filter(
-        ([, value]) => value !== null && value !== undefined && value !== ''
+        ([, value]) => value !== null && value !== undefined && value !== ""
       )
     : [];
 
@@ -274,8 +243,8 @@ const DashboardSection = ({
         <Box
           minWidth={0}
           sx={{
-            wordBreak: 'break-word',
-            overflowWrap: 'anywhere',
+            wordBreak: "break-word",
+            overflowWrap: "anywhere",
           }}
         >
           <Typography
@@ -283,9 +252,9 @@ const DashboardSection = ({
             fontWeight="600"
             title={item.primary}
             sx={{
-              fontSize: { xs: '1.25rem', sm: '0.875rem' },
-              wordBreak: 'break-word',
-              overflowWrap: 'anywhere',
+              fontSize: { xs: "1.25rem", sm: "0.875rem" },
+              wordBreak: "break-word",
+              overflowWrap: "anywhere",
             }}
           >
             {item.primary}
@@ -295,9 +264,9 @@ const DashboardSection = ({
               variant="body2"
               color={colors.grey[300]}
               sx={{
-                fontSize: { xs: '0.9rem', sm: '0.75rem' },
-                wordBreak: 'break-word',
-                overflowWrap: 'anywhere',
+                fontSize: { xs: "0.9rem", sm: "0.75rem" },
+                wordBreak: "break-word",
+                overflowWrap: "anywhere",
               }}
             >
               {item.secondary}
@@ -309,7 +278,7 @@ const DashboardSection = ({
             variant="body2"
             color={colors.greenAccent[500]}
             whiteSpace="nowrap"
-            sx={{ flexShrink: 0, fontSize: { xs: '0.9rem', sm: '0.75rem' } }}
+            sx={{ flexShrink: 0, fontSize: { xs: "0.9rem", sm: "0.75rem" } }}
           >
             {item.meta}
           </Typography>
@@ -325,7 +294,6 @@ const DashboardSection = ({
         isLast={i === items.length - 1}
         onViewRequest={handleViewRequest}
         onEditRequest={onEditRequest}
-        onCloneRequest={onCloneRequest}
         onDeleteRequest={onDeleteRequest}
       >
         {row}
@@ -341,11 +309,9 @@ const DashboardSection = ({
         p="20px"
         display="flex"
         flexDirection="column"
-        justifyContent="space-between"
         height="100%"
         sx={{
-          overflow: 'hidden',
-          transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+          overflow: "hidden",
         }}
       >
         {/* HEADER */}
@@ -353,10 +319,9 @@ const DashboardSection = ({
           display="flex"
           justifyContent="space-between"
           alignItems="center"
-          mb={isCollapsed ? 0 : '10px'}
-          pb={isCollapsed ? 0 : '10px'}
-          borderBottom={isCollapsed ? 'none' : `3px solid ${colors.primary[500]}`}
-          sx={{ transition: 'margin 0.25s ease, padding 0.25s ease' }}
+          mb="10px"
+          pb="10px"
+          borderBottom={`3px solid ${colors.primary[500]}`}
         >
           <Box display="flex" alignItems="center" gap="10px" minWidth={0}>
             <Box
@@ -372,106 +337,80 @@ const DashboardSection = ({
               fontWeight="600"
               color={colors.grey[100]}
               sx={{
-                wordBreak: 'break-word',
+                wordBreak: "break-word",
               }}
             >
               {title}
             </Typography>
           </Box>
+          {viewAllLink && (
+            <Typography
+              component={Link}
+              to={viewAllLink}
+              variant="body2"
+              sx={{
+                color: colors.greenAccent[400],
+                textDecoration: "none",
+                whiteSpace: "nowrap",
+                flexShrink: 0,
+                ml: "10px",
+                "&:hover": { textDecoration: "underline" },
+              }}
+            >
+              View all
+            </Typography>
+          )}
         </Box>
 
-        {/* SMOOTH COLLAPSIBLE BODY AREA */}
-        <Box
-          sx={{
-            flex: isCollapsed ? 0 : 1,
-            maxHeight: isCollapsed ? '0px' : '1000px',
-            opacity: isCollapsed ? 0 : 1,
-            overflow: isCollapsed ? 'hidden' : 'auto',
-            transition: 'max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease',
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'space-between',
-          }}
-        >
-          {/* ITEM LIST */}
-          <Box flex={1} overflow="auto">
-            {items.length === 0 ? (
-              <Box
-                height="100%"
-                minHeight="80px"
-                display="flex"
-                alignItems="center"
-                justifyContent="center"
-              >
-                <Typography color={colors.grey[300]} fontStyle="italic">
-                  {emptyMessage}
-                </Typography>
-              </Box>
-            ) : (
-              items.map((item, i) =>
-                renderItem ? renderItem(item, i) : defaultRenderItem(item, i)
-              )
-            )}
-          </Box>
-
-          {/* VIEW ALL LINK - Pinned to absolute bottom edge */}
-          {viewAllLink && (
-            <Box display="flex" justifyContent="flex-end" pt="12px" mt="auto">
-              <Typography
-                component={Link}
-                to={viewAllLink}
-                variant="body2"
-                sx={{
-                  color: colors.greenAccent[400],
-                  textDecoration: 'none',
-                  whiteSpace: 'nowrap',
-                  fontWeight: '600',
-                  '&:hover': { textDecoration: 'underline' },
-                }}
-              >
-                View all →
+        {/* BODY */}
+        <Box flex={1} overflow="auto">
+          {items.length === 0 ? (
+            <Box
+              height="100%"
+              minHeight="80px"
+              display="flex"
+              alignItems="center"
+              justifyContent="center"
+            >
+              <Typography color={colors.grey[300]} fontStyle="italic">
+                {emptyMessage}
               </Typography>
             </Box>
+          ) : (
+            items.map((item, i) =>
+              renderItem ? renderItem(item, i) : defaultRenderItem(item, i)
+            )
           )}
         </Box>
       </Box>
 
-      {/* VIEW DETAILS DIALOG (Color matched to theme) */}
       <Dialog
         open={Boolean(selectedItem)}
         onClose={handleCloseDetails}
         fullWidth
         maxWidth="sm"
-        PaperProps={{
-          sx: {
-            bgcolor: colors.primary[400],
-            color: colors.grey[100],
-            borderRadius: '16px',
-            backgroundImage: 'none',
-          },
-        }}
       >
-        <DialogTitle sx={{ pr: 6, color: colors.grey[100], fontWeight: 'bold' }}>
-          {selectedItem?.primary || 'Details'}
+        <DialogTitle sx={{ pr: 6 }}>
+          {selectedItem?.primary || "Details"}
           <IconButton
             aria-label="Close"
             onClick={handleCloseDetails}
-            sx={{ position: 'absolute', right: 8, top: 8, color: colors.grey[300] }}
+            sx={{ position: "absolute", right: 8, top: 8 }}
           >
             <CloseIcon />
           </IconButton>
         </DialogTitle>
 
-        <DialogContent dividers sx={{ borderColor: colors.primary[500] }}>
+        <DialogContent dividers>
           {(selectedItem?.secondary || selectedItem?.meta) && (
             <Box mb={detailFields.length ? 2 : 0}>
               {selectedItem?.secondary && (
-                <Typography color={colors.grey[300]} mb={0.5}>
+                <Typography color="text.secondary" mb={0.5}>
                   {selectedItem.secondary}
                 </Typography>
               )}
               {selectedItem?.meta && (
-                <Typography color={colors.greenAccent[500]} fontWeight="600">
+                <Typography color="success.main" fontWeight="600">
                   {selectedItem.meta}
                 </Typography>
               )}
@@ -482,16 +421,17 @@ const DashboardSection = ({
             <Box>
               {detailFields.map(([key, value], index) => (
                 <Box key={key}>
-                  {index > 0 && <Divider sx={{ borderColor: colors.primary[500] }} />}
-                  <Box display="flex" justifyContent="space-between" gap={2} py={1.25}>
-                    <Typography color={colors.grey[300]} sx={{ textTransform: 'capitalize' }}>
-                      {key.replace(/_/g, ' ')}
+                  {index > 0 && <Divider />}
+                  <Box
+                    display="flex"
+                    justifyContent="space-between"
+                    gap={2}
+                    py={1.25}
+                  >
+                    <Typography color="text.secondary" sx={{ textTransform: "capitalize" }}>
+                      {key.replace(/_/g, " ")}
                     </Typography>
-                    <Typography
-                      textAlign="right"
-                      color={colors.grey[100]}
-                      sx={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}
-                    >
+                    <Typography textAlign="right" sx={{ wordBreak: "break-word" }}>
                       {String(value)}
                     </Typography>
                   </Box>
@@ -502,18 +442,9 @@ const DashboardSection = ({
         </DialogContent>
 
         <DialogActions sx={{ px: 3, py: 2 }}>
-          <Button onClick={handleCloseDetails} sx={{ color: colors.grey[300] }}>
-            Close
-          </Button>
+          <Button onClick={handleCloseDetails}>Close</Button>
           {onEditRequest && (
-            <Button
-              variant="contained"
-              onClick={handleEditFromDetails}
-              sx={{
-                bgcolor: colors.blueAccent[600],
-                '&:hover': { bgcolor: colors.blueAccent[700] },
-              }}
-            >
+            <Button variant="contained" onClick={handleEditFromDetails}>
               Edit
             </Button>
           )}

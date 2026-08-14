@@ -1,5 +1,14 @@
 import { useState, useEffect } from 'react';
-import { Box, Button, Checkbox, FormControlLabel, MenuItem, TextField } from '@mui/material';
+import {
+  Box,
+  Button,
+  Checkbox,
+  FormControlLabel,
+  MenuItem,
+  TextField,
+  useTheme,
+} from '@mui/material';
+import { tokens } from '../theme';
 import sectionFields from '../config/sectionFields';
 
 // Fetch source registry for "asyncSelect" fields — keyed by field.source.
@@ -57,6 +66,52 @@ const resolveOptions = (field, values) =>
  * edit every column without a separate hand-built form.
  */
 const SectionForm = ({ sectionKey, initialValues, onSubmit, onCancel, fieldsOverride }) => {
+  const theme = useTheme();
+  const colors = tokens(theme.palette.mode);
+
+  // Every field's focused label/border used to fall back to
+  // theme.palette.primary.main, which is a near-black navy — almost the
+  // same color as the form's own background, so labels/outlines basically
+  // disappeared the moment you focused a field. Force a bright accent for
+  // the focused state, and explicit light text/label colors so nothing
+  // blends into the dark form background at any time.
+  const fieldSx = {
+    '& .MuiInputBase-input': {
+      color: colors.grey[100],
+      // Mobile Safari/Chrome auto-zoom the whole page when a focused input's
+      // font-size is under 16px — that's what was throwing the layout off
+      // the moment you tapped a field. 16px on small screens disables that
+      // browser zoom; desktop keeps the smaller size the rest of the app uses.
+      fontSize: { xs: '16px', sm: '0.875rem' },
+    },
+    '& .MuiInputLabel-root': { color: colors.grey[300] },
+    '& .MuiInputLabel-root.Mui-focused': { color: colors.blueAccent[300] },
+    '& .MuiOutlinedInput-root': {
+      '& fieldset': { borderColor: colors.grey[600] },
+      '&:hover fieldset': { borderColor: colors.grey[400] },
+      '&.Mui-focused fieldset': { borderColor: colors.blueAccent[300] },
+    },
+    '& .MuiSvgIcon-root': { color: colors.grey[300] },
+  };
+
+  // Shared styling for every <TextField select> dropdown menu so it matches
+  // the form's own palette (rounded corners, same dark background instead
+  // of MUI's default paper) and anchors directly under the field instead of
+  // drifting to the left edge of the screen.
+  const selectMenuProps = {
+    PaperProps: {
+      sx: {
+        bgcolor: colors.primary[400],
+        backgroundImage: 'none',
+        borderRadius: '12px',
+        mt: '4px',
+        border: `1px solid ${colors.grey[700]}`,
+      },
+    },
+    anchorOrigin: { vertical: 'bottom', horizontal: 'left' },
+    transformOrigin: { vertical: 'top', horizontal: 'left' },
+  };
+
   const config = sectionFields[sectionKey];
   const fields = fieldsOverride || (config && config.fields) || [];
   const isEditing = Boolean(initialValues);
@@ -174,11 +229,12 @@ const SectionForm = ({ sectionKey, initialValues, onSubmit, onCancel, fieldsOver
           helperText: errors[field.name],
           fullWidth: true,
           disabled: Boolean(field.readOnly),
+          sx: fieldSx,
         };
 
         if (field.type === 'select') {
           return (
-            <TextField {...common} select>
+            <TextField {...common} select SelectProps={{ MenuProps: selectMenuProps }}>
               {resolveOptions(field, values).map((opt) => {
                 const optValue = typeof opt === 'object' ? opt.value : opt;
                 const optLabel = typeof opt === 'object' ? opt.label : opt;
@@ -195,7 +251,12 @@ const SectionForm = ({ sectionKey, initialValues, onSubmit, onCancel, fieldsOver
         if (field.type === 'asyncSelect') {
           const opts = asyncOptions[field.name] || [];
           return (
-            <TextField {...common} select disabled={opts.length === 0}>
+            <TextField
+              {...common}
+              select
+              disabled={opts.length === 0}
+              SelectProps={{ MenuProps: selectMenuProps }}
+            >
               {opts.map((opt) => (
                 <MenuItem key={opt.value} value={opt.value}>
                   {opt.label}
@@ -228,8 +289,8 @@ const SectionForm = ({ sectionKey, initialValues, onSubmit, onCancel, fieldsOver
           return <TextField {...common} type="date" InputLabelProps={{ shrink: true }} />;
         }
 
-        if (field.type === 'datetime') {
-          return <TextField {...common} type="datetime-local" InputLabelProps={{ shrink: true }} />;
+        if (field.type === 'time') {
+          return <TextField {...common} type="time" InputLabelProps={{ shrink: true }} />;
         }
 
         if (field.type === 'number') {
@@ -243,7 +304,19 @@ const SectionForm = ({ sectionKey, initialValues, onSubmit, onCancel, fieldsOver
 
       <Box display="flex" gap="10px" justifyContent="flex-end">
         {onCancel && (
-          <Button onClick={onCancel} disabled={submitting}>
+          <Button
+            onClick={onCancel}
+            disabled={submitting}
+            variant="outlined"
+            sx={{
+              color: colors.grey[100],
+              borderColor: colors.grey[500],
+              '&:hover': {
+                borderColor: colors.grey[300],
+                backgroundColor: colors.primary[500],
+              },
+            }}
+          >
             Cancel
           </Button>
         )}

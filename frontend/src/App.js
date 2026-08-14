@@ -74,7 +74,7 @@ const ProtectedAppLayout = () => {
   // const isMobile = useMediaQuery("(max-width:768px)");
 
   return (
-    <Box display="flex" width="100vw" height="100vh" overflow="hidden">
+    <Box display="flex" width="100%" height="100vh" overflow="hidden">
       {/* SIDEBAR DOCKED ON THE LEFT */}
       <Sidebar
         isMobileOpen={isMobileSidebarOpen}

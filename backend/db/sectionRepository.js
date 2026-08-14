@@ -1,5 +1,5 @@
-const db = require("./connection");
-const sectionConfig = require("./sectionConfig");
+const db = require('./connection');
+const sectionConfig = require('./sectionConfig');
 
 function getConfig(sectionKey) {
   const cfg = sectionConfig[sectionKey];
@@ -16,7 +16,7 @@ function parseJsonColumns(cfg, rows) {
   return rows.map((row) => {
     const next = { ...row };
     for (const col of cfg.jsonColumns) {
-      if (typeof next[col] === "string" && next[col]) {
+      if (typeof next[col] === 'string' && next[col]) {
         try {
           next[col] = JSON.parse(next[col]);
         } catch {
@@ -33,7 +33,7 @@ async function listRecords(sectionKey, { limit } = {}) {
   // `select`/`joins` are optional per-section overrides (see sectionConfig.js)
   // for sections that need to resolve a foreign key to a display value, e.g.
   // renewals.family_member_id -> family_members.first_name.
-  let sql = `SELECT ${cfg.select || "*"} FROM ${cfg.tableName}`;
+  let sql = `SELECT ${cfg.select || '*'} FROM ${cfg.tableName}`;
   if (cfg.joins) sql += ` ${cfg.joins}`;
   if (cfg.where) sql += ` WHERE ${cfg.where}`;
   sql += ` ORDER BY ${cfg.orderBy}`;
@@ -46,22 +46,22 @@ async function insertRecord(sectionKey, values) {
   const cfg = getConfig(sectionKey);
 
   for (const col of cfg.requiredColumns) {
-    if (values[col] === undefined || values[col] === null || values[col] === "") {
+    if (values[col] === undefined || values[col] === null || values[col] === '') {
       const err = new Error(`${col} is required`);
       err.status = 400;
       throw err;
     }
   }
 
-  const cols = cfg.columns.filter((c) => values[c] !== undefined && values[c] !== "");
-  const placeholders = cols.map(() => "?").join(", ");
+  const cols = cfg.columns.filter((c) => values[c] !== undefined && values[c] !== '');
+  const placeholders = cols.map(() => '?').join(', ');
   const params = cols.map((c) => {
     const v = values[c];
     // Object-valued fields (e.g. renewals.attributes) are stored as JSON text.
-    return v !== null && typeof v === "object" ? JSON.stringify(v) : v;
+    return v !== null && typeof v === 'object' ? JSON.stringify(v) : v;
   });
 
-  const sql = `INSERT INTO ${cfg.tableName} (${cols.join(", ")}) VALUES (${placeholders})`;
+  const sql = `INSERT INTO ${cfg.tableName} (${cols.join(', ')}) VALUES (${placeholders})`;
   const result = await db.run(sql, params);
   return { id: result.lastID };
 }
@@ -69,17 +69,29 @@ async function insertRecord(sectionKey, values) {
 async function updateRecord(sectionKey, id, values) {
   const cfg = getConfig(sectionKey);
 
+  if (sectionKey === 'goals' && values.status !== undefined) {
+    if (values.status === 'completed') {
+      values.completed_on = values.completed_on ?? new Date().toISOString().slice(0, 10);
+    } else if (values.status === 'abandoned') {
+      values.completed_on = null;
+    }
+  }
+
+  if (cfg.columns.includes('updated_at')) {
+    values.updated_at = new Date().toISOString();
+  }
+
   const cols = cfg.columns.filter((c) => values[c] !== undefined);
   if (cols.length === 0) {
-    const err = new Error("No updatable fields provided");
+    const err = new Error('No updatable fields provided');
     err.status = 400;
     throw err;
   }
 
-  const setClause = cols.map((c) => `${c} = ?`).join(", ");
+  const setClause = cols.map((c) => `${c} = ?`).join(', ');
   const params = cols.map((c) => {
     const v = values[c];
-    return v !== null && typeof v === "object" ? JSON.stringify(v) : v;
+    return v !== null && typeof v === 'object' ? JSON.stringify(v) : v;
   });
   params.push(id);
 
