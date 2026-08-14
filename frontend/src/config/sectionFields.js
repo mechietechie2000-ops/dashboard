@@ -566,7 +566,7 @@ const sectionFields = {
     tableName: 'todo_task',
     label: 'Todo Task',
     icon: <LocalLibraryOutlinedIcon />,
-    viewAllLink: '/todo-task',
+    viewAllLink: '/todoList',
     emptyMessage: 'No open tasks',
     // Drives the dashboard-widget filter row (see scenes/dashboard/index.jsx).
     // dateField is what "next N days" filters against; any field below

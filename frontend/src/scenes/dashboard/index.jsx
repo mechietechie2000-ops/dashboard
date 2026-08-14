@@ -239,7 +239,11 @@ const HomeDashboard = () => {
             ? Object.values(filterState).filter((v) => v !== undefined && v !== '').length
             : 0;
           const isCollapsed = Boolean(collapsedSections[sectionKey]);
-
+          // Icons stack right-to-left: View all, Add, Filter, (Reset for routine).
+          // Add always sits in the same slot right after "View all"; Filter (when
+          // present) sits one slot further left so the two never overlap.
+          const addRight = config.viewAllLink ? 90 : 12;
+          const filterRight = addRight + 40;
           return (
             <Box
               key={sectionKey}
@@ -326,6 +330,38 @@ const HomeDashboard = () => {
                   onCloneRequest={(item) => handleClone(sectionKey, item)}
                   onDeleteRequest={(item) => queueDelete(sectionKey, item)}
                 />
+                {hasFilter && (
+                  <IconButton
+                    onClick={() => setFilterSheetFor(sectionKey)}
+                    size="small"
+                    sx={{ position: "absolute", top: 12, right: filterRight }}
+                    aria-label={`Filter ${config.label}`}
+                  >
+                    <FilterListIcon
+                      sx={{ color: activeFilterCount ? colors.blueAccent[400] : colors.grey[300] }}
+                    />
+                  </IconButton>
+                )}
+                <IconButton
+                  onClick={() => openAdd(sectionKey)}
+                  size="small"
+                  sx={{ position: "absolute", top: 12, right: addRight }}
+                  aria-label={`Add ${config.label}`}
+                >
+                  <AddCircleOutlineIcon sx={{ color: colors.greenAccent[500] }} />
+                </IconButton>
+                {sectionKey === "routine" && (
+                  <IconButton
+                    onClick={handleDailyReset}
+                    disabled={resetting}
+                    size="small"
+                    sx={{ position: "absolute", top: 12, right: addRight + 40 }}
+                    aria-label="Reset today's routine"
+                    title="Reset today's routine"
+                  >
+                    <RestartAltIcon sx={{ color: colors.grey[300], opacity: resetting ? 0.4 : 1 }} />
+                  </IconButton>
+                )}
               </Box>
             </Box>
           );
@@ -340,9 +376,17 @@ const HomeDashboard = () => {
         PaperProps={{
           sx: {
             backgroundColor: colors.primary[400],
-            borderRadius: '16px 16px 0 0',
-            p: '16px 20px',
-            maxHeight: '70vh',
+            borderRadius: "16px 16px 0 0",
+            p: "16px 20px",
+            maxHeight: "70vh",
+            // Full-width bottom sheet on mobile; on wider screens it's an
+            // awkward edge-to-edge strip, so cap the width and center it
+            // above the fold instead.
+            width: { xs: "100%", sm: 480 },
+            maxWidth: "100vw",
+            left: { xs: 0, sm: "50%" },
+            right: { xs: 0, sm: "auto" },
+            transform: { sm: "translateX(-50%)" },
           },
         }}
       >

@@ -17,13 +17,18 @@ async function runDailyReset() {
     return { skipped: true, reason: 'already ran today' };
   }
 
+  /* */
+  const member = row.family_member_id
+    ? await db.get(`SELECT first_name FROM family_members WHERE id = ?`, [row.family_member_id])
+    : null;
+    
   // 1. Log anything left over from the previous cycle that was never marked
   const unmarked = await db.all(`SELECT * FROM daily_routine_temp WHERE status = 'new'`);
   for (const row of unmarked) {
     await db.run(
-      `INSERT INTO daily_routine_log (routine_id, title, person, log_date, status, reason)
+      `INSERT INTO daily_routine_log (routine_id, title, family_member_id, log_date, status, reason)
        VALUES (?, ?, ?, ?, 'no_action', 'NO ACTION TAKEN')`,
-      [row.routine_id, row.title, row.person, today]
+      [row.routine_id, row.title, row.family_member_id, today]
     );
   }
 
@@ -105,11 +110,17 @@ async function markDone(tempId) {
 }
 
 async function markSkipped(tempId, reason) {
+  console.log(reason);
   const row = await db.get(`SELECT * FROM daily_routine_temp WHERE id = ?`, [tempId]);
   if (!row) throw new Error('Task not found');
   const member = row.family_member_id
     ? await db.get(`SELECT first_name FROM family_members WHERE id = ?`, [row.family_member_id])
     : null;
+  
+  console.log("title: ", row.title);
+  console.log("first_name: ", member?.first_name);
+  console.log("family_member_id: ", row.family_member_id);
+
   await db.run(
     `INSERT INTO daily_routine_log (routine_id, title, person, family_member_id, log_date, status, reason)
      VALUES (?, ?, ?, ?, ?, 'skipped', ?)`,
@@ -119,6 +130,7 @@ async function markSkipped(tempId, reason) {
       member?.first_name || 'Unassigned',
       row.family_member_id,
       todayStr(),
+      reason
     ]
   );
   await db.run(`DELETE FROM daily_routine_temp WHERE id = ?`, [tempId]);

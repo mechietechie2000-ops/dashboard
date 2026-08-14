@@ -1,0 +1,24 @@
+<svg viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="400" height="400" fill="#FBF9F5"/>
+
+  <!-- Clock rim -->
+  <circle cx="200" cy="180" r="128" fill="none" stroke="#1B2430" stroke-width="15"/>
+
+  <!-- Hands forming the numeral "1" -->
+  <!-- main vertical stroke (minute hand) -->
+  <line x1="200" y1="88" x2="200" y2="255" stroke="#E8A33D" stroke-width="18" stroke-linecap="round"/>
+  <!-- flag (hour hand pointing to ~10 o'clock) -->
+  <line x1="200" y1="100" x2="168" y2="124" stroke="#E8A33D" stroke-width="18" stroke-linecap="round"/>
+  <!-- serif foot of the "1" -->
+  <line x1="178" y1="255" x2="222" y2="255" stroke="#E8A33D" stroke-width="18" stroke-linecap="round"/>
+
+  <!-- center pivot pin -->
+  <circle cx="200" cy="180" r="11" fill="#1B2430"/>
+
+  <!-- Wordmark -->
+  <text x="200" y="410" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-weight="700" font-size="54" fill="#1B2430" letter-spacing="1">One<tspan fill="#E8A33D">Life</tspan></text>
+
+  <!-- Tagline -->
+  <text x="200" y="450" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-weight="400" font-size="17" fill="#6B6459" letter-spacing="3">SCHEDULE · REMIND · LIVE</text>
+</svg>

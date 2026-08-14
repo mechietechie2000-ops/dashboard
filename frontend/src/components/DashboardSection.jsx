@@ -85,7 +85,11 @@ const SectionItemRow = ({
 
     if (dragX < -SWIPE_THRESHOLD) {
       onDeleteRequest(item);
-    }
+    } 
+    // Single-tap onViewRequest(item) removed completely to prevent accidental opens!
+/*     else if (!touchMoved.current && !menuOpen) {
+      onViewRequest(item);
+    } */
 
     setDragX(0);
   };
