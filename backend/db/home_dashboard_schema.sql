@@ -43,7 +43,7 @@ CREATE TABLE IF NOT EXISTS goals (
     target_date         TEXT, -- ISO-8601: YYYY-MM-DD
     status              TEXT NOT NULL DEFAULT 'todo', -- in_progress | completed | abandoned | paused
     completed_on        TEXT,
-    priority            INTEGER NOT NULL DEFAULT 0,
+    priority            TEXT NOT NULL DEFAULT 'low',
     created_at          TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at          TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     start_date          TEXT
@@ -208,7 +208,7 @@ CREATE INDEX IF NOT EXISTS idx_routines_active ON daily_routine(active, schedule
 -- ---------------------------------------------------------------------
 
 CREATE TABLE IF NOT EXISTS daily_routine_temp (
-  id                INTEGER PRIMARY KEY AUTOINCREMENT,
+  id                INTEGER PRIMARY KEY,
   routine_id        INTEGER NOT NULL,
   title             TEXT NOT NULL,
   family_member_id  INTEGER,

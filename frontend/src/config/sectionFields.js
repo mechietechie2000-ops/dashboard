@@ -222,7 +222,7 @@ const sectionFields = {
       { name: 'family_member_id', label: 'For', type: 'asyncSelect', source: 'familyMembers', required: true},
       { name: 'title', label: 'Title', type: 'text', required: true },
       { name: 'provider_name', label: 'Provider Name', type: 'text', required: true },
-      { name: 'appointment_datetime', label: 'Appointment Date', type: 'date', required: true },
+      { name: 'appointment_datetime', label: 'Appointment Date', type: 'datetime', required: true },
     ],
     mapRowToItem: (row) => ({
       id: row.id,

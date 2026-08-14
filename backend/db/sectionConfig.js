@@ -26,7 +26,7 @@ module.exports = {
   },
   goals: {
     tableName: "goals",
-    columns: ["category", "title", "family_member_id", "description", "goal_type", "target_year", "target_quarter", "target_date", "target_value"],
+    columns: ["category", "title", "family_member_id", "description", "goal_type", "target_year", "target_quarter", "target_date", "target_value", "status", "priority", "completed_on", "updated_at"],
     requiredColumns: ["title"],
     orderBy: "(target_date IS NULL) ASC, target_date ASC",
   },
@@ -45,6 +45,7 @@ module.exports = {
       "provider_name",
       "appointment_datetime",
       "amount",
+      "status",
     ],
     requiredColumns: ["family_member_id", "appointment_datetime"],
     select: "appointments.*, family_members.first_name AS family_member_name",
@@ -129,6 +130,10 @@ module.exports = {
     joins: "LEFT JOIN family_members ON family_members.id = todo_task.family_member_id",
     orderBy: "(target_date IS NULL) ASC, target_date ASC",
   },
+
+};
+
+
 
   /*
   // -------------------------------------------------------------------
@@ -286,4 +291,3 @@ module.exports = {
     requiredColumns: ["title", "start_date", "end_date"],
     orderBy: "start_date ASC",
   },*/
-};

@@ -1,5 +1,5 @@
 // Every table that should surface in Reminders gets one entry here. Two
-// query builders in remindersRepository.js loop this array:
+// query builders in reminderRepository.js loop this array:
 //   - buildLiveFeedQuery(): the "upcoming reminders" view — applies
 //     requiredWhere AND activeWhere, so finished/invalid items don't
 //     clutter it.

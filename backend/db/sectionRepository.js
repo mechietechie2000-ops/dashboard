@@ -1,5 +1,14 @@
 const db = require("./connection");
 const sectionConfig = require("./sectionConfig");
+const { REMINDER_SOURCES } = require("./reminderSources");
+const reminderRepo = require("./reminderRepository");
+
+// Reverse lookup: source table name -> reminder source type, so any
+// section whose table is a reminder source gets synced automatically
+// without each call site needing to know about reminders.
+const TABLE_TO_REMINDER_TYPE = Object.fromEntries(
+  REMINDER_SOURCES.map((s) => [s.table, s.type])
+);
 
 function getConfig(sectionKey) {
   const cfg = sectionConfig[sectionKey];
@@ -63,6 +72,12 @@ async function insertRecord(sectionKey, values) {
 
   const sql = `INSERT INTO ${cfg.tableName} (${cols.join(", ")}) VALUES (${placeholders})`;
   const result = await db.run(sql, params);
+
+  const reminderType = TABLE_TO_REMINDER_TYPE[cfg.tableName];
+  if (reminderType) {
+    await reminderRepo.syncReminder(reminderType, result.lastID);
+  }
+
   return { id: result.lastID };
 }
 
@@ -85,6 +100,12 @@ async function updateRecord(sectionKey, id, values) {
 
   const sql = `UPDATE ${cfg.tableName} SET ${setClause} WHERE id = ?`;
   const result = await db.run(sql, params);
+
+  const reminderType = TABLE_TO_REMINDER_TYPE[cfg.tableName];
+  if (reminderType) {
+    await reminderRepo.syncReminder(reminderType, id);
+  }
+
   return { changes: result.changes };
 }
 
@@ -92,6 +113,12 @@ async function deleteRecord(sectionKey, id) {
   const cfg = getConfig(sectionKey);
   const sql = `DELETE FROM ${cfg.tableName} WHERE id = ?`;
   const result = await db.run(sql, [id]);
+
+  const reminderType = TABLE_TO_REMINDER_TYPE[cfg.tableName];
+  if (reminderType) {
+    await reminderRepo.removeReminder(reminderType, id);
+  }
+
   return { changes: result.changes };
 }
 

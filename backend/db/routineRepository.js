@@ -1,5 +1,5 @@
 const db = require('./connection');
-const reminderRepo = require('./remindersRepository');
+const reminderRepo = require('./reminderRepository');
 
 const DAY_ABBREV = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
 const todayStr = () => new Date().toISOString().slice(0, 10);
@@ -18,11 +18,6 @@ async function runDailyReset() {
     return { skipped: true, reason: 'already ran today' };
   }
 
-  /* */
-  const member = row.family_member_id
-    ? await db.get(`SELECT first_name FROM family_members WHERE id = ?`, [row.family_member_id])
-    : null;
-    
   // 1. Log anything left over from the previous cycle that was never marked
   const unmarked = await db.all(`SELECT * FROM daily_routine_temp WHERE status = 'new'`);
   for (const row of unmarked) {
@@ -50,9 +45,9 @@ async function runDailyReset() {
   );
   for (const task of todaysTasks) {
     await db.run(
-      `INSERT INTO daily_routine_temp (routine_id, title, family_member_id, scheduled_time, status, mute, announce)
-       VALUES (?, ?, ?, ?, 'new', ?, ?)`,
-      [task.id, task.title, task.family_member_id, task.scheduled_time, task.mute, task.announce]
+      `INSERT INTO daily_routine_temp (id, routine_id, title, family_member_id, scheduled_time, status, mute, announce)
+       VALUES (?, ?, ?, ?, ?, 'new', ?, ?)`,
+      [task.id, task.id, task.title, task.family_member_id, task.scheduled_time, task.mute, task.announce]
     );
   }
   for (const task of todaysTasks) {
