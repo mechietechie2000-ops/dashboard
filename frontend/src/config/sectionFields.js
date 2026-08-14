@@ -12,7 +12,7 @@ import ChecklistOutlinedIcon from '@mui/icons-material/ChecklistOutlined';
 const fmtDate = (value) => {
   if (!value) return undefined;
   // const d = new Date(value);
-  const d = new Date(`${value}T00:00:00`);  
+  const d = new Date(`${value}T00:00:00`);
   if (Number.isNaN(d.getTime())) return value;
   return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 };
@@ -28,6 +28,7 @@ const fmtDateTime = (value) => {
     minute: '2-digit',
   });
 };
+const currentYear = new Date().getFullYear();
 
 // sectionKey -> UI config. `fields` drives the generic form (SectionForm);
 // `mapRowToItem` turns a raw DB row (from listRecords) into the
@@ -58,7 +59,11 @@ const sectionFields = {
           { value: 'weekly', label: 'Weekly' },
         ],
       },
-      { name: 'day_of_week', label: 'Day of week', type: 'select', required: false , 
+      {
+        name: 'day_of_week',
+        label: 'Day of week',
+        type: 'select',
+        required: false,
         options: [
           { value: 'Monday', label: 'Monday' },
           { value: 'Tuesday', label: 'Tuesday' },
@@ -155,7 +160,16 @@ const sectionFields = {
           { value: 'long_term', label: 'Long Term' },
         ],
       },
-      { name: 'target_year', label: 'Target Year', type: 'number', required: true },
+      {
+        name: 'target_year',
+        label: 'Target Year',
+        type: 'select',
+        required: true,
+        options: Array.from({ length: 10 }, (_, index) => {
+          const year = currentYear + index;
+          return { value: year, label: String(year) };
+        }),
+      },
       {
         name: 'target_quarter',
         label: 'Target Quarter',
@@ -230,10 +244,21 @@ const sectionFields = {
         required: false,
         options: ['Doctor', 'Auto', 'Other'],
       },
-      { name: 'family_member_id', label: 'For', type: 'asyncSelect', source: 'familyMembers', required: true},
+      {
+        name: 'family_member_id',
+        label: 'For',
+        type: 'asyncSelect',
+        source: 'familyMembers',
+        required: true,
+      },
       { name: 'title', label: 'Title', type: 'text', required: true },
       { name: 'provider_name', label: 'Provider Name', type: 'text', required: true },
-      { name: 'appointment_datetime', label: 'Appointment Date', type: 'date', required: true },
+      {
+        name: 'appointment_datetime',
+        label: 'Appointment Date & Time',
+        type: 'datetime',
+        required: true,
+      },
     ],
     mapRowToItem: (row) => ({
       id: row.id,
