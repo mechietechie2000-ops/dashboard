@@ -24,3 +24,5 @@ frontend/public/*png*
 frontend/public/*svg
 frontend/public/*svg*
 
+.DS_Store
+**/.DS_Store
