@@ -43,7 +43,7 @@ CREATE TABLE IF NOT EXISTS goals (
     target_date         TEXT, -- ISO-8601: YYYY-MM-DD
     status              TEXT NOT NULL DEFAULT 'todo', -- in_progress | completed | abandoned | paused
     completed_on        TEXT,
-    priority            INTEGER NOT NULL DEFAULT 0,
+    priority            TEXT NOT NULL DEFAULT 'low',
     created_at          TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at          TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     start_date          TEXT
