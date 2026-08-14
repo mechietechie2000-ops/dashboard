@@ -1,4 +1,5 @@
 const db = require('./connection');
+const reminderRepo = require('./remindersRepository');
 
 const DAY_ABBREV = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
 const todayStr = () => new Date().toISOString().slice(0, 10);
@@ -54,7 +55,20 @@ async function runDailyReset() {
       [task.id, task.title, task.family_member_id, task.scheduled_time, task.mute, task.announce]
     );
   }
+  for (const task of todaysTasks) {
+    await reminderRepo.syncReminder('routine', task.id);
+  }
 
+  // Clean up any 'routine' reminder left over from a routine that no longer
+  // qualifies for today (deactivated, or a weekly routine whose day passed) —
+  // its temp row won't be recreated above, so it'd otherwise go stale.
+  const todaysIds = new Set(todaysTasks.map((t) => t.id));
+  const staleReminders = await db.all(`SELECT source_id FROM reminder WHERE source = 'routine'`);
+  for (const r of staleReminders) {
+    if (!todaysIds.has(r.source_id)) {
+      await reminderRepo.removeReminder('routine', r.source_id);
+    }
+  }
   // 4. Record that today's reset has run (upsert)
   await db.run(
     `INSERT INTO app_state (key, value) VALUES ('last_reset_date', ?)
@@ -106,6 +120,7 @@ async function markDone(tempId) {
     ]
   );
   await db.run(`DELETE FROM daily_routine_temp WHERE id = ?`, [tempId]);
+  await reminderRepo.removeReminder('routine', tempId);
   return { ok: true };
 }
 
@@ -134,6 +149,7 @@ async function markSkipped(tempId, reason) {
     ]
   );
   await db.run(`DELETE FROM daily_routine_temp WHERE id = ?`, [tempId]);
+  await reminderRepo.removeReminder('routine', tempId);
   return { ok: true };
 }
 /*   const row = await db.get(`SELECT * FROM daily_routine_temp WHERE temp_id = ?`, [tempId]);
