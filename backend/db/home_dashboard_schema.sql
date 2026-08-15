@@ -35,8 +35,8 @@ CREATE TABLE IF NOT EXISTS goals (
     title               TEXT NOT NULL,
     description         TEXT,
     goal_type           TEXT, -- short_term | long_term 
-    target_year			    INTEGER,
-    target_quarter		  TEXT,
+    target_year         INTEGER,
+    target_quarter      TEXT,
     target_value        NUMERIC,
     current_value       NUMERIC NOT NULL DEFAULT 0,
     unit                TEXT, -- $, %, lbs, miles, books, courses, etc.

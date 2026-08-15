@@ -26,7 +26,7 @@ const SectionQuickAdd = ({ sectionKey, redirectTo }) => {
   return (
     <Box m={{ xs: "0px", sm: "20px" }} maxWidth="480px">
       <Header title={`ADD ${config.label.toUpperCase()}`} subtitle={config.emptyMessage ? "" : ""} />
-      <Paper sx={{ backgroundColor: colors.primary[400], backgroundImage: "none", borderRadius: "10px", p: "24px" }}>
+      <Paper sx={{ backgroundColor: colors.primary[400], backgroundImage: "none", borderRadius: "16px", p: "24px" }}>
         <SectionForm sectionKey={sectionKey} onSubmit={handleSubmit} onCancel={() => navigate(-1)} />
       </Paper>
     </Box>

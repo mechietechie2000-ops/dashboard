@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback, useMemo } from 'react';
 import {
   Box,
   Button,
+  Collapse,
   Drawer,
   IconButton,
   MenuItem,
@@ -33,6 +34,7 @@ import { runDailyResetManual } from '../../data/routineRepository';
 const SECTION_KEYS = [
   'routine',
   'todo_task',
+  'reminders',
   'goals',
   'events',
   'appointments',
@@ -239,6 +241,11 @@ const HomeDashboard = () => {
             ? Object.values(filterState).filter((v) => v !== undefined && v !== '').length
             : 0;
           const isCollapsed = Boolean(collapsedSections[sectionKey]);
+          // Icons stack right-to-left: View all, Add, Filter, (Reset for routine).
+          // Add always sits in the same slot right after "View all"; Filter (when
+          // present) sits one slot further left so the two never overlap.
+          const addRight = config.viewAllLink ? 90 : 12;
+          const filterRight = addRight + 40;
           return (
             <Box
               key={sectionKey}
