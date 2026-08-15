@@ -14,15 +14,16 @@ import {
   MenuItem,
   ListItemIcon,
   ListItemText,
-} from '@mui/material';
-import CloseIcon from '@mui/icons-material/Close';
-import MoreVertIcon from '@mui/icons-material/MoreVert';
-import EditIcon from '@mui/icons-material/Edit';
-import VisibilityIcon from '@mui/icons-material/Visibility';
-import ContentCopyIcon from '@mui/icons-material/ContentCopy';
-import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
-import { Link } from 'react-router-dom';
-import { tokens } from '../theme';
+} from "@mui/material";
+import CloseIcon from "@mui/icons-material/Close";
+import MoreVertIcon from "@mui/icons-material/MoreVert";
+import EditIcon from "@mui/icons-material/Edit";
+import VisibilityIcon from "@mui/icons-material/Visibility";
+import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
+import ContentCopyIcon from "@mui/icons-material/ContentCopy";
+import { Link } from "react-router-dom";
+import { tokens } from "../theme";
+
 
 const SWIPE_THRESHOLD = 90;
 const MOVE_CANCEL_PX = 10;
@@ -381,6 +382,8 @@ const DashboardSection = ({
         </Box>
 
         {/* SMOOTH COLLAPSIBLE BODY AREA */}
+        {/* BODY */}
+        {/* {!isCollapsed && ( */} 
         <Box
           sx={{
             flex: isCollapsed ? 0 : 1,
@@ -414,26 +417,31 @@ const DashboardSection = ({
             )}
           </Box>
 
-          {/* VIEW ALL LINK - Pinned to absolute bottom edge */}
-          {viewAllLink && (
-            <Box display="flex" justifyContent="flex-end" pt="12px" mt="auto">
-              <Typography
-                component={Link}
-                to={viewAllLink}
-                variant="body2"
-                sx={{
-                  color: colors.greenAccent[400],
-                  textDecoration: 'none',
-                  whiteSpace: 'nowrap',
-                  fontWeight: '600',
-                  '&:hover': { textDecoration: 'underline' },
-                }}
-              >
-                View all →
-              </Typography>
-            </Box>
-          )}
-        </Box>
+        {/* FOOTER - VIEW ALL LINK - Pinned to absolute bottom edge */}
+        {viewAllLink && (
+          <Box
+            display="flex"
+            justifyContent="flex-end"
+            mt="10px"
+            pt="10px"
+            borderTop={`1px solid ${colors.primary[500]}`}
+          >
+            <Typography
+              component={Link}
+              to={viewAllLink}
+              variant="body2"
+              sx={{
+                color: colors.greenAccent[400],
+                textDecoration: "none",
+                whiteSpace: "nowrap",
+                "&:hover": { textDecoration: "underline" },
+              }}
+            >
+              View all
+            </Typography>
+          </Box>
+        )}
+        </Box>        
       </Box>
 
       {/* VIEW DETAILS DIALOG (Color matched to theme) */}
@@ -444,19 +452,19 @@ const DashboardSection = ({
         maxWidth="sm"
         PaperProps={{
           sx: {
-            bgcolor: colors.primary[400],
-            color: colors.grey[100],
+            backgroundColor: colors.primary[400],
+            backgroundImage: "none",
             borderRadius: '16px',
-            backgroundImage: 'none',
+            color: colors.grey[100],
           },
         }}
       >
         <DialogTitle sx={{ pr: 6, color: colors.grey[100], fontWeight: 'bold' }}>
-          {selectedItem?.primary || 'Details'}
+          {selectedItem?.primary || "Details"}
           <IconButton
             aria-label="Close"
             onClick={handleCloseDetails}
-            sx={{ position: 'absolute', right: 8, top: 8, color: colors.grey[300] }}
+            sx={{ position: "absolute", right: 8, top: 8, color: colors.grey[300] }}
           >
             <CloseIcon />
           </IconButton>
@@ -483,13 +491,19 @@ const DashboardSection = ({
               {detailFields.map(([key, value], index) => (
                 <Box key={key}>
                   {index > 0 && <Divider sx={{ borderColor: colors.primary[500] }} />}
-                  <Box display="flex" justifyContent="space-between" gap={2} py={1.25}>
-                    <Typography color={colors.grey[300]} sx={{ textTransform: 'capitalize' }}>
-                      {key.replace(/_/g, ' ')}
+                  <Box
+                    display="flex"
+                    justifyContent="space-between"
+                    gap={2}
+                    py={1.25}
+                  >
+                    <Typography color={colors.grey[300]} sx={{ textTransform: "capitalize" }}>
+                      {key.replace(/_/g, " ")}
                     </Typography>
                     <Typography
-                      textAlign="right"
                       color={colors.grey[100]}
+                      textAlign="right"
+                      {/* sx={{ wordBreak: "break-word" }} */}
                       sx={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}
                     >
                       {String(value)}
@@ -500,8 +514,7 @@ const DashboardSection = ({
             </Box>
           )}
         </DialogContent>
-
-        <DialogActions sx={{ px: 3, py: 2 }}>
+        <DialogActions sx={{ px: 3, py: 2, borderColor: colors.primary[500] }}>
           <Button onClick={handleCloseDetails} sx={{ color: colors.grey[300] }}>
             Close
           </Button>

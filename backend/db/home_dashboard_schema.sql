@@ -208,7 +208,7 @@ CREATE INDEX IF NOT EXISTS idx_routines_active ON daily_routine(active, schedule
 -- ---------------------------------------------------------------------
 
 CREATE TABLE IF NOT EXISTS daily_routine_temp (
-  id                INTEGER PRIMARY KEY AUTOINCREMENT,
+  id                INTEGER PRIMARY KEY,
   routine_id        INTEGER NOT NULL,
   title             TEXT NOT NULL,
   family_member_id  INTEGER,

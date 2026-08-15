@@ -20,6 +20,7 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { tokens } from '../../theme';
 import Header from '../../components/Header';
 import DashboardSection from '../../components/DashboardSection';
+import ReminderCard from '../../components/ReminderCard';
 import SectionForm from '../../components/SectionForm';
 import sectionFields from '../../config/sectionFields';
 import {
@@ -231,6 +232,7 @@ const HomeDashboard = () => {
         gap="20px"
         mt="10px"
       >
+        <ReminderCard />
         {SECTION_KEYS.map((sectionKey) => {
           const config = sectionFields[sectionKey];
           const hasFilter = Boolean(config.dashboardFilter);
@@ -330,38 +332,6 @@ const HomeDashboard = () => {
                   onCloneRequest={(item) => handleClone(sectionKey, item)}
                   onDeleteRequest={(item) => queueDelete(sectionKey, item)}
                 />
-                {hasFilter && (
-                  <IconButton
-                    onClick={() => setFilterSheetFor(sectionKey)}
-                    size="small"
-                    sx={{ position: "absolute", top: 12, right: filterRight }}
-                    aria-label={`Filter ${config.label}`}
-                  >
-                    <FilterListIcon
-                      sx={{ color: activeFilterCount ? colors.blueAccent[400] : colors.grey[300] }}
-                    />
-                  </IconButton>
-                )}
-                <IconButton
-                  onClick={() => openAdd(sectionKey)}
-                  size="small"
-                  sx={{ position: "absolute", top: 12, right: addRight }}
-                  aria-label={`Add ${config.label}`}
-                >
-                  <AddCircleOutlineIcon sx={{ color: colors.greenAccent[500] }} />
-                </IconButton>
-                {sectionKey === "routine" && (
-                  <IconButton
-                    onClick={handleDailyReset}
-                    disabled={resetting}
-                    size="small"
-                    sx={{ position: "absolute", top: 12, right: addRight + 40 }}
-                    aria-label="Reset today's routine"
-                    title="Reset today's routine"
-                  >
-                    <RestartAltIcon sx={{ color: colors.grey[300], opacity: resetting ? 0.4 : 1 }} />
-                  </IconButton>
-                )}
               </Box>
             </Box>
           );

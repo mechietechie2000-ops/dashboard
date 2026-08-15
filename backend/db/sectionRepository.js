@@ -1,5 +1,35 @@
 const db = require('./connection');
 const sectionConfig = require('./sectionConfig');
+const { REMINDER_SOURCES } = require('./reminderSources');
+const { syncReminder, removeReminder } = require('./remindersRepository');
+
+// tableName -> reminder source_type, e.g. 'goals' -> 'goal'. Only tables
+// that are actually reminder sources show up here (bills/library/etc are
+// not, so they're simply skipped below).
+const TABLE_TO_SOURCE_TYPE = REMINDER_SOURCES.reduce((map, src) => {
+  map[src.table] = src.type;
+  return map;
+}, {});
+
+async function syncReminderForSection(cfg, id) {
+  const sourceType = TABLE_TO_SOURCE_TYPE[cfg.tableName];
+  if (!sourceType) return; // this section isn't a reminder source
+  try {
+    await syncReminder(sourceType, id);
+  } catch (err) {
+    console.error(`[sectionRepository] syncReminder failed for ${sourceType} ${id}:`, err.message);
+  }
+}
+
+async function removeReminderForSection(cfg, id) {
+  const sourceType = TABLE_TO_SOURCE_TYPE[cfg.tableName];
+  if (!sourceType) return;
+  try {
+    await removeReminder(sourceType, id);
+  } catch (err) {
+    console.error(`[sectionRepository] removeReminder failed for ${sourceType} ${id}:`, err.message);
+  }
+}
 
 function getConfig(sectionKey) {
   const cfg = sectionConfig[sectionKey];
@@ -63,6 +93,7 @@ async function insertRecord(sectionKey, values) {
 
   const sql = `INSERT INTO ${cfg.tableName} (${cols.join(', ')}) VALUES (${placeholders})`;
   const result = await db.run(sql, params);
+  await syncReminderForSection(cfg, result.lastID);
   return { id: result.lastID };
 }
 
@@ -97,6 +128,7 @@ async function updateRecord(sectionKey, id, values) {
 
   const sql = `UPDATE ${cfg.tableName} SET ${setClause} WHERE id = ?`;
   const result = await db.run(sql, params);
+  await syncReminderForSection(cfg, id);
   return { changes: result.changes };
 }
 
@@ -104,6 +136,7 @@ async function deleteRecord(sectionKey, id) {
   const cfg = getConfig(sectionKey);
   const sql = `DELETE FROM ${cfg.tableName} WHERE id = ?`;
   const result = await db.run(sql, [id]);
+  await removeReminderForSection(cfg, id);
   return { changes: result.changes };
 }
 

@@ -1,7 +1,27 @@
 const express = require("express");
 const router = express.Router();
 const repo = require("../db/remindersRepository");
+const sectionRepository = require("../db/sectionRepository");
+const routineRepository = require("../db/routineRepository");
 const { authenticate } = require("../middleware/auth");
+
+// Per-source "mark complete" behavior for PATCH /api/reminders/:sourceType/:sourceId/complete.
+// todo_task/goals/renewals/appointments go through the generic sectionRepository
+// (sectionKey + the status value that counts as "done" for that table) — these
+// already trigger the reminder sync automatically via sectionRepository.js.
+// routine is NOT written to directly (source of truth for "done" is the
+// today's-instance table, and its own endpoint already deletes the row and
+// removes the reminder) — it's proxied to routineRepository.markDone instead.
+const COMPLETE_HANDLERS = {
+  todo_task: (sourceId) =>
+    sectionRepository.updateRecord("todo_task", sourceId, { status: "done" }),
+  goal: (sourceId) => sectionRepository.updateRecord("goals", sourceId, { status: "completed" }),
+  renewal: (sourceId) =>
+    sectionRepository.updateRecord("renewals", sourceId, { status: "renewed" }),
+  appointment: (sourceId) =>
+    sectionRepository.updateRecord("appointments", sourceId, { status: "completed" }),
+  routine: (sourceId) => routineRepository.markDone(sourceId),
+};
 
 const handle = (fn) => async (req, res) => {
   try {
@@ -25,6 +45,65 @@ router.get(
     const from = req.query.from || today;
     const to = req.query.to || defaultTo;
     return repo.getReminders({ from, to });
+  })
+);
+
+// GET /api/reminders/card?bucket=today|tomorrow|this_week|next_week&from=&to=&sources=goal,renewal
+// The Reminder card's actual data source — queries the physical `reminder`
+// table (WHERE completed_at IS NULL), not the live union above (that's
+// only for the sync job and the legacy GET /api/reminders endpoint).
+// `sources` (comma-separated source_type list) lets the frontend exclude a
+// source, e.g. goals, without any backend change.
+const BUCKET_RANGES = {
+  today: () => {
+    const d = new Date().toISOString().slice(0, 10);
+    return { from: d, to: d };
+  },
+  tomorrow: () => {
+    const d = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    return { from: d, to: d };
+  },
+  this_week: () => {
+    const now = new Date();
+    const day = now.getDay();
+    const end = new Date(now.getTime() + (6 - day) * 24 * 60 * 60 * 1000);
+    return { from: now.toISOString().slice(0, 10), to: end.toISOString().slice(0, 10) };
+  },
+  next_week: () => {
+    const now = new Date();
+    const day = now.getDay();
+    const weekEnd = new Date(now.getTime() + (6 - day) * 24 * 60 * 60 * 1000);
+    const nextWeekEnd = new Date(weekEnd.getTime() + 7 * 24 * 60 * 60 * 1000);
+    return { from: now.toISOString().slice(0, 10), to: nextWeekEnd.toISOString().slice(0, 10) };
+  },
+};
+
+router.get(
+  "/api/reminders/card",
+  handle((req) => {
+    let { from, to, bucket, sources } = req.query;
+    if (bucket && BUCKET_RANGES[bucket]) {
+      ({ from, to } = BUCKET_RANGES[bucket]());
+    }
+    if (!from) from = new Date().toISOString().slice(0, 10);
+    if (!to) to = new Date(Date.now() + 400 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    const sourceList = sources ? sources.split(",").map((s) => s.trim()).filter(Boolean) : undefined;
+    return repo.getReminderCard({ from, to, sources: sourceList });
+  })
+);
+
+// PATCH /api/reminders/:sourceType/:sourceId/complete
+router.patch(
+  "/api/reminders/:sourceType/:sourceId/complete",
+  handle((req) => {
+    const { sourceType, sourceId } = req.params;
+    const fn = COMPLETE_HANDLERS[sourceType];
+    if (!fn) {
+      const err = new Error(`Cannot complete reminder source: ${sourceType}`);
+      err.status = 400;
+      throw err;
+    }
+    return fn(sourceId);
   })
 );
 
