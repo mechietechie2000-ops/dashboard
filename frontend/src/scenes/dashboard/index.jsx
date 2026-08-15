@@ -1,7 +1,8 @@
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import {
   Box,
   Button,
+  Collapse,
   Drawer,
   IconButton,
   MenuItem,
@@ -9,52 +10,54 @@ import {
   Select,
   Snackbar,
   useTheme,
-} from "@mui/material";
-import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
-import RestartAltIcon from "@mui/icons-material/RestartAlt";
-import FilterListIcon from "@mui/icons-material/FilterList";
-import { tokens } from "../../theme";
-import Header from "../../components/Header";
-import DashboardSection from "../../components/DashboardSection";
-import SectionForm from "../../components/SectionForm";
-import sectionFields from "../../config/sectionFields";
-import { listRecords, insertRecord, updateRecord, deleteRecord } from "../../data/sectionRepository";
-import { runDailyResetManual } from "../../data/routineRepository";
+} from '@mui/material';
+import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
+import RestartAltIcon from '@mui/icons-material/RestartAlt';
+import FilterListIcon from '@mui/icons-material/FilterList';
+import ExpandLessIcon from '@mui/icons-material/ExpandLess';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+
+import { tokens } from '../../theme';
+import Header from '../../components/Header';
+import DashboardSection from '../../components/DashboardSection';
+import ReminderCard from '../../components/ReminderCard';
+import SectionForm from '../../components/SectionForm';
+import sectionFields from '../../config/sectionFields';
+import {
+  listRecords,
+  insertRecord,
+  updateRecord,
+  deleteRecord,
+} from '../../data/sectionRepository';
+import { runDailyResetManual } from '../../data/routineRepository';
 
 const SECTION_KEYS = [
-  "routine",
-  "reminders",
-  "goals",
-  "events",
-  "appointments",
-  "renewals",
-  "bills",
-  "extracurricular",
-  "library",
-  "todo_task",
+  'routine',
+  'todo_task',
+  'goals',
+  'events',
+  'appointments',
+  'renewals',
+  'bills',
+  //  "extracurricular",
+  //  "library",
 ];
 
 const UNDO_WINDOW_MS = 4500;
 
 const DATE_RANGE_OPTIONS = [
-  { value: 7, label: "Next 7 days" },
-  { value: 30, label: "Next 30 days" },
-  { value: 90, label: "Next 90 days" },
-  { value: 0, label: "All" },
+  { value: 7, label: 'Next 7 days' },
+  { value: 30, label: 'Next 30 days' },
+  { value: 90, label: 'Next 90 days' },
+  { value: 0, label: 'All' },
 ];
 
-// Any field (quick-add `fields` or `detailFields`) marked
-// `dashboardFilterable: true` becomes a dropdown filter here automatically
-// — this isn't specific to Todo Task, any section with `dashboardFilter`
-// set in sectionFields.js gets the same widget for free.
-const getFilterableFields = (config) => [
-  ...(config.fields || []),
-  ...(config.detailFields || []),
-].filter((f) => f.dashboardFilterable);
+const getFilterableFields = (config) =>
+  [...(config.fields || []), ...(config.detailFields || [])].filter((f) => f.dashboardFilterable);
 
 const withinRangeDays = (dateStr, rangeDays) => {
-  if (!rangeDays) return true; // 0/undefined = "All"
-  if (!dateStr) return true; // don't hide undated items behind a date filter
+  if (!rangeDays) return true;
+  if (!dateStr) return true;
   const target = new Date(dateStr);
   if (Number.isNaN(target.getTime())) return true;
   const today = new Date();
@@ -84,16 +87,22 @@ const HomeDashboard = () => {
 
   const [itemsBySection, setItemsBySection] = useState({});
   const [activeSection, setActiveSection] = useState(null);
-  const [editingItem, setEditingItem] = useState(null); // raw row being edited, or null when adding
-  const [pendingUndo, setPendingUndo] = useState(null); // { sectionKey, item, timeoutId }
+  const [editingItem, setEditingItem] = useState(null);
+  const [pendingUndo, setPendingUndo] = useState(null);
   const [resetting, setResetting] = useState(false);
-  const [resetMessage, setResetMessage] = useState("");
-  // Keyed by sectionKey -> { rangeDays, [filterableFieldName]: value }.
-  // Only sections with `dashboardFilter` in sectionFields.js ever read from
-  // this; everything else ignores it, same as before.
+  const [resetMessage, setResetMessage] = useState('');
   const [filtersBySection, setFiltersBySection] = useState({});
-  // Which section's filter sheet is open (a sectionKey, or null when closed).
   const [filterSheetFor, setFilterSheetFor] = useState(null);
+
+  // Track collapsed state per section
+  const [collapsedSections, setCollapsedSections] = useState({});
+
+  const toggleCollapse = (sectionKey) => {
+    setCollapsedSections((prev) => ({
+      ...prev,
+      [sectionKey]: !prev[sectionKey],
+    }));
+  };
 
   const setSectionFilter = (sectionKey, key, value) => {
     setFiltersBySection((prev) => ({
@@ -132,8 +141,8 @@ const HomeDashboard = () => {
     SECTION_KEYS.forEach(loadSection);
   }, [loadSection]);
 
-  const openAdd = (sectionKey) => {
-    setEditingItem(null);
+  const openAdd = (sectionKey, initialValues = null) => {
+    setEditingItem(initialValues); // If cloning, prepopulates with old record values
     setActiveSection(sectionKey);
   };
 
@@ -142,13 +151,20 @@ const HomeDashboard = () => {
     setActiveSection(sectionKey);
   };
 
+  const handleClone = (sectionKey, item) => {
+    // Strip ID and timestamps so it creates a fresh clone
+    const { id, created_at, updated_at, ...clonedData } = item.raw || {};
+    openAdd(sectionKey, clonedData);
+  };
+
   const closeForm = () => {
     setActiveSection(null);
     setEditingItem(null);
   };
 
   const handleSubmit = async (sectionKey, values) => {
-    if (editingItem) {
+    // If editingItem has an ID, it's an update. Otherwise, it's a new record (or cloned record).
+    if (editingItem && editingItem.id) {
       await updateRecord(sectionKey, editingItem.id, values);
     } else {
       await insertRecord(sectionKey, values);
@@ -157,9 +173,6 @@ const HomeDashboard = () => {
     closeForm();
   };
 
-  // Optimistically remove the item and delay the actual API call so the
-  // Snackbar's "Undo" can cancel it outright — mirrors the pattern already
-  // used for routine tasks in scenes/routine/index.jsx.
   const queueDelete = (sectionKey, item) => {
     setItemsBySection((prev) => ({
       ...prev,
@@ -171,7 +184,7 @@ const HomeDashboard = () => {
         await deleteRecord(sectionKey, item.id);
       } catch (err) {
         console.error(`Failed to delete ${sectionKey} item ${item.id}:`, err);
-        loadSection(sectionKey); // resync with the server if the delete failed
+        loadSection(sectionKey);
       }
       setPendingUndo((cur) => (cur && cur.item.id === item.id ? null : cur));
     }, UNDO_WINDOW_MS);
@@ -196,35 +209,37 @@ const HomeDashboard = () => {
       const result = await runDailyResetManual();
       setResetMessage(
         result.skipped
-          ? "Already reset for today."
+          ? 'Already reset for today.'
           : `Reset complete — ${result.tasksLoaded} task(s) loaded for today.`
       );
-      await loadSection("routine");
+      await loadSection('routine');
     } catch (err) {
-      setResetMessage(err.message || "Reset failed — please try again.");
+      setResetMessage(err.message || 'Reset failed — please try again.');
     } finally {
       setResetting(false);
     }
   };
 
   return (
-    <Box m={{ xs: "0px", sm: "20px" }}>
+    <Box m={{ xs: '0px', sm: '20px' }}>
       <Header title="HOME" subtitle="Welcome back!" />
 
       <Box
         display="grid"
-        gridTemplateColumns={{ xs: "1fr", sm: "repeat(2, 1fr)", md: "repeat(3, 1fr)" }}
+        gridTemplateColumns={{ xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(3, 1fr)' }}
         gridAutoRows="minmax(240px, auto)"
         gap="20px"
         mt="10px"
       >
+        <ReminderCard />
         {SECTION_KEYS.map((sectionKey) => {
           const config = sectionFields[sectionKey];
           const hasFilter = Boolean(config.dashboardFilter);
           const filterState = filtersBySection[sectionKey] || {};
           const activeFilterCount = hasFilter
-            ? Object.values(filterState).filter((v) => v !== undefined && v !== "").length
+            ? Object.values(filterState).filter((v) => v !== undefined && v !== '').length
             : 0;
+          const isCollapsed = Boolean(collapsedSections[sectionKey]);
           // Icons stack right-to-left: View all, Add, Filter, (Reset for routine).
           // Add always sits in the same slot right after "View all"; Filter (when
           // present) sits one slot further left so the two never overlap.
@@ -235,16 +250,85 @@ const HomeDashboard = () => {
               key={sectionKey}
               display="flex"
               flexDirection="column"
-              sx={{ minWidth: 0 /* CRITICAL: prevents CSS grid item from stretching beyond screen width */ }}
+              sx={{
+                minWidth: 0,
+                backgroundColor: colors.primary[400], // Matched color palette
+                borderRadius: '8px',
+                overflow: 'hidden',
+                boxShadow: 1,
+              }}
             >
               <Box position="relative" flex={1} minHeight={0}>
+                {/* Top Right Action Button Row: [Reset] [Filter] [+] [ ^ ] */}
+                <Box
+                  sx={{
+                    position: 'absolute',
+                    top: 12,
+                    right: 12,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    zIndex: 2,
+                  }}
+                >
+                  {sectionKey === 'routine' && (
+                    <IconButton
+                      onClick={handleDailyReset}
+                      disabled={resetting}
+                      size="small"
+                      aria-label="Reset today's routine"
+                      title="Reset today's routine"
+                    >
+                      <RestartAltIcon
+                        sx={{ color: colors.grey[300], opacity: resetting ? 0.4 : 1 }}
+                      />
+                    </IconButton>
+                  )}
+
+                  {hasFilter && (
+                    <IconButton
+                      onClick={() => setFilterSheetFor(sectionKey)}
+                      size="small"
+                      aria-label={`Filter ${config.label}`}
+                    >
+                      <FilterListIcon
+                        sx={{
+                          color: activeFilterCount ? colors.blueAccent[400] : colors.grey[300],
+                        }}
+                      />
+                    </IconButton>
+                  )}
+
+                  <IconButton
+                    onClick={() => openAdd(sectionKey)}
+                    size="small"
+                    aria-label={`Add ${config.label}`}
+                  >
+                    <AddCircleOutlineIcon sx={{ color: colors.greenAccent[500] }} />
+                  </IconButton>
+
+                  <IconButton
+                    onClick={() => toggleCollapse(sectionKey)}
+                    size="small"
+                    aria-label={`Toggle collapse ${config.label}`}
+                  >
+                    {isCollapsed ? (
+                      <ExpandMoreIcon sx={{ color: colors.grey[300] }} />
+                    ) : (
+                      <ExpandLessIcon sx={{ color: colors.grey[300] }} />
+                    )}
+                  </IconButton>
+                </Box>
+
                 <DashboardSection
                   title={config.label}
                   icon={config.icon}
                   items={displayItemsBySection[sectionKey] || []}
                   emptyMessage={config.emptyMessage}
                   viewAllLink={config.viewAllLink}
+                  isCollapsed={isCollapsed}
                   onEditRequest={(item) => openEdit(sectionKey, item)}
+                  onCloneRequest={(item) => handleClone(sectionKey, item)}
                   onDeleteRequest={(item) => queueDelete(sectionKey, item)}
                 />
                 {hasFilter && (
@@ -285,10 +369,7 @@ const HomeDashboard = () => {
         })}
       </Box>
 
-      {/* Filter sheet — slides up from the bottom, shared across sections;
-          which section it's filtering is tracked by filterSheetFor. Built
-          off the same dashboardFilter/dashboardFilterable config as before,
-          just relocated out of the always-visible card row. */}
+      {/* Filter Sheet */}
       <Drawer
         anchor="bottom"
         open={Boolean(filterSheetFor)}
@@ -310,84 +391,100 @@ const HomeDashboard = () => {
           },
         }}
       >
-        {filterSheetFor && (() => {
-          const config = sectionFields[filterSheetFor];
-          const filterState = filtersBySection[filterSheetFor] || {};
-          const filterableFields = getFilterableFields(config);
-          return (
-            <Box display="flex" flexDirection="column" gap="14px">
-              <Box sx={{ fontWeight: "bold", color: colors.grey[100] }}>Filter {config.label}</Box>
-              <Box display="flex" flexDirection="column" gap="10px">
-                <Select
-                  size="small"
-                  fullWidth
-                  value={filterState.rangeDays ?? config.dashboardFilter.defaultRangeDays ?? 0}
-                  onChange={(e) => setSectionFilter(filterSheetFor, "rangeDays", Number(e.target.value))}
-                  sx={{ color: colors.grey[100] }}
-                >
-                  {DATE_RANGE_OPTIONS.map((opt) => (
-                    <MenuItem key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </MenuItem>
-                  ))}
-                </Select>
-                {filterableFields.map((field) => (
+        {filterSheetFor &&
+          (() => {
+            const config = sectionFields[filterSheetFor];
+            const filterState = filtersBySection[filterSheetFor] || {};
+            const filterableFields = getFilterableFields(config);
+            return (
+              <Box display="flex" flexDirection="column" gap="14px">
+                <Box sx={{ fontWeight: 'bold', color: colors.grey[100] }}>
+                  Filter {config.label}
+                </Box>
+                <Box display="flex" flexDirection="column" gap="10px">
                   <Select
-                    key={field.name}
                     size="small"
                     fullWidth
-                    displayEmpty
-                    value={filterState[field.name] || ""}
-                    onChange={(e) => setSectionFilter(filterSheetFor, field.name, e.target.value)}
+                    value={filterState.rangeDays ?? config.dashboardFilter?.defaultRangeDays ?? 0}
+                    onChange={(e) =>
+                      setSectionFilter(filterSheetFor, 'rangeDays', Number(e.target.value))
+                    }
                     sx={{ color: colors.grey[100] }}
                   >
-                    <MenuItem value="">All {field.label}</MenuItem>
-                    {(typeof field.options === "function" ? field.options({}) : field.options || []).map(
-                      (opt) => {
-                        const optValue = typeof opt === "object" ? opt.value : opt;
-                        const optLabel = typeof opt === "object" ? opt.label : opt;
+                    {DATE_RANGE_OPTIONS.map((opt) => (
+                      <MenuItem key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                  {filterableFields.map((field) => (
+                    <Select
+                      key={field.name}
+                      size="small"
+                      fullWidth
+                      displayEmpty
+                      value={filterState[field.name] || ''}
+                      onChange={(e) => setSectionFilter(filterSheetFor, field.name, e.target.value)}
+                      sx={{ color: colors.grey[100] }}
+                    >
+                      <MenuItem value="">All {field.label}</MenuItem>
+                      {(typeof field.options === 'function'
+                        ? field.options({})
+                        : field.options || []
+                      ).map((opt) => {
+                        const optValue = typeof opt === 'object' ? opt.value : opt;
+                        const optLabel = typeof opt === 'object' ? opt.label : opt;
                         return (
                           <MenuItem key={optValue} value={optValue}>
                             {optLabel}
                           </MenuItem>
                         );
-                      }
-                    )}
-                  </Select>
-                ))}
+                      })}
+                    </Select>
+                  ))}
+                </Box>
+                <Box display="flex" gap="10px" mt="4px" mb="8px">
+                  <Button
+                    fullWidth
+                    variant="outlined"
+                    onClick={() => resetSectionFilters(filterSheetFor)}
+                  >
+                    Reset
+                  </Button>
+                  <Button
+                    fullWidth
+                    variant="contained"
+                    onClick={() => setFilterSheetFor(null)}
+                    sx={{
+                      backgroundColor: colors.blueAccent[600],
+                      '&:hover': { backgroundColor: colors.blueAccent[700] },
+                    }}
+                  >
+                    Apply
+                  </Button>
+                </Box>
               </Box>
-              <Box display="flex" gap="10px" mt="4px" mb="8px">
-                <Button fullWidth variant="outlined" onClick={() => resetSectionFilters(filterSheetFor)}>
-                  Reset
-                </Button>
-                <Button
-                  fullWidth
-                  variant="contained"
-                  onClick={() => setFilterSheetFor(null)}
-                  sx={{ backgroundColor: colors.blueAccent[600], "&:hover": { backgroundColor: colors.blueAccent[700] } }}
-                >
-                  Apply
-                </Button>
-              </Box>
-            </Box>
-          );
-        })()}
+            );
+          })()}
       </Drawer>
 
-      <Modal open={Boolean(activeSection)} onClose={closeForm}>
+      {/* Edit/Add Modal */}
+      <Modal
+        open={Boolean(activeSection)}
+        onClose={closeForm}
+        sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', p: 2 }}
+      >
         <Box
           sx={{
-            position: "absolute",
-            top: "50%",
-            left: "50%",
-            transform: "translate(-50%, -50%)",
-            width: { xs: "90%", sm: 420 },
-            bgcolor: colors.primary[400],
-            borderRadius: "4px",
-            p: "24px",
-            maxHeight: "90vh",
-            overflowY: "auto",
-
+            width: '100%',
+            maxWidth: 420,
+            bgcolor: colors.primary[400], // Matched palette with main card screens
+            backgroundImage: 'none',
+            borderRadius: '16px',
+            p: '24px',
+            maxHeight: '90vh',
+            overflowY: 'auto',
+            outline: 'none',
           }}
         >
           {activeSection && (
@@ -405,12 +502,12 @@ const HomeDashboard = () => {
         open={!!resetMessage}
         message={resetMessage}
         autoHideDuration={4000}
-        onClose={() => setResetMessage("")}
+        onClose={() => setResetMessage('')}
       />
 
       <Snackbar
         open={!!pendingUndo}
-        message={pendingUndo ? `${pendingUndo.item.primary || "Item"} deleted` : ""}
+        message={pendingUndo ? `${pendingUndo.item.primary || 'Item'} deleted` : ''}
         autoHideDuration={UNDO_WINDOW_MS}
         action={
           <Button color="secondary" size="small" onClick={handleUndoDelete}>

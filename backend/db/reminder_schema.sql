@@ -1,29 +1,40 @@
--- Unified reminder table. Mirrors reminder_feed (the live UNION across
--- source tables, see reminderSources.js) but is a real persisted table so
--- it can carry per-item state the source tables don't have (notify/mute/
--- snooze). title/due_date/family_member_id/priority/status are always
--- overwritten by the sync in reminderRepository.js — never hand-edited.
+-- ---------------------------------------------------------------------
+-- reminder: a persisted mirror of the live UNION across the 5 source
+-- tables (see reminderSources.js), kept in sync on every source-row
+-- write (see sectionRepository.js / routineRepository.js), plus a daily
+-- syncAllReminders() backup job.
+--
+-- Source of truth stays in the source tables — title/due_date/
+-- family_member_id/priority/status here are always overwritten by the
+-- sync, never hand-edited. What this table adds that no source table has:
+-- notify/notify_channel/mute/snooze_until (placeholders, no behavior
+-- wired up yet) and completed_at (history: completed rows stay here,
+-- just filtered out of the live view by completed_at IS NULL).
+-- ---------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS reminder (
-  id                  INTEGER PRIMARY KEY AUTOINCREMENT,
-  source               TEXT NOT NULL,        -- e.g. 'event','goal','renewal','appointment','todo_task','routine'
-  source_id            INTEGER NOT NULL,
-  title                TEXT NOT NULL,
-  window_start         TEXT NOT NULL,        -- due_date minus lead days; drives when this starts appearing
-  due_date             TEXT NOT NULL,
-  family_member_id     INTEGER,
-  priority             TEXT NOT NULL DEFAULT 'low',  -- low | medium | high
-  status               TEXT,                 -- raw copy of source's status column, display-only
-  completed_at         TEXT,                 -- NULL = active/live; set = history, filtered from live feed
-  expires_at           TEXT,
-  notify               INTEGER NOT NULL DEFAULT 0,   -- placeholder, not wired up yet
-  notify_channel       TEXT,                          -- placeholder, not wired up yet
-  mute                 INTEGER NOT NULL DEFAULT 0,   -- placeholder, not wired up yet
-  snooze_until         TEXT,                          -- placeholder, not wired up yet
-  created_at           TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at           TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  UNIQUE(source, source_id)
+  id                INTEGER PRIMARY KEY AUTOINCREMENT,
+  source_type       TEXT NOT NULL,          -- 'event' | 'goal' | 'renewal' | 'appointment' | 'todo_task' | 'routine'
+  source_id         INTEGER NOT NULL,       -- id on the source table
+  title             TEXT NOT NULL,
+  window_start      TEXT,                   -- due_date - lead_days; when this should start appearing
+  due_date          TEXT NOT NULL,
+  family_member_id  INTEGER REFERENCES family_members(id) ON DELETE SET NULL,
+  priority          TEXT NOT NULL DEFAULT 'low',  -- normalized low | medium | high
+  status            TEXT,                   -- raw copy of the source's own status column, display only
+  completed_at      TEXT,                   -- NULL = still live. Set = history, hidden from the live feed.
+  expires_at        TEXT,                   -- reserved for future use, not currently populated
+
+  -- Placeholders for future work — no behavior wired up yet.
+  notify            INTEGER NOT NULL DEFAULT 0 CHECK (notify IN (0, 1)),
+  notify_channel     TEXT,                   -- e.g. 'push' | 'email' | 'sms' | 'voice', future
+  mute              INTEGER NOT NULL DEFAULT 0 CHECK (mute IN (0, 1)),
+  snooze_until      TEXT,
+
+  created_at        TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at        TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+  UNIQUE (source_type, source_id)
 );
 
-CREATE INDEX IF NOT EXISTS idx_reminder_due_date ON reminder(due_date);
-CREATE INDEX IF NOT EXISTS idx_reminder_completed_at ON reminder(completed_at);
-CREATE INDEX IF NOT EXISTS idx_reminder_source ON reminder(source, source_id);
+CREATE INDEX IF NOT EXISTS idx_reminder_completed_due ON reminder(completed_at, due_date);
+CREATE INDEX IF NOT EXISTS idx_reminder_source ON reminder(source_type, source_id);

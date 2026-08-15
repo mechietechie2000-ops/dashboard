@@ -1,9 +1,27 @@
 const express = require("express");
 const router = express.Router();
-const repo = require("../db/reminderRepository");
-const sectionRepo = require("../db/sectionRepository");
-const routineRepo = require("../db/routineRepository");
+const repo = require("../db/remindersRepository");
+const sectionRepository = require("../db/sectionRepository");
+const routineRepository = require("../db/routineRepository");
 const { authenticate } = require("../middleware/auth");
+
+// Per-source "mark complete" behavior for PATCH /api/reminders/:sourceType/:sourceId/complete.
+// todo_task/goals/renewals/appointments go through the generic sectionRepository
+// (sectionKey + the status value that counts as "done" for that table) — these
+// already trigger the reminder sync automatically via sectionRepository.js.
+// routine is NOT written to directly (source of truth for "done" is the
+// today's-instance table, and its own endpoint already deletes the row and
+// removes the reminder) — it's proxied to routineRepository.markDone instead.
+const COMPLETE_HANDLERS = {
+  todo_task: (sourceId) =>
+    sectionRepository.updateRecord("todo_task", sourceId, { status: "done" }),
+  goal: (sourceId) => sectionRepository.updateRecord("goals", sourceId, { status: "completed" }),
+  renewal: (sourceId) =>
+    sectionRepository.updateRecord("renewals", sourceId, { status: "renewed" }),
+  appointment: (sourceId) =>
+    sectionRepository.updateRecord("appointments", sourceId, { status: "completed" }),
+  routine: (sourceId) => routineRepository.markDone(sourceId),
+};
 
 const handle = (fn) => async (req, res) => {
   try {
@@ -30,103 +48,62 @@ router.get(
   })
 );
 
-// Preset bucket -> [from, to] ranges, mirrors the day math in
-// frontend/src/utils/reminderBuckets.js so ?bucket=today etc. match what
-// the client would compute itself. Week ends Saturday (Sun-Sat week),
-// matching endOfWeek() there.
-function bucketRange(bucket) {
-  const now = new Date();
-  const day0 = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const iso = (d) => d.toISOString().slice(0, 10);
-  const addDays = (d, n) => new Date(d.getTime() + n * 24 * 60 * 60 * 1000);
+// GET /api/reminders/card?bucket=today|tomorrow|this_week|next_week&from=&to=&sources=goal,renewal
+// The Reminder card's actual data source — queries the physical `reminder`
+// table (WHERE completed_at IS NULL), not the live union above (that's
+// only for the sync job and the legacy GET /api/reminders endpoint).
+// `sources` (comma-separated source_type list) lets the frontend exclude a
+// source, e.g. goals, without any backend change.
+const BUCKET_RANGES = {
+  today: () => {
+    const d = new Date().toISOString().slice(0, 10);
+    return { from: d, to: d };
+  },
+  tomorrow: () => {
+    const d = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    return { from: d, to: d };
+  },
+  this_week: () => {
+    const now = new Date();
+    const day = now.getDay();
+    const end = new Date(now.getTime() + (6 - day) * 24 * 60 * 60 * 1000);
+    return { from: now.toISOString().slice(0, 10), to: end.toISOString().slice(0, 10) };
+  },
+  next_week: () => {
+    const now = new Date();
+    const day = now.getDay();
+    const weekEnd = new Date(now.getTime() + (6 - day) * 24 * 60 * 60 * 1000);
+    const nextWeekEnd = new Date(weekEnd.getTime() + 7 * 24 * 60 * 60 * 1000);
+    return { from: now.toISOString().slice(0, 10), to: nextWeekEnd.toISOString().slice(0, 10) };
+  },
+};
 
-  const day1 = addDays(day0, 1);
-  const weekEnd = addDays(day0, 6 - day0.getDay());
-  const nextWeekEnd = addDays(weekEnd, 7);
-
-  switch (bucket) {
-    case "today":
-      return [iso(day0), iso(day0)];
-    case "tomorrow":
-      return [iso(day1), iso(day1)];
-    case "this_week":
-      return [iso(day0), iso(weekEnd)];
-    case "next_week":
-      return [iso(addDays(weekEnd, 1)), iso(nextWeekEnd)];
-    default:
-      return null;
-  }
-}
-
-// GET /api/reminders/card?bucket=today|tomorrow|this_week|next_week
-// GET /api/reminders/card?from=YYYY-MM-DD&to=YYYY-MM-DD
-// GET /api/reminders/card   (no params — everything incomplete)
-//
-// Reads the PHYSICAL reminder table (WHERE completed_at IS NULL), not the
-// live union — this is the route the Reminder card should call. The
-// original /api/reminders above stays reserved for the sync job and the
-// prototype it was originally built for.
 router.get(
   "/api/reminders/card",
   handle((req) => {
-    if (req.query.bucket) {
-      const range = bucketRange(req.query.bucket);
-      if (!range) {
-        const err = new Error(
-          `Unknown bucket '${req.query.bucket}' — use today|tomorrow|this_week|next_week, or from/to`
-        );
-        err.status = 400;
-        throw err;
-      }
-      const [from, to] = range;
-      return repo.getCardReminders({ from, to });
+    let { from, to, bucket, sources } = req.query;
+    if (bucket && BUCKET_RANGES[bucket]) {
+      ({ from, to } = BUCKET_RANGES[bucket]());
     }
-    return repo.getCardReminders({ from: req.query.from, to: req.query.to });
+    if (!from) from = new Date().toISOString().slice(0, 10);
+    if (!to) to = new Date(Date.now() + 400 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    const sourceList = sources ? sources.split(",").map((s) => s.trim()).filter(Boolean) : undefined;
+    return repo.getReminderCard({ from, to, sources: sourceList });
   })
 );
 
-// Per-source "mark complete" config — everything except routine goes
-// through the generic sectionRepository.updateRecord (same path normal
-// edits use, so it auto-triggers the sync via sectionRepository.js's
-// hooks). 'done' value matches what each source's completedAtExpr in
-// reminderSources.js actually checks for.
-const COMPLETE_HANDLERS = {
-  todo_task: (id) =>
-    sectionRepo.updateRecord("todo_task", id, {
-      status: "done",
-      completion_date: new Date().toISOString().slice(0, 10),
-    }),
-  goal: (id) =>
-    sectionRepo.updateRecord("goals", id, {
-      status: "completed",
-      completed_on: new Date().toISOString().slice(0, 10),
-    }),
-  renewal: (id) =>
-    sectionRepo.updateRecord("renewals", id, { status: "renewed" }),
-  appointment: (id) =>
-    sectionRepo.updateRecord("appointments", id, { status: "completed" }),
-  // routine's "completion" is deleting the daily_routine_temp row, not a
-  // status flip — do NOT write to `reminder` directly (see reminderSources.js
-  // note). markDone already calls removeReminder() itself.
-  routine: (id) => routineRepo.markDone(id),
-};
-
-// PATCH /api/reminders/:source/:sourceId/complete
-// :source must be a reminderSources.js `type` value (event/goal/renewal/
-// appointment/todo_task/routine).
+// PATCH /api/reminders/:sourceType/:sourceId/complete
 router.patch(
-  "/api/reminders/:source/:sourceId/complete",
+  "/api/reminders/:sourceType/:sourceId/complete",
   handle((req) => {
-    const fn = COMPLETE_HANDLERS[req.params.source];
+    const { sourceType, sourceId } = req.params;
+    const fn = COMPLETE_HANDLERS[sourceType];
     if (!fn) {
-      const err = new Error(
-        `Source '${req.params.source}' can't be marked complete this way` +
-          (req.params.source === "event" ? " — events don't have a completion state." : ".")
-      );
+      const err = new Error(`Cannot complete reminder source: ${sourceType}`);
       err.status = 400;
       throw err;
     }
-    return fn(req.params.sourceId);
+    return fn(sourceId);
   })
 );
 

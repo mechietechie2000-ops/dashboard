@@ -1,5 +1,5 @@
 const db = require('./connection');
-const reminderRepo = require('./reminderRepository');
+const { syncReminder, removeReminder } = require('./remindersRepository');
 
 const DAY_ABBREV = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
 const todayStr = () => new Date().toISOString().slice(0, 10);
@@ -44,26 +44,39 @@ async function runDailyReset() {
           .includes(dayAbbrev))
   );
   for (const task of todaysTasks) {
+    // id is inserted explicitly equal to routine_id (task.id), instead of
+    // letting it autoincrement, so this routine's reminder keeps a stable
+    // identity (source_id) across days instead of churning on every reset.
     await db.run(
       `INSERT INTO daily_routine_temp (id, routine_id, title, family_member_id, scheduled_time, status, mute, announce)
        VALUES (?, ?, ?, ?, ?, 'new', ?, ?)`,
       [task.id, task.id, task.title, task.family_member_id, task.scheduled_time, task.mute, task.announce]
     );
-  }
-  for (const task of todaysTasks) {
-    await reminderRepo.syncReminder('routine', task.id);
-  }
-
-  // Clean up any 'routine' reminder left over from a routine that no longer
-  // qualifies for today (deactivated, or a weekly routine whose day passed) —
-  // its temp row won't be recreated above, so it'd otherwise go stale.
-  const todaysIds = new Set(todaysTasks.map((t) => t.id));
-  const staleReminders = await db.all(`SELECT source_id FROM reminder WHERE source = 'routine'`);
-  for (const r of staleReminders) {
-    if (!todaysIds.has(r.source_id)) {
-      await reminderRepo.removeReminder('routine', r.source_id);
+    try {
+      await syncReminder('routine', task.id);
+    } catch (err) {
+      console.error(`[daily-reset] syncReminder failed for routine ${task.id}:`, err.message);
     }
   }
+
+  // 3b. Clean up stale routine reminders: any reminder row still pointing
+  // at a routine that didn't qualify for today (e.g. a weekly task whose
+  // day_of_week doesn't include today) shouldn't linger in the Reminder
+  // card since daily_routine_temp no longer has a matching row for it.
+  const todaysIds = new Set(todaysTasks.map((t) => t.id));
+  const staleRoutineReminders = await db.all(
+    `SELECT source_id FROM reminder WHERE source_type = 'routine'`
+  );
+  for (const { source_id } of staleRoutineReminders) {
+    if (!todaysIds.has(source_id)) {
+      try {
+        await removeReminder('routine', source_id);
+      } catch (err) {
+        console.error(`[daily-reset] removeReminder failed for routine ${source_id}:`, err.message);
+      }
+    }
+  }
+
   // 4. Record that today's reset has run (upsert)
   await db.run(
     `INSERT INTO app_state (key, value) VALUES ('last_reset_date', ?)
@@ -115,7 +128,11 @@ async function markDone(tempId) {
     ]
   );
   await db.run(`DELETE FROM daily_routine_temp WHERE id = ?`, [tempId]);
-  await reminderRepo.removeReminder('routine', tempId);
+  try {
+    await removeReminder('routine', tempId);
+  } catch (err) {
+    console.error(`[markDone] removeReminder failed for routine ${tempId}:`, err.message);
+  }
   return { ok: true };
 }
 
@@ -144,7 +161,11 @@ async function markSkipped(tempId, reason) {
     ]
   );
   await db.run(`DELETE FROM daily_routine_temp WHERE id = ?`, [tempId]);
-  await reminderRepo.removeReminder('routine', tempId);
+  try {
+    await removeReminder('routine', tempId);
+  } catch (err) {
+    console.error(`[markSkipped] removeReminder failed for routine ${tempId}:`, err.message);
+  }
   return { ok: true };
 }
 /*   const row = await db.get(`SELECT * FROM daily_routine_temp WHERE temp_id = ?`, [tempId]);

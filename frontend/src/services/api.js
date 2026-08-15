@@ -82,3 +82,8 @@ api.delete = async (endpoint, options = {}) => {
   const data = await api(endpoint, { ...options, method: 'DELETE' });
   return { data }
 };
+
+api.patch = async (endpoint, body, options = {}) => {
+  const data = await api(endpoint, { ...options, method: 'PATCH', body });
+  return { data };
+};

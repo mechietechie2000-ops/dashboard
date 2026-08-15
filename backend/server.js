@@ -7,6 +7,7 @@ const fs = require("fs");
 const path = require("path");
 const cron = require("node-cron");
 const { runDailyReset, hasResetRunToday } = require("./db/routineRepository");
+const { syncAllReminders } = require("./db/remindersRepository");
 const { ALLOWED_ORIGINS } = require("./config.js");
 
 dotenv.config();
@@ -109,3 +110,21 @@ hasResetRunToday()
     }
   })
   .catch((err) => console.error("[daily-reset:startup-catchup] failed:", err.message));
+
+// ---- Reminder table nightly safety net ----
+// syncReminder() runs on every source-row write, so this is purely a
+// backup in case a write-path call was ever missed (crash mid-request, a
+// future code path that forgets to call it, etc). Runs a few minutes after
+// the daily routine reset so a fresh day's routine reminders are in place
+// before the bulk resync walks every source table.
+cron.schedule("15 0 * * *", () => {
+  syncAllReminders()
+    .then((result) => console.log("[reminders:sync-cron]", result))
+    .catch((err) => console.error("[reminders:sync-cron] failed:", err.message));
+});
+
+// Also run once at boot, so a server that was down through 00:15 doesn't
+// wait a full day before its first backup sync.
+syncAllReminders()
+  .then((result) => console.log("[reminders:sync-startup]", result))
+  .catch((err) => console.error("[reminders:sync-startup] failed:", err.message));
