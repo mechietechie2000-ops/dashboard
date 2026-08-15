@@ -503,7 +503,7 @@ const DashboardSection = ({
                     <Typography
                       color={colors.grey[100]}
                       textAlign="right"
-                      {/* sx={{ wordBreak: "break-word" }} */}
+                      /* sx={{ wordBreak: "break-word" }} */
                       sx={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}
                     >
                       {String(value)}
