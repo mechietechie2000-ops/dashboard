@@ -23,16 +23,12 @@ CREATE TABLE IF NOT EXISTS reminder (
   status            TEXT,                   -- raw copy of the source's own status column, display only
   completed_at      TEXT,                   -- NULL = still live. Set = history, hidden from the live feed.
   expires_at        TEXT,                   -- reserved for future use, not currently populated
-
-  -- Placeholders for future work — no behavior wired up yet.
   notify            INTEGER NOT NULL DEFAULT 0 CHECK (notify IN (0, 1)),
   notify_channel     TEXT,                   -- e.g. 'push' | 'email' | 'sms' | 'voice', future
   mute              INTEGER NOT NULL DEFAULT 0 CHECK (mute IN (0, 1)),
   snooze_until      TEXT,
-
   created_at        TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at        TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
   UNIQUE (source_type, source_id)
 );
 
