@@ -292,7 +292,9 @@ const SectionForm = ({ sectionKey, initialValues, onSubmit, onCancel, fieldsOver
         if (field.type === 'time') {
           return <TextField {...common} type="time" InputLabelProps={{ shrink: true }} />;
         }
-
+        if (field.type === 'datetime') {
+          return <TextField {...common} type="datetime-local" InputLabelProps={{ shrink: true }} />;
+        }
         if (field.type === 'number') {
           return <TextField {...common} type="number" />;
         }

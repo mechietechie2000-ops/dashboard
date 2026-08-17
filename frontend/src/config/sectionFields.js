@@ -87,7 +87,7 @@ const sectionFields = {
     }),
   },
 
-  reminders: {
+/*   reminders: {
     tableName: 'reminders',
     label: 'Reminders',
     icon: <NotificationsActiveOutlinedIcon />,
@@ -119,7 +119,7 @@ const sectionFields = {
       meta: fmtDate(row.due_date),
     }),
   },
-
+ */
   goals: {
     tableName: 'goals',
     label: 'Goals',
@@ -265,7 +265,7 @@ const sectionFields = {
       // primary: `${row.doctor_name}${row.doctor_special ? ` — ${row.doctor_special}` : ''}`,
       primary: `${row.category} ${row.title}`,
       secondary: `${row.family_member_name}'s appointment`,
-      meta: fmtDate(row.appointment_datetime),
+      meta: fmtDateTime(row.appointment_datetime),
     }),
   },
 

@@ -156,9 +156,10 @@ const ReminderCard = () => {
         />
         <Box minWidth={0}>
           <Typography
-            variant="body2"
+            variant="body4"
             sx={{
               color: colors.grey[100],
+              backgroundColor: colors.primary[400], // Matched color palette
               whiteSpace: 'nowrap',
               overflow: 'hidden',
               textOverflow: 'ellipsis',
@@ -172,12 +173,14 @@ const ReminderCard = () => {
                 ? fmtDateTime(reminder.due_date)
                 : fmtDate(reminder.due_date)}
             </Typography>
+            {/*  controls css for source type on reminder card (event,appointment, renewals, goals, routine) */}
             <Chip
               label={SOURCE_LABELS[reminder.source_type] || reminder.source_type}
+              // label={SOURCE_LABELS[reminder.source_type] ? fmtDateTime(reminder.due_date):fmtDate(reminder.due_date)}
               size="small"
               sx={{
                 height: 16,
-                fontSize: '0.65rem',
+                fontSize: '.65rem',
                 backgroundColor: colors.primary[600] || colors.primary[500],
                 color: colors.grey[300],
               }}
@@ -218,7 +221,7 @@ const ReminderCard = () => {
         position: 'relative',
       }}
     >
-      <Box display="flex" alignItems="center" justifyContent="space-between" px="15px" pt="12px">
+      <Box display="flex" alignItems="center" justifyContent="space-between" px="15px" pt="22px">
         <Box display="flex" alignItems="center" gap="8px">
           <NotificationsActiveOutlinedIcon sx={{ color: colors.greenAccent[500] }} />
           <Typography variant="h5" fontWeight="600" sx={{ color: colors.grey[100] }}>
@@ -255,6 +258,7 @@ const ReminderCard = () => {
                 }}
               />
             ))}
+            {/* this block controls the css for ['today', 'tomorrow', 'thisWeek', 'nextWeek', 'thisMonth', 'nextMonth', 'thisYear', 'later'] */}
             <Chip
               label="Custom"
               size="small"
@@ -265,6 +269,7 @@ const ReminderCard = () => {
                 color: bucketFilter === 'custom' ? '#fff' : colors.grey[300],
               }}
             />
+            {/* this block controls the css for ['Goals: shown' : 'Goals: hidden'] */}
             <Chip
               label={includeGoals ? 'Goals: shown' : 'Goals: hidden'}
               size="small"
@@ -301,7 +306,7 @@ const ReminderCard = () => {
                   background: 'transparent',
                   color: colors.grey[100],
                   border: `1px solid ${colors.grey[600]}`,
-                  borderRadius: 4,
+                  borderRadius: 8,
                   padding: '4px 6px',
                 }}
               />

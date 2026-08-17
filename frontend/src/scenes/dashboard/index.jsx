@@ -34,7 +34,7 @@ import { runDailyResetManual } from '../../data/routineRepository';
 const SECTION_KEYS = [
   'routine',
   'todo_task',
-  'reminders',
+  //'reminders',
   'goals',
   'events',
   'appointments',
@@ -253,7 +253,7 @@ const HomeDashboard = () => {
               flexDirection="column"
               sx={{
                 minWidth: 0,
-                backgroundColor: colors.primary[400], // Matched color palette
+                // backgroundColor: colors.primary[400], // Matched color palette
                 borderRadius: '8px',
                 overflow: 'hidden',
                 boxShadow: 1,
