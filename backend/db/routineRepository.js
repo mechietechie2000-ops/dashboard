@@ -20,11 +20,21 @@ async function runDailyReset() {
 
   // 1. Log anything left over from the previous cycle that was never marked
   const unmarked = await db.all(`SELECT * FROM daily_routine_temp WHERE status = 'new'`);
+  
   for (const row of unmarked) {
+    const member = row.family_member_id
+      ? await db.get(`SELECT first_name FROM family_members WHERE id = ?`, [row.family_member_id])
+      : null;
     await db.run(
-      `INSERT INTO daily_routine_log (routine_id, title, family_member_id, log_date, status, reason)
-       VALUES (?, ?, ?, ?, 'no_action', 'NO ACTION TAKEN')`,
-      [row.routine_id, row.title, row.family_member_id, today]
+      `INSERT INTO daily_routine_log (routine_id, title, person, family_member_id, log_date, status, reason)
+       VALUES (?, ?, ?, ?, ?, 'no_action', 'NO ACTION TAKEN')`,
+      [
+        row.routine_id,
+        row.title,
+        member?.first_name || 'Unassigned',
+        row.family_member_id,
+        today,
+      ]
     );
   }
 

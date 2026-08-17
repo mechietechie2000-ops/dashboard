@@ -178,3 +178,53 @@ const login = async (email, password) => {
 ```
 There are 12 errors reported on Developer Tool
 
+
+## How to add another card/section / webpage
+Recommended order
+
+0. Database
+Create meal table first.
+Decide on a primary key, e.g. meal_id.
+
+1. Backend
+Create backend/routes/meal.js
+Add the CRUD endpoints.
+Make sure server.js/app.js actually mounts this router, e.g. /api or whatever your existing convention is.
+
+2. Frontend page
+Create:
+frontend/src/scenes/meal/meal.jsx
+This page calls your backend endpoints and renders the UI.
+
+3. App.js
+Import the component:
+import Meal from "./scenes/meal/meal";
+Add:
+<Route path="/meal" element={<Meal />} />
+
+4. Sidebar
+Add your <Item ... />.
+So I'd actually do:
+DB → Backend route → Frontend page → App route → Sidebar
+
+
+
+Straight step-by-step for adding a new route/page — two versions:
+
+A) New section fits one table (fully generic — do this whenever possible):
+
+- Add the table's DDL.
+- Add an entry to backend sectionConfig.js (tableName, columns, requiredColumns, orderBy, jsonColumns if any).
+- Add an entry to frontend sectionFields.js (label, icon, fields for the form, detailFields if any extra columns should show in View but not the quick-add form).
+- Create a thin page component (e.g. Recipe.jsx) that mounts one DashboardSection + one SectionForm-in-a-Modal, wired to listRecords/insertRecord/updateRecord/deleteRecord for that one sectionKey — essentially a single-section slice of what HomeDashboard/index.jsx does for all of them (you could even factor a small reusable SingleSectionPage component from that pattern, since Recipe won't be the last one-table addition).
+- Add the route in App.js: <Route path="/recipe" element={<Recipe />} />.
+- Add the sidebar entry.
+- Test the CRUD loop.
+
+B) New section needs relational/multi-table writes (like Meal):
+
+- Add the table(s)/DDL.
+- Write bespoke Express routes (as you already have) with the transaction logic for the join writes.
+- Build the page component by hand, but reuse DashboardSection for rendering (shape your API data into {id, primary, secondary, meta, raw}) and reuse SectionForm's field-rendering/styling conventions where possible, even though onSubmit calls your custom API instead of sectionRepository.
+- Add the route in App.js + sidebar entry, same as A.
+- Test the CRUD loop, including the join-table transaction paths (add/edit/delete/clone all touching meal_recipe correctly).

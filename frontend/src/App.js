@@ -15,6 +15,8 @@ import Event from "./scenes/events";
 import DigiLocker from "./scenes/digiLocker/digiLocker";
 import AddTask from "./scenes/tasks/AddTask";
 import TodoList from "./scenes/todo/todoList";
+import Meal from "./scenes/meal/Meal";
+import Recipe from "./scenes/recipe/Recipe";
 
 /*
 import KidsMenu from "./scenes/kids/KidsMenu";
@@ -106,9 +108,11 @@ const ProtectedAppLayout = () => {
             <Route path="/event" element={<Event />} />
             <Route path="/routine/admin" element={<RoutineAdmin />} />
             <Route path="/digiLocker" element={<DigiLocker />} />
-            <Route path="/calendar" element={<Calendar />} />
+            <Route path="/calendar" element={<Calendar />} />{/*  */}
             <Route path="/add-task" element={<AddTask />} />
             <Route path="/todoList" element={<TodoList />} />
+            <Route path="/meal" element={<Meal />} />
+            <Route path="/recipe" element={<Recipe />} />
 {/*
             <Route path="/event/admin" element={<EventAdmin />} />
              <Route path="/reports/overview" element={<Dashboard />} />

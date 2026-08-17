@@ -97,7 +97,7 @@ const Sidebar = ({ isMobileOpen = false, onMobileClose = () => {} }) => {
                 ml="15px"
               >
                 <Typography variant="h3" color={colors.grey[100]}>
-                  Home Sweet Home
+                  Home
                 </Typography>
                 {!isMobile && (
                   <IconButton onClick={() => setIsCollapsed(!isCollapsed)}>
@@ -150,6 +150,8 @@ const Sidebar = ({ isMobileOpen = false, onMobileClose = () => {} }) => {
               <Item title="Routines" to="/routine" icon={<PeopleOutlinedIcon />} selected={selected} setSelected={setSelected} onSelect={isMobile ? onMobileClose : undefined} />
               <Item title="Routine Admin" to="/routine/admin" icon={<PeopleOutlinedIcon />} selected={selected} setSelected={setSelected} onSelect={isMobile ? onMobileClose : undefined} />              
               <Item title="Calendar" to="/calendar" icon={<CalendarTodayOutlinedIcon />} selected={selected} setSelected={setSelected} onSelect={isMobile ? onMobileClose : undefined} />
+              <Item title="Meal" to="/meal" icon={<LunchDiningRoundedIcon />} selected={selected} setSelected={setSelected} onSelect={isMobile ? onMobileClose : undefined} />
+              <Item title="Recipe" to="/recipe" icon={<LunchDiningRoundedIcon />} selected={selected} setSelected={setSelected} onSelect={isMobile ? onMobileClose : undefined} />
             </SubMenu>
 
             <Item

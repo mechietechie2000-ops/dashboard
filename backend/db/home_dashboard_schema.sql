@@ -342,3 +342,28 @@ WHEN OLD.updated_at IS NEW.updated_at
 BEGIN
     UPDATE todo_task SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
 END;
+
+
+CREATE TABLE recipe (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    recipe_name TEXT NOT NULL UNIQUE
+);
+
+CREATE TABLE meal (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    meal_date DATE,
+    day_of_week TEXT NOT NULL, 
+    bread TEXT,
+    notification_type TEXT,   -- voice, text, none
+    notification_sent INTEGER DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE meal_recipe (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    meal_id INTEGER NOT NULL,
+    recipe_id INTEGER NOT NULL,
+    FOREIGN KEY (meal_id) REFERENCES meal(id) ON DELETE CASCADE,
+    FOREIGN KEY (recipe_id) REFERENCES recipe(id) ON DELETE CASCADE,
+    UNIQUE (meal_id, recipe_id)
+);
