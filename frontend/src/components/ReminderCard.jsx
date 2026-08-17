@@ -156,35 +156,30 @@ const ReminderCard = () => {
         />
         <Box minWidth={0}>
           <Typography
-            variant="body4"
+            variant="body2"
             sx={{
               color: colors.grey[100],
-              backgroundColor: colors.primary[400], // Matched color palette
+              fontWeight: 600,
               whiteSpace: 'nowrap',
               overflow: 'hidden',
               textOverflow: 'ellipsis',
+              fontSize: { xs: '1.25rem', sm: '0.875rem' } //sx for mobile, sm for web
             }}
           >
             {reminder.title}
           </Typography>
           <Box display="flex" alignItems="center" gap="6px">
-            <Typography variant="caption" sx={{ color: colors.grey[400] }}>
+            {/*  controls css for source type on reminder card (event,appointment, renewals, goals, routine) */}
+            {/* [stale] source-type Chip removed here (was `SOURCE_LABELS[reminder.source_type]`) — replaced with time-only display per user feedback, see below */}
+            {/* label={SOURCE_LABELS[reminder.source_type] ? fmtDateTime(reminder.due_date):fmtDate(reminder.due_date)} */}
+            <Typography
+              variant="caption"
+              sx={{ color: colors.grey[300], fontWeight: 500, fontSize: { xs: '0.9rem', sm: '0.75rem' }, }}
+            >
               {reminder.source_type === 'appointment'
                 ? fmtDateTime(reminder.due_date)
                 : fmtDate(reminder.due_date)}
             </Typography>
-            {/*  controls css for source type on reminder card (event,appointment, renewals, goals, routine) */}
-            <Chip
-              label={SOURCE_LABELS[reminder.source_type] || reminder.source_type}
-              // label={SOURCE_LABELS[reminder.source_type] ? fmtDateTime(reminder.due_date):fmtDate(reminder.due_date)}
-              size="small"
-              sx={{
-                height: 16,
-                fontSize: '.65rem',
-                backgroundColor: colors.primary[600] || colors.primary[500],
-                color: colors.grey[300],
-              }}
-            />
           </Box>
         </Box>
       </Box>
@@ -221,7 +216,8 @@ const ReminderCard = () => {
         position: 'relative',
       }}
     >
-      <Box display="flex" alignItems="center" justifyContent="space-between" px="15px" pt="22px">
+      {/* <Box display="flex" alignItems="center" justifyContent="space-between" px="15px" pt="22px"> */}
+      <Box display="flex" alignItems="center" justifyContent="space-between" px="15px" py="10px">
         <Box display="flex" alignItems="center" gap="8px">
           <NotificationsActiveOutlinedIcon sx={{ color: colors.greenAccent[500] }} />
           <Typography variant="h5" fontWeight="600" sx={{ color: colors.grey[100] }}>
@@ -252,9 +248,17 @@ const ReminderCard = () => {
                 clickable
                 onClick={() => setBucketFilter(preset.value)}
                 sx={{
+                  fontWeight: 600,
+                  border: `1px solid ${bucketFilter === preset.value ? colors.blueAccent[400] : colors.grey[600]}`,
+                  // backgroundColor:
+                  //   bucketFilter === preset.value ? colors.blueAccent[500] : colors.primary[500],
                   backgroundColor:
-                    bucketFilter === preset.value ? colors.blueAccent[600] : colors.primary[600] || colors.primary[500],
-                  color: bucketFilter === preset.value ? '#fff' : colors.grey[300],
+                    bucketFilter === preset.value ? colors.blueAccent[500] : 'transparent',  
+                  color: bucketFilter === preset.value ? '#fff' : colors.grey[200],
+                  '&:hover': {
+                    backgroundColor:
+                      bucketFilter === preset.value ? colors.blueAccent[400] : colors.primary[600] || colors.primary[500],
+                  },
                 }}
               />
             ))}
@@ -265,8 +269,11 @@ const ReminderCard = () => {
               clickable
               onClick={() => setBucketFilter('custom')}
               sx={{
-                backgroundColor: bucketFilter === 'custom' ? colors.blueAccent[600] : colors.primary[600] || colors.primary[500],
-                color: bucketFilter === 'custom' ? '#fff' : colors.grey[300],
+                fontWeight: 600,
+                border: `1px solid ${bucketFilter === 'custom' ? colors.blueAccent[400] : colors.grey[600]}`,
+                // backgroundColor: bucketFilter === 'custom' ? colors.blueAccent[500] : colors.primary[500],
+                backgroundColor: bucketFilter === 'custom' ? colors.blueAccent[500] : 'transparent',
+                color: bucketFilter === 'custom' ? '#fff' : colors.grey[200],
               }}
             />
             {/* this block controls the css for ['Goals: shown' : 'Goals: hidden'] */}
@@ -278,8 +285,17 @@ const ReminderCard = () => {
               onClick={() => setIncludeGoals((v) => !v)}
               sx={{
                 ml: 'auto',
-                color: colors.grey[300],
-                borderColor: colors.grey[500],
+                fontFamily: '"Roboto Mono", monospace',
+                fontWeight: 600,
+                letterSpacing: '0.02em',
+                border: `1px solid ${includeGoals ? colors.greenAccent[500] : colors.grey[500]}`,
+                backgroundColor: includeGoals ? colors.greenAccent[700] || colors.greenAccent[600] : 'transparent',
+                color: includeGoals ? '#fff' : colors.grey[300],
+                '&:hover': {
+                  backgroundColor: includeGoals
+                    ? colors.greenAccent[600]
+                    : colors.primary[600] || colors.primary[500],
+                },
               }}
             />
           </Box>
@@ -313,7 +329,36 @@ const ReminderCard = () => {
             </Box>
           )}
 
-          <Box px="15px" pb="12px" pt="8px" sx={{ maxHeight: 320, overflowY: 'auto' }}>
+          {/* <Box px="15px" pb="12px" pt="8px" sx={{ maxHeight: 320, overflowY: 'auto' }}> */}
+          <Box
+            px="15px"
+            pb="12px"
+            pt="8px"
+            sx={{
+              maxHeight: { xs: 'none', sm: 320 },
+              overflowY: { xs: 'visible', sm: 'auto' },
+              scrollbarWidth: 'thin', // Firefox (desktop only, see below)
+              scrollbarColor: `${colors.grey[700]} transparent`,
+              '&::-webkit-scrollbar': {
+                width: '6px',
+              },
+              '&::-webkit-scrollbar-track': {
+                background: 'transparent',
+              },
+              '&::-webkit-scrollbar-thumb': {
+                backgroundColor: colors.grey[700],
+                borderRadius: '4px',
+              },
+              '@media (max-width: 600px)': {
+                maxHeight: 'none',
+                overflowY: 'visible',
+                scrollbarWidth: 'none',
+                '&::-webkit-scrollbar': {
+                  display: 'none',
+                },
+              },
+            }}
+          >
             {loading && (
               <Typography variant="body2" sx={{ color: colors.grey[400] }}>
                 Loading…
