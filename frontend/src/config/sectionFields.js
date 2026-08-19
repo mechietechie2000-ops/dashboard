@@ -86,7 +86,39 @@ const sectionFields = {
       meta: row.scheduled_time,
     }),
   },
-
+  /*   reminders: {
+    tableName: 'reminders',
+    label: 'Reminders',
+    icon: <NotificationsActiveOutlinedIcon />,
+    emptyMessage: 'No reminders',
+    fields: [
+      { name: 'title', label: 'Reminder', type: 'text', required: true },
+      { name: 'notes', label: 'Notes', type: 'textarea', required: false },
+      { name: 'due_date', label: 'Due date', type: 'date', required: true },
+      {
+        name: 'priority',
+        label: 'Priority',
+        type: 'select',
+        required: false,
+        options: ['low', 'medium', 'high'],
+      },
+      {
+        name: 'family_member_id',
+        label: 'For',
+        type: 'asyncSelect',
+        source: 'familyMembers',
+        required: false,
+      },
+      { name: 'is_completed', label: 'Completed', type: 'checkbox', required: false },
+    ],
+    mapRowToItem: (row) => ({
+      id: row.reminder_id,
+      primary: row.title,
+      secondary: row.note,
+      meta: fmtDate(row.due_date),
+    }),
+  },
+ */
   goals: {
     tableName: 'goals',
     label: 'Goals',
@@ -524,6 +556,24 @@ const sectionFields = {
     }),
   },
 
+  recipe: {
+    tableName: 'recipe',
+    label: 'Recipe',
+    icon: <LocalLibraryOutlinedIcon />,
+    emptyMessage: 'No Recipe currently available, click + to add',
+    fields: [
+      { name: 'recipe_name', label: 'Recipe Name', type: 'text', required: true },
+      { name: 'recipe_type', label: 'Veg/Non-Veg', type: 'text', required: true },
+      { name: 'ingredients', label: 'Ingredients', type: 'text', required: false },
+      { name: 'instructions', label: 'Instructions', type: 'text', required: false },
+    ],
+    mapRowToItem: (row) => ({
+      id: row.id,
+      primary: row.recipe_name,
+      secondary: row.recipe_type,
+      meta: fmtDate(row.recipe_name),
+    }),
+  },
   // 10th section. `fields` is the short quick-add set (dashboard card "+"
   // and /todo-task/new); `detailFields` is new — extra columns that only
   // show up in the View All detail table/form (see SectionDetailView.jsx).

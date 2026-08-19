@@ -40,6 +40,7 @@ const SECTION_KEYS = [
   'appointments',
   'renewals',
   'bills',
+  'recipe',
   //  "extracurricular",
   //  "library",
 ];
@@ -346,17 +347,17 @@ const HomeDashboard = () => {
         PaperProps={{
           sx: {
             backgroundColor: colors.primary[400],
-            borderRadius: "16px 16px 0 0",
-            p: "16px 20px",
-            maxHeight: "70vh",
+            borderRadius: '16px 16px 0 0',
+            p: '16px 20px',
+            maxHeight: '70vh',
             // Full-width bottom sheet on mobile; on wider screens it's an
             // awkward edge-to-edge strip, so cap the width and center it
             // above the fold instead.
-            width: { xs: "100%", sm: 480 },
-            maxWidth: "100vw",
-            left: { xs: 0, sm: "50%" },
-            right: { xs: 0, sm: "auto" },
-            transform: { sm: "translateX(-50%)" },
+            width: { xs: '100%', sm: 480 },
+            maxWidth: '100vw',
+            left: { xs: 0, sm: '50%' },
+            right: { xs: 0, sm: 'auto' },
+            transform: { sm: 'translateX(-50%)' },
           },
         }}
       >

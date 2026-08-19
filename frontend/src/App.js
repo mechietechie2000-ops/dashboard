@@ -1,22 +1,22 @@
-import { useState } from "react";
-import { Routes, Route, Navigate, useNavigate } from "react-router-dom";
-import { CssBaseline, ThemeProvider, Box, useMediaQuery, useTheme } from "@mui/material";
-import { ColorModeContext, useMode } from "./theme";
+import { useState } from 'react';
+import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import { CssBaseline, ThemeProvider, Box, useMediaQuery, useTheme } from '@mui/material';
+import { ColorModeContext, useMode } from './theme';
 
-import Topbar from "./scenes/global/Topbar";
-import Sidebar from "./scenes/global/Sidebar";
-import BottomNav, { BOTTOM_NAV_HEIGHT } from "./scenes/global/BottomNav";
+import Topbar from './scenes/global/Topbar';
+import Sidebar from './scenes/global/Sidebar';
+import BottomNav, { BOTTOM_NAV_HEIGHT } from './scenes/global/BottomNav';
 
-import HomeDashboard from "./scenes/dashboard";
-import Calendar from "./scenes/calendar/calendar";
-import Routine from "./scenes/routine";
-import RoutineAdmin from "./scenes/routine/RoutineAdmin";
-import Event from "./scenes/events";
-import DigiLocker from "./scenes/digiLocker/digiLocker";
-import AddTask from "./scenes/tasks/AddTask";
-import TodoList from "./scenes/todo/todoList";
-import Meal from "./scenes/meal/Meal";
-import Recipe from "./scenes/recipe/Recipe";
+import HomeDashboard from './scenes/dashboard';
+import Calendar from './scenes/calendar/calendar';
+import Routine from './scenes/routine';
+import RoutineAdmin from './scenes/routine/RoutineAdmin';
+import Event from './scenes/events';
+import DigiLocker from './scenes/digiLocker/digiLocker';
+import AddTask from './scenes/tasks/AddTask';
+import TodoList from './scenes/todo/todoList';
+import Meal from './scenes/meal/Meal';
+import Recipe from './scenes/recipe/Recipe';
 
 /*
 import KidsMenu from "./scenes/kids/KidsMenu";
@@ -27,10 +27,10 @@ import Dashboard from "./scenes/dashboard";
 */
 
 // Auth imports
-import { AuthProvider, useAuth } from "./context/AuthContext";
-import { ProtectedRoute } from "./components/ProtectedRoute";
-import { Login } from "./components/Login";
-import { Register } from "./components/Register";
+import { AuthProvider, useAuth } from './context/AuthContext';
+import { ProtectedRoute } from './components/ProtectedRoute';
+import { Login } from './components/Login';
+import { Register } from './components/Register';
 
 // Helper components for standalone Login / Register pages
 const LoginPage = () => {
@@ -42,12 +42,7 @@ const LoginPage = () => {
     return <Navigate to="/" replace />;
   }
 
-  return (
-    <Login
-      onSwitchToRegister={() => navigate("/register")}
-      onSuccess={() => navigate("/")}
-    />
-  );
+  return <Login onSwitchToRegister={() => navigate('/register')} onSuccess={() => navigate('/')} />;
 };
 
 const RegisterPage = () => {
@@ -58,12 +53,7 @@ const RegisterPage = () => {
     return <Navigate to="/" replace />;
   }
 
-  return (
-    <Register
-      onSwitchToLogin={() => navigate("/login")}
-      onSuccess={() => navigate("/")}
-    />
-  );
+  return <Register onSwitchToLogin={() => navigate('/login')} onSuccess={() => navigate('/')} />;
 };
 
 // Main layout wrapper for authenticated routes
@@ -72,7 +62,7 @@ const ProtectedAppLayout = () => {
   const theme = useTheme();
   // Same breakpoint Sidebar.jsx uses for its own mobile/drawer behavior,
   // kept in sync so both switch to "mobile mode" at the same width.
-  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   // const isMobile = useMediaQuery("(max-width:768px)");
 
   return (
@@ -88,10 +78,10 @@ const ProtectedAppLayout = () => {
         component="main"
         sx={{
           flexGrow: 1,
-          height: "100%",
-          overflowY: "auto",
-          display: "flex",
-          flexDirection: "column",
+          height: '100%',
+          overflowY: 'auto',
+          display: 'flex',
+          flexDirection: 'column',
           minWidth: 0, // Prevents content from forcing horizontal scroll
         }}
       >
@@ -100,20 +90,26 @@ const ProtectedAppLayout = () => {
           flex={1}
           p={2}
           // Reserve space so the fixed BottomNav never covers content.
-          sx={isMobile ? { pb: `calc(${BOTTOM_NAV_HEIGHT}px + env(safe-area-inset-bottom) + 16px)` } : undefined}
+          sx={
+            isMobile
+              ? { pb: `calc(${BOTTOM_NAV_HEIGHT}px + env(safe-area-inset-bottom) + 16px)` }
+              : undefined
+          }
         >
           <Routes>
             <Route path="/" element={<HomeDashboard />} />
             <Route path="/routine" element={<Routine />} />
-            <Route path="/event" element={<Event />} />
+            {/* <Route path="/event" element={<Event />} /> */}
             <Route path="/routine/admin" element={<RoutineAdmin />} />
             <Route path="/digiLocker" element={<DigiLocker />} />
-            <Route path="/calendar" element={<Calendar />} />{/*  */}
-{/*             <Route path="/add-task" element={<AddTask />} />
- */}            <Route path="/todoList" element={<TodoList />} />
+            <Route path="/calendar" element={<Calendar />} />
+            {/*  */}
+            {/*             <Route path="/add-task" element={<AddTask />} />
+             */}{' '}
+            <Route path="/todoList" element={<TodoList />} />
             <Route path="/meal" element={<Meal />} />
             <Route path="/recipe" element={<Recipe />} />
-{/*
+            {/*
             <Route path="/event/admin" element={<EventAdmin />} />
              <Route path="/reports/overview" element={<Dashboard />} />
             <Route path="/kids" element={<KidsMenu />} />
