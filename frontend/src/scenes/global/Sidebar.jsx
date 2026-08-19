@@ -22,6 +22,8 @@ import LocalHospitalIcon from '@mui/icons-material/LocalHospital';
 import QueryBuilderIcon from '@mui/icons-material/QueryBuilder';
 import ChildCareIcon from '@mui/icons-material/ChildCare';
 import LockIcon from '@mui/icons-material/Lock';
+import BuildOutlinedIcon from '@mui/icons-material/BuildOutlined';
+import AddHomeWorkTwoToneIcon from '@mui/icons-material/AddHomeWorkTwoTone';
 
 const Item = ({ title, to, icon, selected, setSelected, onSelect }) => {
   const theme = useTheme();
@@ -162,6 +164,9 @@ const Sidebar = ({ isMobileOpen = false, onMobileClose = () => {} }) => {
               setSelected={setSelected}
               onSelect={isMobile ? onMobileClose : undefined}
             />
+            <SubMenu title="Properties" icon={<AddHomeWorkTwoToneIcon />} opened={true}>
+              <Item title="Maintenance" to="/homeMaintenance" icon={<BuildOutlinedIcon />} selected={selected} setSelected={setSelected} />
+            </SubMenu>
 
             <SubMenu title="Kids" icon={<ChildCareIcon />} opened={true}>
               <Item title="Meal Plan" to="/kids" icon={<LunchDiningRoundedIcon />} selected={selected} setSelected={setSelected} onSelect={isMobile ? onMobileClose : undefined} />

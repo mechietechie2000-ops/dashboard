@@ -159,6 +159,26 @@ module.exports = {
     requiredColumns: ['recipe_name', 'recipe_type'],
     orderBy: '(recipe_type IS NULL) ASC, target_date ASC',
   },
+  home_maintenance: {
+    tableName: 'home_maintenance',
+    columns: [
+      'address', 
+      'category',
+      'location',
+      'title',
+      'date_of_work',
+      'details',
+      'cost',
+      'currency',
+      'receipt_saved',
+      'payment_method',
+      'account',
+      'paid_by',
+      'status',
+    ],
+    requiredColumns: ['address', 'category', 'status'],
+    orderBy: '(date_of_work IS NULL) ASC, date_of_work DESC',
+  },  
 };
 
 /*

@@ -224,7 +224,8 @@ const HomeDashboard = () => {
 
   return (
     <Box m={{ xs: '0px', sm: '20px' }}>
-      <Header title="HOME" subtitle="Welcome back!" />
+      {/* <Header title="HOME" subtitle="Welcome back!" /> */}
+      <Header title="Dashboard"/> 
 
       <Box
         display="grid"
@@ -258,6 +259,7 @@ const HomeDashboard = () => {
                 borderRadius: '8px',
                 overflow: 'hidden',
                 boxShadow: 1,
+                alignSelf: isCollapsed ? 'start' : 'stretch',
               }}
             >
               <Box position="relative" flex={1} minHeight={0}>

@@ -142,7 +142,7 @@ const ReminderCard = () => {
       gap="10px"
       py="8px"
       px="2px"
-      sx={{ borderBottom: `1px solid ${colors.primary[500]}` }}
+      sx={{ borderBottom: `1px solid ${colors.primary[500]}33` }}
     >
       <Box display="flex" alignItems="center" gap="8px" minWidth={0} flex={1}>
         <Box

@@ -8,6 +8,8 @@ import PaymentsOutlinedIcon from '@mui/icons-material/PaymentsOutlined';
 import SportsHandballRoundedIcon from '@mui/icons-material/SportsHandballRounded';
 import LocalLibraryOutlinedIcon from '@mui/icons-material/LocalLibraryOutlined';
 import ChecklistOutlinedIcon from '@mui/icons-material/ChecklistOutlined';
+import BuildOutlinedIcon from '@mui/icons-material/BuildOutlined';
+import PlaylistAddCheckOutlinedIcon from '@mui/icons-material/PlaylistAddCheckOutlined';
 
 const fmtDate = (value) => {
   if (!value) return undefined;
@@ -581,8 +583,8 @@ const sectionFields = {
   // detailFields unless it's present.
   todo_list: {
     tableName: 'todo_task',
-    label: 'Todo Task',
-    icon: <LocalLibraryOutlinedIcon />,
+    label: 'Todo List',
+    icon: <PlaylistAddCheckOutlinedIcon />,
     viewAllLink: '/todoList',
     emptyMessage: 'No open tasks',
     // Drives the dashboard-widget filter row (see scenes/dashboard/index.jsx).
@@ -658,6 +660,104 @@ const sectionFields = {
       meta: row.target_date ? fmtDate(row.target_date) : undefined,
     }),
   },
+
+  home_maintenance: {
+    tableName: 'home_maintenance',
+    label: 'Maintenance',   // this is display on the page
+    icon: <BuildOutlinedIcon />,
+    viewAllLink: '/homeMaintenance',
+    emptyMessage: 'No maintenance records yet',
+    fields: [
+      {
+        name: 'address',
+        label: 'Address',
+        type: 'select',
+        required: true,
+        options: [
+          { value: 'C16', label: 'C16' },
+          { value: 'LR-D504', label: 'LR-D504' },
+          { value: '53 Manohar', label: '53 Manohar' },
+          { value: 'DB City', label: 'DB City' },
+          { value: '218 Nathan', label: '218 Nathan' },
+        ],
+      },
+      {
+        name: 'category',
+        label: 'Category',
+        type: 'select',
+        required: true,
+        options: ['Plumbing', 'Grouting', 'AC', 'Electricity','Painting','Cleaning','Repair','Gutter','Roof'],
+      },
+      {
+        name: 'location',
+        label: 'Location',
+        type: 'text',
+        required: true,
+        // options: ['Plumbing', 'Grouting', 'AC', 'Electricity'],
+      },
+      {
+        name: 'title',
+        label: 'Title',
+        type: 'text',
+        required: false,
+      },             
+      { name: 'date_of_work', label: 'Date of Work', type: 'date', required: false },
+      { name: 'details', label: 'Work Detail', type: 'textarea', required: false },
+      { name: 'cost', label: 'Cost', type: 'number', required: false },
+      {
+        name: 'status',
+        label: 'Status',
+        type: 'select',
+        required: true,
+        options: [
+          { value: 'TBD', label: 'TBD' },
+          { value: 'Completed', label: 'Completed' },
+          { value: 'In Progress', label: 'In Progress' },
+          { value: 'Blocked', label: 'Blocked' },
+        ],
+      },
+    ],
+    // Extra columns — only shown on the View All page/table, appended to
+    // `fields` there (same pattern as todo_list.detailFields).
+    detailFields: [
+      {
+        name: 'currency',
+        label: 'Currency',
+        type: 'text',
+        required: false,
+        readOnly: true, // auto-computed, not user-editable — flip to false if you want it overridable
+        derive: (values) => (values.address === '218 Nathan' ? 'USD' : 'INR'),
+      },
+      { name: 'receipt_saved', label: 'Receipt Saved', type: 'checkbox', required: false },
+      {
+        name: 'payment_method',
+        label: 'Payment Method',
+        type: 'select',
+        required: false,
+        options: [
+          { value: 'cash', label: 'Cash' },
+          { value: 'credit card', label: 'Credit Card' },
+          { value: 'debit card', label: 'Debit Card' },
+        ],
+      },
+      { name: 'account', label: 'Account', type: 'text', required: false },
+      { name: 'paid_by', label: 'Paid By', type: 'text', required: false },
+      { name: 'created_at', label: 'Created', type: 'text', required: false, readOnly: true },
+      { name: 'updated_at', label: 'Updated', type: 'text', required: false, readOnly: true },
+    ],
+    mapRowToItem: (row) => ({
+      id: row.id,
+      primary: `${row.address} ${row.location}`,
+      secondary: `${row.details} ${row.date_of_work}`, //row.details,
+      meta: [
+        row.cost != null ? `${row.currency || '$'}${Number(row.cost).toFixed(2)}` : null,
+        row.status,
+      ]
+        .filter(Boolean)
+        .join(' • '),
+    }),
+  },
+
 };
 
 export default sectionFields;

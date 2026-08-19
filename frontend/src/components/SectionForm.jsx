@@ -159,6 +159,23 @@ const SectionForm = ({ sectionKey, initialValues, onSubmit, onCancel, fieldsOver
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sectionKey, fieldsOverride]);
 
+  useEffect(() => {
+    const derivable = fields.filter((f) => typeof f.derive === 'function');
+    if (!derivable.length) return;
+    setValues((prev) => {
+      let changed = false;
+      const next = { ...prev };
+      for (const field of derivable) {
+        const computed = field.derive(prev);
+        if (computed !== undefined && next[field.name] !== computed) {
+          next[field.name] = computed;
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [values, fields]);
+
   if (!config && !fieldsOverride) return null;
 
   const handleChange = (name) => (e) => {
@@ -220,6 +237,10 @@ const SectionForm = ({ sectionKey, initialValues, onSubmit, onCancel, fieldsOver
       {fields.map((field) => {
         if (!isFieldVisible(field, values)) return null;
 
+        /**
+         * Important catch: your current buildPayload skips all readOnly fields, so a derived-but-readOnly currency would never actually get sent to the backend. You have two options:
+          Option A — don't mark it readOnly for payload purposes; instead add a separate flag like locked: true for "disable the input" and keep buildPayload sending it:
+         */
         const common = {
           key: field.name,
           label: field.label,
@@ -228,7 +249,8 @@ const SectionForm = ({ sectionKey, initialValues, onSubmit, onCancel, fieldsOver
           error: Boolean(errors[field.name]),
           helperText: errors[field.name],
           fullWidth: true,
-          disabled: Boolean(field.readOnly),
+          // disabled: Boolean(field.readOnly),
+          disabled: Boolean(field.readOnly || field.locked),
           sx: fieldSx,
         };
 

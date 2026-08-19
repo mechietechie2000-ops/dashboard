@@ -367,3 +367,25 @@ CREATE TABLE IF NOT EXISTS meal_recipe (
     FOREIGN KEY (recipe_id) REFERENCES recipe(id) ON DELETE CASCADE,
     UNIQUE (meal_id, recipe_id)
 );
+
+CREATE TABLE IF NOT EXISTS home_maintenance (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  address VARCHAR(50) NOT NULL,
+  category TEXT,
+  location TEXT,
+  title TEXT,
+  date_of_work DATE,
+  details TEXT,
+  cost DECIMAL(10,2),
+  currency VARCHAR(10) DEFAULT 'INR',
+  receipt_saved TINYINT(1) DEFAULT 0,
+  payment_method VARCHAR(50),
+  account VARCHAR(100),
+  paid_by VARCHAR(100),
+  status VARCHAR(50) DEFAULT 'TBD',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP     ON UPDATE CURRENT_TIMESTAMP
+);
+
+
+

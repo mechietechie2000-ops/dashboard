@@ -6,24 +6,20 @@ import { ColorModeContext, useMode } from './theme';
 import Topbar from './scenes/global/Topbar';
 import Sidebar from './scenes/global/Sidebar';
 import BottomNav, { BOTTOM_NAV_HEIGHT } from './scenes/global/BottomNav';
-
 import HomeDashboard from './scenes/dashboard';
 import Calendar from './scenes/calendar/calendar';
 import Routine from './scenes/routine';
 import RoutineAdmin from './scenes/routine/RoutineAdmin';
-import Event from './scenes/events';
 import DigiLocker from './scenes/digiLocker/digiLocker';
-import AddTask from './scenes/tasks/AddTask';
 import TodoList from './scenes/todo/todoList';
 import Meal from './scenes/meal/Meal';
 import Recipe from './scenes/recipe/Recipe';
+import SectionDetailView from './components/SectionDetailView'
 
 /*
 import KidsMenu from "./scenes/kids/KidsMenu";
 import Medical from "./scenes/medical/medical";
-import Passport from "./scenes/passport/passport";
 import Sports from "./scenes/kids/sports";
-import Dashboard from "./scenes/dashboard";
 */
 
 // Auth imports
@@ -99,14 +95,11 @@ const ProtectedAppLayout = () => {
           <Routes>
             <Route path="/" element={<HomeDashboard />} />
             <Route path="/routine" element={<Routine />} />
-            {/* <Route path="/event" element={<Event />} /> */}
             <Route path="/routine/admin" element={<RoutineAdmin />} />
             <Route path="/digiLocker" element={<DigiLocker />} />
             <Route path="/calendar" element={<Calendar />} />
-            {/*  */}
-            {/*             <Route path="/add-task" element={<AddTask />} />
-             */}{' '}
             <Route path="/todoList" element={<TodoList />} />
+            <Route path="/homeMaintenance" element={<SectionDetailView sectionKey="home_maintenance" />} />
             <Route path="/meal" element={<Meal />} />
             <Route path="/recipe" element={<Recipe />} />
             {/*

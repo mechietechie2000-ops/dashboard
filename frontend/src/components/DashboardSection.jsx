@@ -23,7 +23,7 @@ import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import { Link } from "react-router-dom";
 import { tokens } from "../theme";
-
+import Collapse from '@mui/material/Collapse';
 
 const SWIPE_THRESHOLD = 90;
 const MOVE_CANCEL_PX = 10;
@@ -117,7 +117,7 @@ const SectionItemRow = ({
         position: 'relative',
         overflow: 'hidden',
         borderRadius: '6px',
-        borderBottom: isLast ? 'none' : `1px solid ${colors.primary[500]}`,
+        borderBottom: isLast ? 'none' : `1px solid ${colors.primary[500]}33`, //Low-Opacity 1px Border (Most consistent across all displays) // 33 adds ~20% opacity in hex
       }}
     >
       {isTouchDevice && dragX < 0 && (
@@ -342,7 +342,7 @@ const DashboardSection = ({
         p="20px"
         display="flex"
         flexDirection="column"
-        justifyContent="space-between"
+        justifyContent="flex-start"
         height="100%"
         sx={{
           overflow: 'hidden',
@@ -383,14 +383,9 @@ const DashboardSection = ({
 
         {/* SMOOTH COLLAPSIBLE BODY AREA */}
         {/* BODY */}
-        {/* {!isCollapsed && ( */} 
+        <Collapse in={!isCollapsed} timeout="auto" unmountOnExit={false}>
         <Box
           sx={{
-            flex: isCollapsed ? 0 : 1,
-            maxHeight: isCollapsed ? '0px' : '1000px',
-            opacity: isCollapsed ? 0 : 1,
-            overflow: isCollapsed ? 'hidden' : 'auto',
-            transition: 'max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease',
             display: 'flex',
             flexDirection: 'column',
             justifyContent: 'space-between',
@@ -441,7 +436,8 @@ const DashboardSection = ({
             </Typography>
           </Box>
         )}
-        </Box>        
+       </Box>
+      </Collapse>
       </Box>
 
       {/* VIEW DETAILS DIALOG (Color matched to theme) */}
