@@ -133,7 +133,7 @@ module.exports = {
   // updated_at (DB-defaulted, not client-writable) and todo_task_history
   // (populated by a trigger in home_dashboard_schema.sql — see that file).
 
-  todo_task: {
+  todo_list: {
     tableName: 'todo_task',
     columns: [
       'title',

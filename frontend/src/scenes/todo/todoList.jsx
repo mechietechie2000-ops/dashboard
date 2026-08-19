@@ -7,6 +7,6 @@ import SectionQuickAdd from "../../components/SectionQuickAdd";
 // config/sectionFields.js — this file just wires that generic component
 // to the todo_task section and sends the user back to the dashboard
 // once the task is saved.
-const TodoList = () => <SectionQuickAdd sectionKey="todo_task" redirectTo="/" />;
+const TodoList = () => <SectionQuickAdd sectionKey="todo_list" redirectTo="/" />;
 
 export default TodoList;

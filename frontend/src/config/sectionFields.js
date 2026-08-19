@@ -87,39 +87,6 @@ const sectionFields = {
     }),
   },
 
-/*   reminders: {
-    tableName: 'reminders',
-    label: 'Reminders',
-    icon: <NotificationsActiveOutlinedIcon />,
-    emptyMessage: 'No reminders',
-    fields: [
-      { name: 'title', label: 'Reminder', type: 'text', required: true },
-      { name: 'notes', label: 'Notes', type: 'textarea', required: false },
-      { name: 'due_date', label: 'Due date', type: 'date', required: true },
-      {
-        name: 'priority',
-        label: 'Priority',
-        type: 'select',
-        required: false,
-        options: ['low', 'medium', 'high'],
-      },
-      {
-        name: 'family_member_id',
-        label: 'For',
-        type: 'asyncSelect',
-        source: 'familyMembers',
-        required: false,
-      },
-      { name: 'is_completed', label: 'Completed', type: 'checkbox', required: false },
-    ],
-    mapRowToItem: (row) => ({
-      id: row.reminder_id,
-      primary: row.title,
-      secondary: row.note,
-      meta: fmtDate(row.due_date),
-    }),
-  },
- */
   goals: {
     tableName: 'goals',
     label: 'Goals',
@@ -562,7 +529,7 @@ const sectionFields = {
   // show up in the View All detail table/form (see SectionDetailView.jsx).
   // Existing sections keep working unchanged since nothing reads
   // detailFields unless it's present.
-  todo_task: {
+  todo_list: {
     tableName: 'todo_task',
     label: 'Todo Task',
     icon: <LocalLibraryOutlinedIcon />,

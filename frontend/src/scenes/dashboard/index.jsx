@@ -33,7 +33,7 @@ import { runDailyResetManual } from '../../data/routineRepository';
 
 const SECTION_KEYS = [
   'routine',
-  'todo_task',
+  'todo_list',
   //'reminders',
   'goals',
   'events',
