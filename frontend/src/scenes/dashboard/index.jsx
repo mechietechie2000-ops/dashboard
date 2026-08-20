@@ -2,7 +2,6 @@ import { useEffect, useState, useCallback, useMemo } from 'react';
 import {
   Box,
   Button,
-  Collapse,
   Drawer,
   IconButton,
   MenuItem,
@@ -40,7 +39,7 @@ const SECTION_KEYS = [
   'appointments',
   'renewals',
   'bills',
-  'recipe',
+  // 'recipe',
   //  "extracurricular",
   //  "library",
 ];

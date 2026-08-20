@@ -83,9 +83,9 @@ const sectionFields = {
     ],
     mapRowToItem: (row) => ({
       id: row.id,
-      primary: row.title,
+      primary: [row.scheduled_time,'', row.title].filter(Boolean).join(' • '),
       secondary: row.family_member_name,
-      meta: row.scheduled_time,
+      //meta: row.scheduled_time,
     }),
   },
   /*   reminders: {
@@ -745,19 +745,22 @@ const sectionFields = {
       { name: 'created_at', label: 'Created', type: 'text', required: false, readOnly: true },
       { name: 'updated_at', label: 'Updated', type: 'text', required: false, readOnly: true },
     ],
-    mapRowToItem: (row) => ({
-      id: row.id,
-      primary: `${row.address} ${row.location}`,
-      secondary: `${row.details} ${row.date_of_work}`, //row.details,
-      meta: [
-        row.cost != null ? `${row.currency || '$'}${Number(row.cost).toFixed(2)}` : null,
-        row.status,
-      ]
-        .filter(Boolean)
-        .join(' • '),
-    }),
-  },
 
+    mapRowToItem: (row) => ({
+    id: row.id,
+    secondary: [
+      row.address,
+      [row.category, row.location].filter(Boolean).join(' • '),
+      row.date_of_work ? fmtDate(row.date_of_work) : null,
+      row.cost != null ? `${row.currency || 'INR'} ${Number(row.cost).toLocaleString()}` : null,
+      row.account,
+      row.status,
+    ]
+      .filter(Boolean)
+      .join(' | '),
+  }),
+
+  },
 };
 
 export default sectionFields;

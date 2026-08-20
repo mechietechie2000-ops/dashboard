@@ -356,7 +356,7 @@ const DashboardSection = ({
           alignItems="center"
           mb={isCollapsed ? 0 : '10px'}
           pb={isCollapsed ? 0 : '10px'}
-          borderBottom={isCollapsed ? 'none' : `3px solid ${colors.primary[500]}`}
+          borderBottom={isCollapsed ? 'none' : `2px solid ${colors.primary[500]}`}
           sx={{ transition: 'margin 0.25s ease, padding 0.25s ease' }}
         >
           <Box display="flex" alignItems="center" gap="10px" minWidth={0}>
