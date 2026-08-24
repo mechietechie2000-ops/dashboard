@@ -10,6 +10,22 @@ import LocalLibraryOutlinedIcon from '@mui/icons-material/LocalLibraryOutlined';
 import ChecklistOutlinedIcon from '@mui/icons-material/ChecklistOutlined';
 import BuildOutlinedIcon from '@mui/icons-material/BuildOutlined';
 import PlaylistAddCheckOutlinedIcon from '@mui/icons-material/PlaylistAddCheckOutlined';
+import RadioButtonUncheckedIcon from '@mui/icons-material/RadioButtonUnchecked';
+import InboxOutlinedIcon from '@mui/icons-material/InboxOutlined';
+import BlockIcon from '@mui/icons-material/Block';
+import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
+
+// Consolidated status set shared by sections that support swipe-to-status
+// (see DashboardSection's SectionItemRow). colorKey maps to a `colors`
+// palette key resolved at render time (component has the theme, this file
+// doesn't).
+export const STATUS_OPTIONS = [
+  { value: 'not_started', label: 'Not Started', icon: RadioButtonUncheckedIcon, colorKey: 'grey' },
+  { value: 'backlog', label: 'Backlog', icon: InboxOutlinedIcon, colorKey: 'grey' },
+  { value: 'in_progress', label: 'WIP', icon: AutorenewOutlinedIcon, colorKey: 'blueAccent' },
+  { value: 'blocked', label: 'Blocked', icon: BlockIcon, colorKey: 'redAccent' },
+  { value: 'done', label: 'Done', icon: CheckCircleOutlineIcon, colorKey: 'greenAccent' },
+];
 
 const fmtDate = (value) => {
   if (!value) return undefined;
@@ -28,6 +44,31 @@ const fmtDateTime = (value) => {
     day: 'numeric',
     hour: 'numeric',
     minute: '2-digit',
+  });
+};
+const fmtTime12 = (value) => {
+  if (!value) return undefined;
+
+  // Handle time-only strings (e.g., "14:30" or "14:30:00")
+  if (typeof value === 'string' && /^\d{2}:\d{2}(:\d{2})?$/.test(value)) {
+    const [hours, minutes] = value.split(':');
+    const d = new Date();
+    d.setHours(parseInt(hours, 10), parseInt(minutes, 10), 0, 0);
+    return d.toLocaleTimeString(undefined, {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+    });
+  }
+
+  // Handle standard Date objects or ISO strings
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return value;
+
+  return d.toLocaleTimeString(undefined, {
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
   });
 };
 const currentYear = new Date().getFullYear();
@@ -83,44 +124,12 @@ const sectionFields = {
     ],
     mapRowToItem: (row) => ({
       id: row.id,
-      primary: [row.scheduled_time,'', row.title].filter(Boolean).join(' • '),
+      primary: [fmtTime12(row.scheduled_time),'', row.title].filter(Boolean).join(' • '),
       secondary: row.family_member_name,
       //meta: row.scheduled_time,
     }),
   },
-  /*   reminders: {
-    tableName: 'reminders',
-    label: 'Reminders',
-    icon: <NotificationsActiveOutlinedIcon />,
-    emptyMessage: 'No reminders',
-    fields: [
-      { name: 'title', label: 'Reminder', type: 'text', required: true },
-      { name: 'notes', label: 'Notes', type: 'textarea', required: false },
-      { name: 'due_date', label: 'Due date', type: 'date', required: true },
-      {
-        name: 'priority',
-        label: 'Priority',
-        type: 'select',
-        required: false,
-        options: ['low', 'medium', 'high'],
-      },
-      {
-        name: 'family_member_id',
-        label: 'For',
-        type: 'asyncSelect',
-        source: 'familyMembers',
-        required: false,
-      },
-      { name: 'is_completed', label: 'Completed', type: 'checkbox', required: false },
-    ],
-    mapRowToItem: (row) => ({
-      id: row.reminder_id,
-      primary: row.title,
-      secondary: row.note,
-      meta: fmtDate(row.due_date),
-    }),
-  },
- */
+
   goals: {
     tableName: 'goals',
     label: 'Goals',
@@ -591,6 +600,7 @@ const sectionFields = {
     // dateField is what "next N days" filters against; any field below
     // marked dashboardFilterable becomes a dropdown filter automatically.
     dashboardFilter: { dateField: 'target_date', defaultRangeDays: 30 },
+    statusOptions: STATUS_OPTIONS,
     fields: [
       { name: 'title', label: 'Title', type: 'text', required: true },
       {
@@ -658,6 +668,7 @@ const sectionFields = {
       primary: row.title,
       secondary: [row.family_member_name, row.category].filter(Boolean).join(' • '),
       meta: row.target_date ? fmtDate(row.target_date) : undefined,
+      status: row.status,
     }),
   },
 
@@ -667,6 +678,7 @@ const sectionFields = {
     icon: <BuildOutlinedIcon />,
     viewAllLink: '/homeMaintenance',
     emptyMessage: 'No maintenance records yet',
+    statusOptions: STATUS_OPTIONS,
     fields: [
       {
         name: 'address',
@@ -709,12 +721,8 @@ const sectionFields = {
         label: 'Status',
         type: 'select',
         required: true,
-        options: [
-          { value: 'TBD', label: 'TBD' },
-          { value: 'Completed', label: 'Completed' },
-          { value: 'In Progress', label: 'In Progress' },
-          { value: 'Blocked', label: 'Blocked' },
-        ],
+        dashboardFilterable: true,
+        options: STATUS_OPTIONS.map(({ value, label }) => ({ value, label })),
       },
     ],
     // Extra columns — only shown on the View All page/table, appended to
@@ -758,6 +766,7 @@ const sectionFields = {
     ]
       .filter(Boolean)
       .join(' | '),
+    status: row.status,
   }),
 
   },

@@ -167,6 +167,8 @@ const Sidebar = ({ isMobileOpen = false, onMobileClose = () => {} }) => {
             <SubMenu title="Properties" icon={<AddHomeWorkTwoToneIcon />} opened={true}>
               <Item title="Maintenance" to="/homeMaintenance" icon={<BuildOutlinedIcon />} selected={selected} setSelected={setSelected} />
             </SubMenu>
+            
+            <Item title="AI Agent" to="/local-llm" icon={<BuildOutlinedIcon />} selected={selected} setSelected={setSelected} />
 
             <SubMenu title="Kids" icon={<ChildCareIcon />} opened={true}>
               <Item title="Meal Plan" to="/kids" icon={<LunchDiningRoundedIcon />} selected={selected} setSelected={setSelected} onSelect={isMobile ? onMobileClose : undefined} />

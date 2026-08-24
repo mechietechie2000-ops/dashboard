@@ -68,12 +68,46 @@ const withinRangeDays = (dateStr, rangeDays) => {
   return target >= today && target <= end;
 };
 
+/* const applyDashboardFilters = (items, config, filterState) => {
+  if (!config.dashboardFilter) return items;
+  const { dateField, defaultRangeDays } = config.dashboardFilter;
+  const rangeDays = filterState.rangeDays ?? defaultRangeDays ?? 0;
+  const statusFilterActive = Boolean(filterState.status);
+  return items.filter((item) => {
+    // Backlog/Done are hidden from the default view to reduce clutter;
+    // explicitly selecting that status in the filter sheet still shows it.
+    if (!statusFilterActive && (item.status === 'backlog' || item.status === 'done')) {
+      return false;
+    }
+    // in_progress is always visible regardless of date range.
+    if (item.status !== 'in_progress') {
+      if (dateField && !withinRangeDays(item.raw?.[dateField], rangeDays)) return false;
+    }
+    for (const field of getFilterableFields(config)) {
+      const selected = filterState[field.name];
+      if (selected && String(item.raw?.[field.name]) !== String(selected)) return false;
+    }
+    return true;
+  });
+}; */
+
 const applyDashboardFilters = (items, config, filterState) => {
   if (!config.dashboardFilter) return items;
   const { dateField, defaultRangeDays } = config.dashboardFilter;
   const rangeDays = filterState.rangeDays ?? defaultRangeDays ?? 0;
+  const statusFilterActive = Boolean(filterState.status);
   return items.filter((item) => {
-    if (dateField && !withinRangeDays(item.raw?.[dateField], rangeDays)) return false;
+    // Backlog/Done are hidden from the default view to reduce clutter;
+    // explicitly selecting that status in the filter sheet still shows it.
+    if (!statusFilterActive && (item.status === 'backlog' || item.status === 'done')) {
+      return false;
+    }
+    // Any other status (not_started, in_progress, blocked) is always visible
+    // by default. The date-range dropdown only narrows results when the
+    // user explicitly picks a range other than "All".
+    if (filterState.rangeDays !== undefined && dateField) {
+      if (!withinRangeDays(item.raw?.[dateField], rangeDays)) return false;
+    }
     for (const field of getFilterableFields(config)) {
       const selected = filterState[field.name];
       if (selected && String(item.raw?.[field.name]) !== String(selected)) return false;
@@ -191,6 +225,29 @@ const HomeDashboard = () => {
     }, UNDO_WINDOW_MS);
 
     setPendingUndo({ sectionKey, item, timeoutId });
+  };
+
+  const handleStatusChange = async (sectionKey, item, newStatus) => {
+    const prevStatus = item.status;
+
+    setItemsBySection((prev) => ({
+      ...prev,
+      [sectionKey]: (prev[sectionKey] || []).map((i) =>
+        i.id === item.id ? { ...i, status: newStatus } : i
+      ),
+    }));
+
+    try {
+      await updateRecord(sectionKey, item.id, { status: newStatus });
+    } catch (err) {
+      console.error(`Failed to update status for ${sectionKey} item ${item.id}:`, err);
+      setItemsBySection((prev) => ({
+        ...prev,
+        [sectionKey]: (prev[sectionKey] || []).map((i) =>
+          i.id === item.id ? { ...i, status: prevStatus } : i
+        ),
+      }));
+    }
   };
 
   const handleUndoDelete = () => {
@@ -333,6 +390,8 @@ const HomeDashboard = () => {
                   onEditRequest={(item) => openEdit(sectionKey, item)}
                   onCloneRequest={(item) => handleClone(sectionKey, item)}
                   onDeleteRequest={(item) => queueDelete(sectionKey, item)}
+                  statusOptions={config.statusOptions}
+                  onStatusChange={(item, newStatus) => handleStatusChange(sectionKey, item, newStatus)}
                 />
               </Box>
             </Box>

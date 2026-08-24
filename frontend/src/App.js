@@ -15,6 +15,7 @@ import TodoList from './scenes/todo/todoList';
 import Meal from './scenes/meal/Meal';
 import Recipe from './scenes/recipe/Recipe';
 import SectionDetailView from './components/SectionDetailView'
+import LocalLLMChat from './components/LocalLLMChat';
 
 /*
 import KidsMenu from "./scenes/kids/KidsMenu";
@@ -102,6 +103,7 @@ const ProtectedAppLayout = () => {
             <Route path="/homeMaintenance" element={<SectionDetailView sectionKey="home_maintenance" />} />
             <Route path="/meal" element={<Meal />} />
             <Route path="/recipe" element={<Recipe />} />
+            <Route path="/local-llm" element={<LocalLLMChat />} />
             {/*
             <Route path="/event/admin" element={<EventAdmin />} />
              <Route path="/reports/overview" element={<Dashboard />} />

@@ -41,13 +41,28 @@ const SectionItemRow = ({
   onEditRequest,
   onCloneRequest,
   onDeleteRequest,
+  statusOptions,
+  onStatusChange,
   children,
 }) => {
   const [dragX, setDragX] = useState(0);
   const [anchorEl, setAnchorEl] = useState(null);
+  // Right-swipe status panel: independent of dragX/delete logic below.
+  // Stays open until a status is picked or the row is tapped again.
+  const [statusOpen, setStatusOpen] = useState(false);
   const dragging = useRef(false);
   const startX = useRef(0);
   const touchMoved = useRef(false);
+
+  const availableStatuses = (statusOptions || []).filter(
+    (opt) => opt.value !== item.status
+  );
+
+  const handlePickStatus = (value) => (e) => {
+    e.stopPropagation();
+    setStatusOpen(false);
+    if (onStatusChange) onStatusChange(item, value);
+  };
 
   const menuOpen = Boolean(anchorEl);
 
@@ -86,7 +101,9 @@ const SectionItemRow = ({
 
     if (dragX < -SWIPE_THRESHOLD) {
       onDeleteRequest(item);
-    } 
+    } else if (dragX > 40 && availableStatuses.length > 0) {
+      setStatusOpen(true);
+    }
     // Single-tap onViewRequest(item) removed completely to prevent accidental opens!
 /*     else if (!touchMoved.current && !menuOpen) {
       onViewRequest(item);
@@ -137,9 +154,43 @@ const SectionItemRow = ({
         </Box>
       )}
 
+      {statusOpen && availableStatuses.length > 0 && (
+        <Box sx={{ position: 'absolute', top: 0, bottom: 0, left: 0, width: '190px', display: 'flex', zIndex: 1 }}>
+          {availableStatuses.map((opt) => {
+            const StatusIcon = opt.icon;
+            const c = colors[opt.colorKey] || colors.grey;
+            return (
+              <Box
+                key={opt.value}
+                onClick={handlePickStatus(opt.value)}
+                aria-label={opt.label}
+                sx={{
+                  flex: 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  backgroundColor: `${c[500]}33`,
+                  cursor: 'pointer',
+                }}
+              >
+                <StatusIcon fontSize="small" sx={{ color: c[500] }} />
+              </Box>
+            );
+          })}
+        </Box>
+      )}
+
       <Box
         {...touchHandlers}
         {...desktopHandlers}
+        onClick={(e) => {
+          if (statusOpen) {
+            e.stopPropagation();
+            setStatusOpen(false);
+            return;
+          }
+          if (desktopHandlers.onClick) desktopHandlers.onClick(e);
+        }}
         sx={{
           position: 'relative',
           display: 'flex',
@@ -149,7 +200,7 @@ const SectionItemRow = ({
           py: '10px',
           px: isTouchDevice ? 0 : '2px',
           backgroundColor: colors.primary[400],
-          transform: isTouchDevice ? `translateX(${dragX}px)` : 'none',
+          transform: isTouchDevice ? `translateX(${statusOpen ? 190 : dragX}px)` : 'none',
           transition: dragging.current ? 'none' : 'transform 0.2s ease',
           cursor: 'pointer',
           userSelect: 'none',
@@ -218,6 +269,20 @@ const SectionItemRow = ({
             </MenuItem>
           )}
 
+          {availableStatuses.length > 0 &&
+            availableStatuses.map((opt) => {
+              const StatusIcon = opt.icon;
+              const c = colors[opt.colorKey] || colors.grey;
+              return (
+                <MenuItem key={opt.value} onClick={handleAction(() => onStatusChange && onStatusChange(item, opt.value))}>
+                  <ListItemIcon sx={{ color: c[500] }}>
+                    <StatusIcon fontSize="small" />
+                  </ListItemIcon>
+                  <ListItemText>{opt.label}</ListItemText>
+                </MenuItem>
+              );
+            })}
+
           {onDeleteRequest && (
             <MenuItem onClick={handleAction(onDeleteRequest)} sx={{ color: colors.redAccent[400] }}>
               <ListItemIcon sx={{ color: colors.redAccent[400] }}>
@@ -243,6 +308,8 @@ const DashboardSection = ({
   onEditRequest,
   onCloneRequest,
   onDeleteRequest,
+  statusOptions,
+  onStatusChange,
 }) => {
   const theme = useTheme();
   const colors = tokens(theme.palette.mode);
@@ -328,6 +395,8 @@ const DashboardSection = ({
         onEditRequest={onEditRequest}
         onCloneRequest={onCloneRequest}
         onDeleteRequest={onDeleteRequest}
+        statusOptions={statusOptions}
+        onStatusChange={onStatusChange}
       >
         {row}
       </SectionItemRow>
