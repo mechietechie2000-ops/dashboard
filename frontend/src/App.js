@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useNavigate, useParams } from 'react-router-dom';
 import { CssBaseline, ThemeProvider, Box, useMediaQuery, useTheme } from '@mui/material';
 import { ColorModeContext, useMode } from './theme';
 
@@ -17,6 +17,7 @@ import Recipe from './scenes/recipe/Recipe';
 import SectionDetailView from './components/SectionDetailView'
 import LocalLLMChat from './components/LocalLLMChat';
 
+// in your <Routes>:
 /*
 import KidsMenu from "./scenes/kids/KidsMenu";
 import Medical from "./scenes/medical/medical";
@@ -51,6 +52,12 @@ const RegisterPage = () => {
   }
 
   return <Register onSwitchToLogin={() => navigate('/login')} onSuccess={() => navigate('/')} />;
+};
+
+
+const SectionDetailRoute = () => {
+  const { sectionKey } = useParams();
+  return <SectionDetailView sectionKey={sectionKey} />;
 };
 
 // Main layout wrapper for authenticated routes
@@ -104,6 +111,8 @@ const ProtectedAppLayout = () => {
             <Route path="/meal" element={<Meal />} />
             <Route path="/recipe" element={<Recipe />} />
             <Route path="/local-llm" element={<LocalLLMChat />} />
+            <Route path="/section/:sectionKey" element={<SectionDetailRoute />} />
+
             {/*
             <Route path="/event/admin" element={<EventAdmin />} />
              <Route path="/reports/overview" element={<Dashboard />} />

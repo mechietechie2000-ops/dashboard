@@ -28,7 +28,7 @@ import {
   updateRecord,
   deleteRecord,
 } from '../../data/sectionRepository';
-import { runDailyResetManual } from '../../data/routineRepository';
+import { runDailyResetManual, listTodayRoutineTasks, markRoutineDone, markRoutineSkipped,toggleRoutineMute } from '../../data/routineRepository';
 
 const SECTION_KEYS = [
   'routine',
@@ -66,6 +66,59 @@ const withinRangeDays = (dateStr, rangeDays) => {
   const end = new Date(today);
   end.setDate(end.getDate() + rangeDays);
   return target >= today && target <= end;
+};
+
+const parseFamilyMemberNames = () => {
+  const raw = process.env.REACT_APP_FAMILY_MEMBER_NAMES || '';
+  return raw.split(',').map((s) => s.trim().toLowerCase()).filter(Boolean);
+};
+const FAMILY_MEMBER_NAMES = parseFamilyMemberNames();
+
+const isFamilyMember = (personName) =>
+  FAMILY_MEMBER_NAMES.includes((personName || '').trim().toLowerCase());
+
+const getMonthDay = (dateStr) => {
+  const d = new Date(`${dateStr}T00:00:00`);
+  if (Number.isNaN(d.getTime())) return null;
+  return { month: d.getMonth(), day: d.getDate() };
+};
+
+const daysBetween = (a, b) => Math.round((b - a) / 86400000);
+
+// Custom filter for events: MM/DD-only recurrence, asymmetric windows for
+// family vs non-family, and a 2-day "belated" grace period on past dates.
+const filterEvents = (items) => {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const year = today.getFullYear();
+
+  return items.filter((item) => {
+    const dateStr = item.raw?.event_date;
+    const md = dateStr ? getMonthDay(dateStr) : null;
+    if (!md) return true; // no usable date — don't hide it
+
+    const thisYear = new Date(year, md.month, md.day);
+    const nextYear = new Date(year + 1, md.month, md.day);
+    const lastYear = new Date(year - 1, md.month, md.day);
+
+    // Nearest upcoming occurrence (>= 0 days away)
+    const futureCandidates = [thisYear, nextYear]
+      .map((occ) => daysBetween(today, occ))
+      .filter((diff) => diff >= 0);
+    const futureDiff = futureCandidates.length ? Math.min(...futureCandidates) : Infinity;
+
+    // Nearest past occurrence (<= 0 days away, closest to today)
+    const pastCandidates = [thisYear, lastYear]
+      .map((occ) => daysBetween(today, occ))
+      .filter((diff) => diff <= 0);
+    const pastDiff = pastCandidates.length ? Math.max(...pastCandidates) : -Infinity;
+
+    const windowDays = isFamilyMember(item.raw?.person_name) ? 90 : 30;
+    const withinFutureWindow = futureDiff <= windowDays;
+    const withinBelatedWindow = pastDiff >= -2; // up to 2 days ago, any person
+
+    return withinFutureWindow || withinBelatedWindow;
+  });
 };
 
 /* const applyDashboardFilters = (items, config, filterState) => {
@@ -155,9 +208,13 @@ const HomeDashboard = () => {
     for (const sectionKey of SECTION_KEYS) {
       const config = sectionFields[sectionKey];
       const items = itemsBySection[sectionKey] || [];
-      result[sectionKey] = config?.dashboardFilter
-        ? applyDashboardFilters(items, config, filtersBySection[sectionKey] || {})
-        : items;
+      if (sectionKey === 'events') {
+        result[sectionKey] = filterEvents(items);
+      } else {
+        result[sectionKey] = config?.dashboardFilter
+          ? applyDashboardFilters(items, config, filtersBySection[sectionKey] || {})
+          : items;
+      }
     }
     return result;
   }, [itemsBySection, filtersBySection]);
@@ -170,7 +227,21 @@ const HomeDashboard = () => {
       console.error(`Failed to load ${sectionKey}:`, err);
       setItemsBySection((prev) => ({ ...prev, [sectionKey]: [] }));
     }
+  }, []); 
+
+  /* const loadSection = useCallback(async (sectionKey) => {
+    try {
+      const items =
+        sectionKey === 'routine'
+          ? (await listTodayRoutineTasks()).map(sectionFields.routine.mapRowToItem)
+          : await listRecords(sectionKey);
+      setItemsBySection((prev) => ({ ...prev, [sectionKey]: items }));
+    } catch (err) {
+      console.error(`Failed to load ${sectionKey}:`, err);
+      setItemsBySection((prev) => ({ ...prev, [sectionKey]: [] }));
+    }
   }, []);
+  */
 
   useEffect(() => {
     SECTION_KEYS.forEach(loadSection);

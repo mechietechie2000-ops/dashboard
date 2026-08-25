@@ -164,13 +164,16 @@ export const themeSettings = (mode) => {
     },
     typography: {
       fontFamily: ["Inter", "sans-serif"].join(","),
+      //fontFamily: ["Pinsetter", "cursive", "sans-serif"].join(","),
       fontSize: 12,
       h1: {
         fontFamily: ["Inter", "sans-serif"].join(","),
+        //fontFamily: ["Pinsetter", "cursive", "sans-serif"].join(","),
         fontSize: 40,
       },
       h2: {
-        fontFamily: ["Inter", "sans-serif"].join(","),
+        //fontFamily: ["Inter", "sans-serif"].join(","),
+        fontFamily: ["Pinsetter", "cursive", "sans-serif"].join(","),
         fontSize: 32,
       },
       h3: {
@@ -179,11 +182,13 @@ export const themeSettings = (mode) => {
       },
       h4: {
         fontFamily: ["Inter", "sans-serif"].join(","),
+        //fontFamily: ["Pinsetter", "cursive", "sans-serif"].join(","),
         fontSize: 20,
       },
       h5: {
-        fontFamily: ["Inter", "sans-serif"].join(","),
-        fontSize: 16,
+        //fontFamily: ["Inter", "sans-serif"].join(","),
+        fontFamily: ["Lobster", "sans-serif"].join(","),
+        fontSize: 20,
       },
       h6: {
         fontFamily: ["Inter", "sans-serif"].join(","),

@@ -20,11 +20,11 @@ import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 // palette key resolved at render time (component has the theme, this file
 // doesn't).
 export const STATUS_OPTIONS = [
-  { value: 'not_started', label: 'Not Started', icon: RadioButtonUncheckedIcon, colorKey: 'grey' },
-  { value: 'backlog', label: 'Backlog', icon: InboxOutlinedIcon, colorKey: 'grey' },
-  { value: 'in_progress', label: 'WIP', icon: AutorenewOutlinedIcon, colorKey: 'blueAccent' },
-  { value: 'blocked', label: 'Blocked', icon: BlockIcon, colorKey: 'redAccent' },
-  { value: 'done', label: 'Done', icon: CheckCircleOutlineIcon, colorKey: 'greenAccent' },
+  { value: 'done', label: 'Done', icon: CheckCircleOutlineIcon, colorKey: 'greenAccent', color: '#1b5e20' },
+  { value: 'not_started', label: 'Not Started', icon: RadioButtonUncheckedIcon, colorKey: 'grey', color: '#424242' },
+  { value: 'backlog', label: 'Backlog', icon: InboxOutlinedIcon, colorKey: 'grey', color: '#424242' },
+  { value: 'in_progress', label: 'WIP', icon: AutorenewOutlinedIcon, colorKey: 'blueAccent', color: '#0d47a1' },
+  { value: 'blocked', label: 'Blocked', icon: BlockIcon, colorKey: 'redAccent', color: '#7f0000' },
 ];
 
 const fmtDate = (value) => {
@@ -212,7 +212,7 @@ const sectionFields = {
     tableName: 'events',
     label: 'Events (Birthdays, Anniversaries)',
     icon: <CakeOutlinedIcon />,
-    viewAllLink: '/events', // check if the route exist yet
+    viewAllLink: '/section/events', // check if the route exist yet
     emptyMessage: 'No upcoming birthdays or anniversaries',
     fields: [
       { name: 'person_name', label: 'Person Name', type: 'text', required: true },
@@ -230,6 +230,14 @@ const sectionFields = {
       },
       { name: 'event_date', label: 'Date', type: 'date', required: true },
     ],
+/*     mapRowToItem: (row) => ({
+      id: row.id,
+      primary: row.person_name,
+      secondary: row.event_type
+        ? row.event_type[0].toUpperCase() + row.event_type.slice(1)
+        : undefined,
+      meta: fmtDate(row.event_date),
+    }), */
     mapRowToItem: (row) => ({
       id: row.id,
       primary: row.person_name,
@@ -237,14 +245,15 @@ const sectionFields = {
         ? row.event_type[0].toUpperCase() + row.event_type.slice(1)
         : undefined,
       meta: fmtDate(row.event_date),
-    }),
+      status: 'N/A',
+    }),  
   },
 
   appointments: {
     tableName: 'appointments',
     label: 'Appointments',
     icon: <LocalHospitalIcon />,
-    viewAllLink: '/medical',
+    viewAllLink: '/section/appointments',
     emptyMessage: 'No upcoming appointments',
     fields: [
       {
@@ -283,7 +292,7 @@ const sectionFields = {
     tableName: 'renewals',
     label: 'Renewals',
     icon: <AutorenewOutlinedIcon />,
-    viewAllLink: '/renewals', // check if the route exist yet
+    viewAllLink: '/section/renewals', // check if the route exist yet
     emptyMessage: 'Nothing due for renewal',
     fields: [
       {
@@ -594,7 +603,7 @@ const sectionFields = {
     tableName: 'todo_task',
     label: 'Todo List',
     icon: <PlaylistAddCheckOutlinedIcon />,
-    viewAllLink: '/todoList',
+    viewAllLink: '/section/todo_list',
     emptyMessage: 'No open tasks',
     // Drives the dashboard-widget filter row (see scenes/dashboard/index.jsx).
     // dateField is what "next N days" filters against; any field below
