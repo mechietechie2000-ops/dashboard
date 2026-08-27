@@ -1,7 +1,7 @@
 const db = require('./connection');
 const { syncReminder, removeReminder } = require('./remindersRepository');
 
-const DAY_ABBREV = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
+const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 const todayStr = () => new Date().toISOString().slice(0, 10);
 
 // ---------- Daily reset (the core scheduled workflow) ----------
@@ -11,7 +11,7 @@ const todayStr = () => new Date().toISOString().slice(0, 10);
 // button without risk of double-processing.
 async function runDailyReset() {
   const today = todayStr();
-  const dayAbbrev = DAY_ABBREV[new Date().getDay()];
+  const dayAbbrev = DAY_NAMES[new Date().getDay()];
 
   const state = await db.get(`SELECT value FROM app_state WHERE key = 'last_reset_date'`);
   if (state && state.value === today) {
@@ -104,7 +104,14 @@ async function hasResetRunToday() {
 
 // ---------- Today's working list ----------
 async function getTodayTasks() {
-  const rows = await db.all(`SELECT * FROM daily_routine_temp ORDER BY scheduled_time ASC`);
+  // const rows = await db.all(`SELECT * FROM daily_routine_temp ORDER BY scheduled_time ASC`);
+  const rows = await db.all(
+    `SELECT daily_routine_temp.*, family_members.first_name AS family_member_name
+     FROM daily_routine_temp
+     LEFT JOIN family_members ON family_members.id = daily_routine_temp.family_member_id
+     ORDER BY daily_routine_temp.scheduled_time ASC`
+  );
+  
   const now = Date.now();
   return rows
     .map((r) => ({

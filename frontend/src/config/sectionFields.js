@@ -27,6 +27,11 @@ export const STATUS_OPTIONS = [
   { value: 'blocked', label: 'Blocked', icon: BlockIcon, colorKey: 'redAccent', color: '#7f0000' },
 ];
 
+export const ROUTINE_STATUS_OPTIONS = [
+  { value: 'done', label: 'Done', icon: CheckCircleOutlineIcon, colorKey: 'greenAccent', color: '#1b5e20' },
+  { value: 'skipped', label: 'Skip', icon: BlockIcon, colorKey: 'redAccent', color: '#7f0000' },
+];
+
 const fmtDate = (value) => {
   if (!value) return undefined;
   // const d = new Date(value);
@@ -46,6 +51,14 @@ const fmtDateTime = (value) => {
     minute: '2-digit',
   });
 };
+
+const fmtDateOnly = (value) => {
+  if (!value) return undefined;
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return value;
+  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+};
+/* 
 const fmtTime12 = (value) => {
   if (!value) return undefined;
 
@@ -71,7 +84,50 @@ const fmtTime12 = (value) => {
     hour12: true,
   });
 };
+
+ */
+
+const fmtTime12 = (value) => {
+  if (!value) return undefined;
+
+  // Handle time-only strings (e.g., "14:30" or "14:30:00")
+  if (typeof value === 'string' && /^\d{2}:\d{2}(:\d{2})?$/.test(value)) {
+    const [hours, minutes] = value.split(':');
+    const d = new Date();
+    d.setHours(parseInt(hours, 10), parseInt(minutes, 10), 0, 0);
+    return d
+      .toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit', hour12: true })
+      .replace(':00 ', ' ');
+  }
+
+  // Handle standard Date objects or ISO strings
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return value;
+
+  return d
+    .toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit', hour12: true })
+    .replace(':00 ', ' ');
+};
 const currentYear = new Date().getFullYear();
+
+
+// This file has no access to the theme (colors are resolved at render time
+// in components), so hardcode the three accent colors here directly rather
+// than pulling from `tokens`/`colors`.
+const getDateKeyword = (dateStr) => {
+  const target = new Date(dateStr);
+  if (Number.isNaN(target.getTime())) return null;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  target.setHours(0, 0, 0, 0);
+  const diffDays = Math.round((target - today) / 86400000);
+
+  if (diffDays === 0) return { label: 'Today', color: '#4caf50' };
+  if (diffDays === 1) return { label: 'Tomorrow', color: '#42a5f5' };
+  if (diffDays > 1) return { label: `${diffDays} days to go`, color: '#4caf50' };
+  if (diffDays < 0) return { label: 'Past', color: '#ef5350' };
+  return null;
+};
 
 // sectionKey -> UI config. `fields` drives the generic form (SectionForm);
 // `mapRowToItem` turns a raw DB row (from listRecords) into the
@@ -83,6 +139,7 @@ const sectionFields = {
     icon: <QueryBuilderIcon />,
     viewAllLink: '/routine',
     emptyMessage: 'No routine items today',
+    statusOptions: ROUTINE_STATUS_OPTIONS,
     fields: [
       { name: 'title', label: 'Task', type: 'text', required: true },
       {
@@ -124,9 +181,10 @@ const sectionFields = {
     ],
     mapRowToItem: (row) => ({
       id: row.id,
-      primary: [fmtTime12(row.scheduled_time),'', row.title].filter(Boolean).join(' • '),
+      primary: [fmtTime12(row.scheduled_time), '', row.title].filter(Boolean).join(' • '),
       secondary: row.family_member_name,
       //meta: row.scheduled_time,
+      status: row.status, 
     }),
   },
 
@@ -238,15 +296,27 @@ const sectionFields = {
         : undefined,
       meta: fmtDate(row.event_date),
     }), */
-    mapRowToItem: (row) => ({
+    mapRowToItem: (row) => {
+      const dateKeyword = getDateKeyword(row.event_date);
+      return {
       id: row.id,
-      primary: row.person_name,
-      secondary: row.event_type
+      // primary: row.person_name,
+      // primary: `${fmtDate(row.event_date)}   -  ${row.person_name}`,
+      // primary: [fmtDate(row.event_date), row.person_name].filter(Boolean).join('    •    '),
+      primary: `${fmtDate(row.event_date)}${
+        row.person_name
+          ? `  •  ${row.person_name}'s ${row.event_type || 'other'}`
+          : '  •  some event'
+      }`,
+      meta: dateKeyword?.label,
+      dateLabelColor: dateKeyword?.color,
+ /*      meta: row.event_type
         ? row.event_type[0].toUpperCase() + row.event_type.slice(1)
         : undefined,
-      meta: fmtDate(row.event_date),
-      status: 'N/A',
-    }),  
+      // meta: fmtDate(row.event_date),
+      status: 'N/A', */
+      };
+    },
   },
 
   appointments: {
@@ -279,15 +349,39 @@ const sectionFields = {
         required: true,
       },
     ],
-    mapRowToItem: (row) => ({
-      id: row.id,
-      // primary: `${row.doctor_name}${row.doctor_special ? ` — ${row.doctor_special}` : ''}`,
-      primary: `${row.category} ${row.title}`,
-      secondary: `${row.family_member_name}'s appointment`,
-      meta: fmtDateTime(row.appointment_datetime),
-    }),
+    mapRowToItem: (row) => {
+      const dateKeyword = getDateKeyword(row.appointment_datetime);
+      const datePart = fmtDateOnly(row.appointment_datetime);
+      const timePart = fmtTime12(row.appointment_datetime);
+      const label =
+        row.category === 'Doctor'
+          ? `Dr. Appt. ${row.family_member_name}`
+          : row.title;
+
+      return {
+        id: row.id,
+        primary: `${datePart} - ${label} @${timePart}`,
+        // secondary: `${row.family_member_name}'s appointment`,
+        secondary: dateKeyword?.label,
+        dateLabelColor: dateKeyword?.color,
+      };
+    },
   },
 
+  /**
+    mapRowToItem: (row) => {
+      const dateKeyword = getDateKeyword(row.event_date);
+      return {
+      id: row.id,
+      primary: `${fmtDate(row.event_date)}${
+        row.person_name
+          ? `  •  ${row.person_name}'s ${row.event_type || 'other'}`
+          : '  •  some event'
+      }`,
+      meta: dateKeyword?.label,
+      dateLabelColor: dateKeyword?.color,
+   * 
+   */
   renewals: {
     tableName: 'renewals',
     label: 'Renewals',

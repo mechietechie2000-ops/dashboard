@@ -24,6 +24,7 @@ import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import { Link } from "react-router-dom";
 import { tokens } from "../theme";
 import Collapse from '@mui/material/Collapse';
+import sectionFieldsConfig from '../config/sectionFields'
 
 const SWIPE_THRESHOLD = 90;
 const MOVE_CANCEL_PX = 10;
@@ -82,34 +83,49 @@ const SectionItemRow = ({
     if (actionFn) actionFn(item);
   };
 
+  const startY = useRef(0);
+
   const onTouchStart = (e) => {
     dragging.current = true;
     touchMoved.current = false;
     startX.current = e.touches[0].clientX;
+    startY.current = e.touches[0].clientY;
   };
 
   const onTouchMove = (e) => {
     if (!dragging.current) return;
-    const x = e.touches[0].clientX - startX.current;
+      const x = e.touches[0].clientX - startX.current;
+      const y = e.touches[0].clientY - startY.current;
+    // Vertical scroll intent: bail out of the horizontal drag entirely so
+    // the row snaps back and the page scrolls normally.
+    if (Math.abs(y) > Math.abs(x) && Math.abs(y) > MOVE_CANCEL_PX) {
+      dragging.current = false;
+      touchMoved.current = false;
+      setDragX(0);
+      return;
+    }
+
     if (Math.abs(x) > MOVE_CANCEL_PX) touchMoved.current = true;
     setDragX(x);
   };
 
   const onTouchEnd = () => {
+    
     if (!dragging.current) return;
     dragging.current = false;
-
-    if (dragX < -SWIPE_THRESHOLD) {
-      onDeleteRequest(item);
-    } else if (dragX > 40 && availableStatuses.length > 0) {
-      setStatusOpen(true);
+    try {
+      if (dragX < -SWIPE_THRESHOLD  && onDeleteRequest ) {
+        onDeleteRequest(item);
+      } else if (dragX > 40 && availableStatuses.length > 0) {
+        setStatusOpen(true);
+      }
+      // Single-tap onViewRequest(item) removed completely to prevent accidental opens!
+      /*     else if (!touchMoved.current && !menuOpen) {
+        onViewRequest(item);
+      } */
+    } finally {
+      setDragX(0);
     }
-    // Single-tap onViewRequest(item) removed completely to prevent accidental opens!
-/*     else if (!touchMoved.current && !menuOpen) {
-      onViewRequest(item);
-    } */
-
-    setDragX(0);
   };
 
   const onTouchCancel = () => {
@@ -310,6 +326,7 @@ const DashboardSection = ({
   onDeleteRequest,
   statusOptions,
   onStatusChange,
+  sectionKey,
 }) => {
   const theme = useTheme();
   const colors = tokens(theme.palette.mode);
@@ -335,8 +352,51 @@ const DashboardSection = ({
         ([, value]) => value !== null && value !== undefined && value !== ''
       )
     : [];
+  
+  const fontWeightBySection = {
+    events: 600,
+    appointments: 600,
+    routine: 600,
+    todo_list: 400,
+  }; 
 
+  const getUrgencyColor = (item) => {
+    if (item.dateLabelColor) return item.dateLabelColor; // already set upstream
+
+    if (!item.meta) return colors.greenAccent[500]; // fallback, no date info
+
+    if (item.meta === 'Today') return '#4caf50';
+    if (item.meta === 'Tomorrow') return '#42a5f5';
+    if (item.meta === 'Past') return '#ef5350';
+
+    // "N days to go" — extract the number and scale urgency
+    const match = item.meta.match(/^(\d+) days? to go$/);
+    if (match) {
+      const days = parseInt(match[1], 10);
+      if (days <= 3) return '#ff9800';   // orange — coming up soon
+      if (days <= 7) return '#42a5f5';   // blue — this week
+      return colors.grey[300];           // default — further out
+    }
+
+    return colors.greenAccent[500];
+  };
+
+  const secondaryFontWeightBySection = {
+    events: 500,
+    appointments: 400,
+    routine: 400,
+    todo_list: 400,
+  };
+
+  const secondaryColorBySection = {
+    events: colors.grey[300],
+    appointments: colors.grey[300],
+    routine: colors.grey[400],
+    todo_list: colors.grey[400],
+  };
+  
   const defaultRenderItem = (item, i) => {
+    console.log('sectionKey:', sectionKey, 'weight:', fontWeightBySection[sectionKey]);
     const row = (
       <>
         <Box
@@ -348,7 +408,8 @@ const DashboardSection = ({
         >
           <Typography
             color={colors.grey[100]}
-            fontWeight="600"
+            //fontWeight="600"
+            fontWeight={fontWeightBySection[sectionKey] || 600}
             title={item.primary}
             sx={{
               fontSize: { xs: '1.25rem', sm: '0.875rem' },
@@ -361,9 +422,10 @@ const DashboardSection = ({
           {item.secondary && (
             <Typography
               variant="body2"
-              color={colors.grey[300]}
+              color={item.dateLabelColor || secondaryColorBySection[sectionKey] || colors.grey[300]}
               sx={{
                 fontSize: { xs: '0.9rem', sm: '0.75rem' },
+                fontWeight: secondaryFontWeightBySection[sectionKey] || 400,
                 wordBreak: 'break-word',
                 overflowWrap: 'anywhere',
               }}
@@ -375,7 +437,8 @@ const DashboardSection = ({
         {item.meta && (
           <Typography
             variant="body2"
-            color={colors.greenAccent[500]}
+            // color={item.dateLabelColor || colors.greenAccent[500]}
+            color={getUrgencyColor(item)}
             whiteSpace="nowrap"
             sx={{ flexShrink: 0, fontSize: { xs: '0.9rem', sm: '0.75rem' } }}
           >

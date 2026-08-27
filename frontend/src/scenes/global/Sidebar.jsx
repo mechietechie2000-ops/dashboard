@@ -148,7 +148,6 @@ const Sidebar = ({ isMobileOpen = false, onMobileClose = () => {} }) => {
             />
             
             <SubMenu title="Daily Routine" icon={<QueryBuilderIcon />} opened={true}>
-              <Item title="Events" to="/kids" icon={<QueryBuilderIcon />} selected={selected} setSelected={setSelected} onSelect={isMobile ? onMobileClose : undefined} />
               <Item title="Routines" to="/routine" icon={<PeopleOutlinedIcon />} selected={selected} setSelected={setSelected} onSelect={isMobile ? onMobileClose : undefined} />
               <Item title="Routine Admin" to="/routine/admin" icon={<PeopleOutlinedIcon />} selected={selected} setSelected={setSelected} onSelect={isMobile ? onMobileClose : undefined} />              
               <Item title="Calendar" to="/calendar" icon={<CalendarTodayOutlinedIcon />} selected={selected} setSelected={setSelected} onSelect={isMobile ? onMobileClose : undefined} />

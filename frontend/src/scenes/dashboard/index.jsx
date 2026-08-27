@@ -9,6 +9,11 @@ import {
   Select,
   Snackbar,
   useTheme,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+
 } from '@mui/material';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import RestartAltIcon from '@mui/icons-material/RestartAlt';
@@ -29,6 +34,10 @@ import {
   deleteRecord,
 } from '../../data/sectionRepository';
 import { runDailyResetManual, listTodayRoutineTasks, markRoutineDone, markRoutineSkipped,toggleRoutineMute } from '../../data/routineRepository';
+// import {SKIP_REASONS} from '../routine'
+
+
+//SKIP_REASONS = ['lazy', 'tired', 'office work', 'guest', 'outdoor', 'no reason'];
 
 const SECTION_KEYS = [
   'routine',
@@ -169,6 +178,9 @@ const applyDashboardFilters = (items, config, filterState) => {
   });
 };
 
+
+
+
 const HomeDashboard = () => {
   const theme = useTheme();
   const colors = tokens(theme.palette.mode);
@@ -181,9 +193,12 @@ const HomeDashboard = () => {
   const [resetMessage, setResetMessage] = useState('');
   const [filtersBySection, setFiltersBySection] = useState({});
   const [filterSheetFor, setFilterSheetFor] = useState(null);
+  const [routineSkipTarget, setRoutineSkipTarget] = useState(null);
+  const [routineSkipReason, setRoutineSkipReason] = useState('');
 
   // Track collapsed state per section
   const [collapsedSections, setCollapsedSections] = useState({});
+  const SKIP_REASONS = ['lazy', 'tired', 'office work', 'guest', 'outdoor', 'no reason'];
 
   const toggleCollapse = (sectionKey) => {
     setCollapsedSections((prev) => ({
@@ -219,7 +234,7 @@ const HomeDashboard = () => {
     return result;
   }, [itemsBySection, filtersBySection]);
 
-  const loadSection = useCallback(async (sectionKey) => {
+  /* const loadSection = useCallback(async (sectionKey) => {
     try {
       const items = await listRecords(sectionKey);
       setItemsBySection((prev) => ({ ...prev, [sectionKey]: items }));
@@ -227,21 +242,24 @@ const HomeDashboard = () => {
       console.error(`Failed to load ${sectionKey}:`, err);
       setItemsBySection((prev) => ({ ...prev, [sectionKey]: [] }));
     }
-  }, []); 
+  }, []); */
 
-  /* const loadSection = useCallback(async (sectionKey) => {
-    try {
-      const items =
-        sectionKey === 'routine'
-          ? (await listTodayRoutineTasks()).map(sectionFields.routine.mapRowToItem)
-          : await listRecords(sectionKey);
-      setItemsBySection((prev) => ({ ...prev, [sectionKey]: items }));
-    } catch (err) {
-      console.error(`Failed to load ${sectionKey}:`, err);
-      setItemsBySection((prev) => ({ ...prev, [sectionKey]: [] }));
-    }
-  }, []);
-  */
+const loadSection = useCallback(async (sectionKey) => {
+  try {
+    const items =
+      sectionKey === 'routine'
+        ? (await listTodayRoutineTasks()).map((row) => ({
+            ...sectionFields.routine.mapRowToItem(row),
+            raw: row,
+          }))
+        : await listRecords(sectionKey);
+    setItemsBySection((prev) => ({ ...prev, [sectionKey]: items }));
+  } catch (err) {
+    console.error(`Failed to load ${sectionKey}:`, err);
+    setItemsBySection((prev) => ({ ...prev, [sectionKey]: [] }));
+  }
+}, []);
+  
 
   useEffect(() => {
     SECTION_KEYS.forEach(loadSection);
@@ -298,7 +316,7 @@ const HomeDashboard = () => {
     setPendingUndo({ sectionKey, item, timeoutId });
   };
 
-  const handleStatusChange = async (sectionKey, item, newStatus) => {
+/*   const handleStatusChange = async (sectionKey, item, newStatus) => {
     const prevStatus = item.status;
 
     setItemsBySection((prev) => ({
@@ -319,6 +337,91 @@ const HomeDashboard = () => {
         ),
       }));
     }
+  }; */
+
+    const handleStatusChange = async (sectionKey, item, newStatus) => {
+    if (sectionKey === 'routine') {
+/*       if (newStatus === 'done') {
+        // Optimistic remove — markDone deletes the temp row server-side,
+        // it doesn't set a status we can patch in place like other sections.
+        const prevItems = itemsBySection.routine || [];
+        setItemsBySection((prev) => ({
+          ...prev,
+          routine: (prev.routine || []).filter((i) => i.id !== item.id),
+        }));
+        try {
+          await markRoutineDone(item.id);
+        } catch (err) {
+          console.error(`Failed to mark routine ${item.id} done:`, err);
+          setItemsBySection((prev) => ({ ...prev, routine: prevItems }));
+        }
+        return;
+      }
+
+      if (newStatus === 'skipped') {
+        // Skip needs a reason first — defer the actual call/removal until
+        // confirmRoutineSkip() runs from the dialog.
+        setRoutineSkipTarget(item);
+        setRoutineSkipReason('');
+        return;
+      } */
+      if (newStatus === 'done') {
+        queueRoutineAction(item, 'done');
+        return;
+      }
+      if (newStatus === 'skipped') {
+        setRoutineSkipTarget(item);
+        setRoutineSkipReason('');
+        return;
+      }
+      return;
+    }
+
+    // ---- existing generic path for all other sections ----
+    const prevStatus = item.status;
+
+    setItemsBySection((prev) => ({
+      ...prev,
+      [sectionKey]: (prev[sectionKey] || []).map((i) =>
+        i.id === item.id ? { ...i, status: newStatus } : i
+      ),
+    }));
+
+    try {
+      await updateRecord(sectionKey, item.id, { status: newStatus });
+    } catch (err) {
+      console.error(`Failed to update status for ${sectionKey} item ${item.id}:`, err);
+      setItemsBySection((prev) => ({
+        ...prev,
+        [sectionKey]: (prev[sectionKey] || []).map((i) =>
+          i.id === item.id ? { ...i, status: prevStatus } : i
+        ),
+      }));
+    }
+  };
+
+/*   const confirmRoutineSkip = async () => {
+    if (!routineSkipReason || !routineSkipTarget) return;
+    const target = routineSkipTarget;
+    const prevItems = itemsBySection.routine || [];
+
+    setItemsBySection((prev) => ({
+      ...prev,
+      routine: (prev.routine || []).filter((i) => i.id !== target.id),
+    }));
+    setRoutineSkipTarget(null);
+
+    try {
+      await markRoutineSkipped(target.id, routineSkipReason);
+    } catch (err) {
+      console.error(`Failed to skip routine ${target.id}:`, err);
+      setItemsBySection((prev) => ({ ...prev, routine: prevItems }));
+    }
+  }; */
+  const confirmRoutineSkip = () => {
+    if (!routineSkipReason || !routineSkipTarget) return;
+    queueRoutineAction(routineSkipTarget, 'skipped', routineSkipReason);
+    setRoutineSkipTarget(null);
   };
 
   const handleUndoDelete = () => {
@@ -349,17 +452,47 @@ const HomeDashboard = () => {
     }
   };
 
+  const queueRoutineAction = (item, action, reason) => {
+    const prevItems = itemsBySection.routine || [];
+
+    setItemsBySection((prev) => ({
+      ...prev,
+      routine: (prev.routine || []).filter((i) => i.id !== item.id),
+    }));
+
+    const timeoutId = setTimeout(async () => {
+      try {
+        if (action === 'done') {
+          await markRoutineDone(item.id);
+        } else {
+          await markRoutineSkipped(item.id, reason);
+        }
+      } catch (err) {
+        console.error(`Failed to ${action} routine ${item.id}:`, err);
+        setItemsBySection((prev) => ({ ...prev, routine: prevItems }));
+      }
+      setPendingUndo((cur) => (cur && cur.item.id === item.id ? null : cur));
+    }, UNDO_WINDOW_MS);
+
+    setPendingUndo({ sectionKey: 'routine', item, action, reason, timeoutId, prevItems });
+  };
+  
   return (
     <Box m={{ xs: '0px', sm: '20px' }}>
       {/* <Header title="HOME" subtitle="Welcome back!" /> */}
       <Header title="Dashboard"/> 
 
       <Box
-        display="grid"
-        gridTemplateColumns={{ xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(3, 1fr)' }}
-        gridAutoRows="minmax(240px, auto)"
-        gap="20px"
+        display={{ xs: 'block', sm: 'grid' }}
+        gridTemplateColumns={{ sm: 'repeat(2, 1fr)', md: 'repeat(3, 1fr)' }}
+        gridAutoRows={{ sm: 'minmax(240px, auto)' }}
+        gap={{ sm: '20px' }}
         mt="10px"
+        sx={{
+          '& > *': {
+            marginBottom: { xs: '20px', sm: 0 },
+          },
+        }}
       >
         <ReminderCard />
         {SECTION_KEYS.map((sectionKey) => {
@@ -458,11 +591,14 @@ const HomeDashboard = () => {
                   emptyMessage={config.emptyMessage}
                   viewAllLink={config.viewAllLink}
                   isCollapsed={isCollapsed}
-                  onEditRequest={(item) => openEdit(sectionKey, item)}
+                  // onEditRequest={(item) => openEdit(sectionKey, item)}
+                  // onDeleteRequest={(item) => queueDelete(sectionKey, item)}
+                  onEditRequest={sectionKey === 'routine' ? undefined : (item) => openEdit(sectionKey, item)}
+                  onDeleteRequest={sectionKey === 'routine' ? undefined : (item) => queueDelete(sectionKey, item)}
                   onCloneRequest={(item) => handleClone(sectionKey, item)}
-                  onDeleteRequest={(item) => queueDelete(sectionKey, item)}
                   statusOptions={config.statusOptions}
                   onStatusChange={(item, newStatus) => handleStatusChange(sectionKey, item, newStatus)}
+                  sectionKey={sectionKey}
                 />
               </Box>
             </Box>
@@ -568,6 +704,21 @@ const HomeDashboard = () => {
             );
           })()}
       </Drawer>
+
+      <Dialog open={!!routineSkipTarget} onClose={() => setRoutineSkipTarget(null)}>
+        <DialogTitle>Why skip "{routineSkipTarget?.primary}"?</DialogTitle>
+        <DialogContent>
+          <Select fullWidth value={routineSkipReason} onChange={(e) => setRoutineSkipReason(e.target.value)}>
+            {SKIP_REASONS.map((r) => (
+              <MenuItem key={r} value={r}>{r}</MenuItem>
+            ))}
+          </Select>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setRoutineSkipTarget(null)}>Cancel</Button>
+          <Button disabled={!routineSkipReason} onClick={confirmRoutineSkip}>Skip</Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Edit/Add Modal */}
       <Modal
