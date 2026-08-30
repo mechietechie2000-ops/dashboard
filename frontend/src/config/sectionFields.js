@@ -175,8 +175,18 @@ const sectionFields = {
         ],
       },
       { name: 'scheduled_time', label: 'Time (HH:MM)', type: 'time', required: true },
-      { name: 'mute', label: 'Mute', type: 'radio', required: false },
-      { name: 'announce', label: 'Announce', type: 'radio', required: false },
+      { name: 'mute', label: 'Mute', type: 'checkbox', required: false },
+      { name: 'announce', label: 'Announce', type: 'checkbox', required: false },
+      /* {
+        name: 'announce',
+        label: 'Notification Setting',
+        type: 'radio',
+        required: false,
+        options: [
+          { label: 'Mute', value: 1 },
+          { label: 'Announce', value: 1 }
+        ]
+      }, */
       { name: 'description', label: 'Description', type: 'text', required: false },
     ],
     mapRowToItem: (row) => ({

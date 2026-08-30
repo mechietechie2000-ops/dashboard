@@ -7,6 +7,7 @@ import {
   MenuItem,
   TextField,
   useTheme,
+  FormControl, FormLabel, RadioGroup, Radio
 } from '@mui/material';
 import { tokens } from '../theme';
 import sectionFields from '../config/sectionFields';
@@ -303,6 +304,49 @@ const SectionForm = ({ sectionKey, initialValues, onSubmit, onCancel, fieldsOver
           );
         }
 
+        if (field.type === 'radio') {
+        return (
+          <FormControl key={field.name} component="fieldset" margin="normal">
+            <FormLabel component="legend">{field.label}</FormLabel>
+            <RadioGroup
+              name={field.name}
+              value={values[field.name] || ''}
+              onChange={common.onChange} // or common.handleChange depending on your setup
+              row // Remove 'row' if you want radio buttons stacked vertically
+            >
+              {resolveOptions(field, values).map((opt) => {
+                const optValue = typeof opt === 'object' ? opt.value : opt;
+                const optLabel = typeof opt === 'object' ? opt.label : opt;
+                return (
+                  <FormControlLabel
+                    key={optValue}
+                    value={optValue}
+                    control={<Radio />}
+                    label={optLabel}
+                  />
+                );
+              })}
+            </RadioGroup>
+          </FormControl>
+        );
+      }
+
+        /**
+         * // Example of missing case in custom component logic:
+switch (field.type) {
+  case 'text':
+    return <input type="text" {...props} />;
+  case 'radio': // <-- Ensure this block exists to handle looping field.options
+    return field.options.map(opt => (
+      <label key={opt.value}>
+        <input type="radio" name={field.name} value={opt.value} />
+        {opt.label}
+      </label>
+    ));
+  default:
+    return <input type="text" {...props} />; // Falls back here when unrecognized!
+}
+         */
         if (field.type === 'textarea') {
           return <TextField {...common} multiline minRows={3} />;
         }

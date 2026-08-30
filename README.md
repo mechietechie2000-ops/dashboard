@@ -281,3 +281,112 @@ App.js: add a route using the generic detail view:
 ```
 <Route path="/homeMaintenance" element={<SectionDetailView sectionKey="home_maintenance" />} />
 ```
+
+
+Summary of actual work
+Layer	Change
+DB	1 new table
+Backend	1 config object in sectionConfig.js
+Frontend	1 config object in sectionFields.js
+Routing	1 route in App.js
+Sidebar	1 nav link
+
+
+
+#prompt
+
+# Prompt: Add "Todo Task" as the 9th or 10th Section (SQLite + Express + React)
+
+## Context
+
+Repo: `https://github.com/mechietechie2000-ops/dashboard.git`
+
+This app already has a **generic "section" architecture** that powers 9 existing sections end-to-end:
+
+- **Backend**
+  - `routes/section.js` — generic SELECT / DML routes shared by all sections
+  - `db/sectionConfig.js` — per-section config: table name, column list, default `ORDER BY` clause
+  - `db/sectionRepository.js` — builds dynamic SQL (SELECT / INSERT / UPDATE / DELETE) from each section's config
+- **Frontend**
+  - `config/sectionFields.js` — maps each section's form fields to actual table columns (type, label, required, options, etc.)
+  - `component/SectionForm.js` — generic form component driven by `sectionFields.js`
+
+
+to be added in sectionField: 
+when type='inspection' and category is 'auto'
+      primary= `${row.subcategory} ${type} due on ${expiration_date}`
+
+
+
+
+
+I want to add a **9th section called "Todo Task"** by following this exact existing pattern — do **not** hand-roll a one-off table/route/form outside the generic framework unless something about Todo Task genuinely can't fit it (call that out explicitly if so).
+
+## 1. Database
+
+Create a new SQLite table (name it `todo_task`, or match the existing naming convention used by the other tables — check and follow it) with these columns:
+
+| Column | Notes |
+|---|---|
+| Title | required, text |
+| Priority | e.g. Low/Medium/High enum |
+| Desc | free text |
+| Category | text/enum — reuse existing Category values/table if one already exists in the app |
+| Status | e.g. Not Started / In Progress / Blocked / Done |
+| Target_Date | date |
+| Blocker | text, optional |
+| notes | text, optional |
+| family_member_id | FK to the existing family member table used elsewhere in the app |
+| StartDate | date, optional |
+| CompletionDate | date, optional |
+| EntryDate | date, default to creation timestamp |
+
+Also review db/home_dashboard_schema.sql only and create todo as well todo_history (if required for report generation), give me the table DDL and git patch for rest of the functionality
+
+
+
+Register the new table in `db/sectionConfig.js` (columns, table name, default order-by — probably `Target_Date ASC` or `EntryDate DESC`, use your judgment based on how other date-driven sections are sorted).
+
+## 2. Backend
+
+- Confirm `routes/section.js` and `db/sectionRepository.js` need **no changes** to support `todo_task` (they should be fully generic/dynamic). If they're not fully generic yet, generalize them rather than special-casing Todo Task.
+- Add whatever route registration/wiring is needed (e.g. `/api/sections/todo_task`) consistent with the other 8 sections.
+
+## 3. Frontend — Quick-Add Form (fewer fields)
+
+Add a **Todo Task** entry to `config/sectionFields.js` for the quick-add form shown from the bottom nav "+" button, exposing only:
+
+- Title (required)
+- Priority (select)
+- Desc (textarea)
+- Category (select)
+- Target_Date (date picker)
+- person (this is `family_member_id` — render as a "for" select/dropdown labeled "Person", sourced from the existing family member list/API, but store the FK `family_member_id`)
+
+This should render via the existing generic `component/SectionForm.js` — do not build a separate form component for this quick-add version.
+
+## 4. Frontend — Navigation & Views
+
+- **Bottom nav "+" (Add Task):** wire the existing Add-task action to open the Todo Task quick-add form above (new route, e.g. `/todo-task/new` or whatever the existing add-task routes look like for other sections).
+- **Dashboard widget:** show upcoming Todo Tasks (default filter: next 1 month by `Target_Date`), with basic filter controls (e.g. by Status, Category, Priority, date range) — reuse whatever dashboard-widget/filter pattern the other sections already use on the dashboard.
+- **"View All":** clicking View All should navigate to a **detailed list/table view** of Todo Tasks that exposes *all* columns (including Status, Blocker, StartDate, CompletionDate, EntryDate, notes) and supports edit-in-place or edit-via-form for those extra fields — model this after however the existing "Routine" section's View All / detail view works. Reuse that layout/component if it's generic; otherwise extend it minimally to include the extra Todo Task columns.
+
+## 5. Constraints / Style
+
+- Match existing code style, file layout, and naming conventions found elsewhere in the repo — inspect the existing 8 sections first and mirror them exactly rather than introducing a new pattern.
+- Keep everything data-driven off `sectionConfig.js` / `sectionFields.js` so a future 10th section can be added the same way.
+- Call out any place where Todo Task's requirements (e.g. `family_member_id` FK, the extra date/status columns not present in simpler sections) require a genuine extension to the shared generic code, and explain the change.
+- Include brief testing steps (how to run migrations, start backend/frontend, and manually verify create/list/filter/edit works end-to-end for Todo Task).
+
+## Deliverables
+
+1. DB migration/table creation code for `todo_task`
+2. Updated `db/sectionConfig.js`
+3. Any necessary generalization of `routes/section.js` / `db/sectionRepository.js`
+4. Updated `config/sectionFields.js` (quick-add field set + detail-view field set)
+5. Route wiring for bottom-nav "+" and "View All"
+6. Dashboard widget with next-1-month + filters
+7. Detail/"View All" view with full column set, matching the Routine section's pattern
+
+
+if it's not possible to add 10th grid, feel free to drop "Extra Curriculum Registrations" section and replace that Todo      

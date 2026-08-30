@@ -11,7 +11,7 @@ const todayStr = () => new Date().toISOString().slice(0, 10);
 // button without risk of double-processing.
 async function runDailyReset() {
   const today = todayStr();
-  const dayAbbrev = DAY_NAMES[new Date().getDay()];
+  const dayName = DAY_NAMES[new Date().getDay()];
 
   const state = await db.get(`SELECT value FROM app_state WHERE key = 'last_reset_date'`);
   if (state && state.value === today) {
@@ -51,8 +51,9 @@ async function runDailyReset() {
         (r.day_of_week || '')
           .split(',')
           .map((d) => d.trim())
-          .includes(dayAbbrev))
+          .includes(dayName))
   );
+  console.log(DAY_NAMES);
   for (const task of todaysTasks) {
     // id is inserted explicitly equal to routine_id (task.id), instead of
     // letting it autoincrement, so this routine's reminder keeps a stable
