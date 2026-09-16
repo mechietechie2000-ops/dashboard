@@ -48,43 +48,24 @@ router.get(
   })
 );
 
-// GET /api/reminders/card?bucket=today|tomorrow|this_week|next_week&from=&to=&sources=goal,renewal
+// GET /api/reminders/card?from=&to=&sources=goal,renewal
 // The Reminder card's actual data source — queries the physical `reminder`
 // table (WHERE completed_at IS NULL), not the live union above (that's
 // only for the sync job and the legacy GET /api/reminders endpoint).
 // `sources` (comma-separated source_type list) lets the frontend exclude a
 // source, e.g. goals, without any backend change.
-const BUCKET_RANGES = {
-  today: () => {
-    const d = new Date().toISOString().slice(0, 10);
-    return { from: d, to: d };
-  },
-  tomorrow: () => {
-    const d = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
-    return { from: d, to: d };
-  },
-  this_week: () => {
-    const now = new Date();
-    const day = now.getDay();
-    const end = new Date(now.getTime() + (6 - day) * 24 * 60 * 60 * 1000);
-    return { from: now.toISOString().slice(0, 10), to: end.toISOString().slice(0, 10) };
-  },
-  next_week: () => {
-    const now = new Date();
-    const day = now.getDay();
-    const weekEnd = new Date(now.getTime() + (6 - day) * 24 * 60 * 60 * 1000);
-    const nextWeekEnd = new Date(weekEnd.getTime() + 7 * 24 * 60 * 60 * 1000);
-    return { from: now.toISOString().slice(0, 10), to: nextWeekEnd.toISOString().slice(0, 10) };
-  },
-};
-
+//
+// Bucket-to-date-range conversion (today/tomorrow/this_week/next_week) is
+// done client-side in utils/reminderBuckets.js's bucketToRange(), using the
+// browser's local wall-clock and an explicit end-of-day boundary on `to`.
+// This route only accepts already-resolved from/to — it intentionally does
+// NOT resolve a `bucket` param itself anymore: an earlier version did that
+// here using UTC dates with no end-of-day cushion, which is what caused
+// bucket filters to show records that belonged to a different local day.
 router.get(
   "/api/reminders/card",
   handle((req) => {
-    let { from, to, bucket, sources } = req.query;
-    if (bucket && BUCKET_RANGES[bucket]) {
-      ({ from, to } = BUCKET_RANGES[bucket]());
-    }
+    let { from, to, sources } = req.query;
     if (!from) from = new Date().toISOString().slice(0, 10);
     if (!to) to = new Date(Date.now() + 400 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
     const sourceList = sources ? sources.split(",").map((s) => s.trim()).filter(Boolean) : undefined;
@@ -105,6 +86,16 @@ router.patch(
     }
     return fn(sourceId);
   })
+);
+
+// POST /api/reminders/sync
+// Manual trigger for the same resync + orphan-cleanup that runDailyReset's
+// nightly job does — lets the frontend force reminder rows to catch up to
+// their source tables on demand (e.g. a refresh button) instead of waiting
+// for the next scheduled run.
+router.post(
+  "/api/reminders/sync",
+  handle(() => repo.syncAllReminders())
 );
 
 module.exports = router;

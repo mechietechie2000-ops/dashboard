@@ -129,6 +129,29 @@ const getDateKeyword = (dateStr) => {
   return null;
 };
 
+const getRecurringDateKeyword = (dateStr) => {
+  if (!dateStr) return null;
+  const target = new Date(`${dateStr}T00:00:00`);
+  if (Number.isNaN(target.getTime())) return null;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const year = today.getFullYear();
+
+  const thisYear = new Date(year, target.getMonth(), target.getDate());
+  const diffDaysThisYear = Math.round((thisYear - today) / 86400000);
+  const nextYear = new Date(year + 1, target.getMonth(), target.getDate());
+  const diffDays =
+    diffDaysThisYear < 0
+      ? Math.round((nextYear - today) / 86400000)
+      : diffDaysThisYear;
+
+  if (diffDaysThisYear === 0) return { label: 'Today', color: '#4caf50' };
+  if (diffDaysThisYear === 1) return { label: 'Tomorrow', color: '#42a5f5' };
+  if (diffDaysThisYear < 0 && diffDaysThisYear >= -2)
+    return { label: 'Past', color: '#ef5350' };
+  return { label: `${diffDays} days to go`, color: '#4caf50' };
+};
+
 // sectionKey -> UI config. `fields` drives the generic form (SectionForm);
 // `mapRowToItem` turns a raw DB row (from listRecords) into the
 // { id, primary, secondary, meta } shape DashboardSection expects.
@@ -307,7 +330,8 @@ const sectionFields = {
       meta: fmtDate(row.event_date),
     }), */
     mapRowToItem: (row) => {
-      const dateKeyword = getDateKeyword(row.event_date);
+      // const dateKeyword = getDateKeyword(row.event_date);
+      const dateKeyword = getRecurringDateKeyword(row.event_date);
       return {
       id: row.id,
       // primary: row.person_name,
@@ -372,7 +396,7 @@ const sectionFields = {
         id: row.id,
         primary: `${datePart} - ${label} @${timePart}`,
         // secondary: `${row.family_member_name}'s appointment`,
-        secondary: dateKeyword?.label,
+        badge: dateKeyword?.label,
         dateLabelColor: dateKeyword?.color,
       };
     },
@@ -611,16 +635,23 @@ const sectionFields = {
         required: false,
       },
     ],
-    mapRowToItem: (row) => ({
+/*     mapRowToItem: (row) => ({
       id: row.id,
-      // family_member_name comes from the LEFT JOIN in sectionConfig.js
-      // (renewals only stores family_member_id). Fall back to the item's
-      // own title/category when no family member is set on the record.
-      primary: `${row.category} ${row.renewal_type}`,
+      // primary: `${row.category} ${row.renewal_type}`,
+      primary: `${row.title}`,
       secondary: row.subcategory,
       //secondary: [row.category, row.subcategory, row.renewal_type].filter(Boolean).join(' — '),
-      meta: row.expiry_date ? fmtDate(row.expiry_date) : undefined,
-    }),
+      meta: row.expiry_date ? fmtDate(row.expiry_date) : undefined, */
+
+    mapRowToItem: (row) => {
+      const dateKeyword = getDateKeyword(row.expiry_date);
+      return {
+      id: row.id,
+      primary: `${fmtDate(row.expiry_date)}  •  ${row.title}`,
+      meta: dateKeyword?.label,
+      dateLabelColor: dateKeyword?.color,
+     }
+    },
   },
 
   bills: {

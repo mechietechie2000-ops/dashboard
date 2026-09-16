@@ -25,6 +25,7 @@ import { Link } from "react-router-dom";
 import { tokens } from "../theme";
 import Collapse from '@mui/material/Collapse';
 import sectionFieldsConfig from '../config/sectionFields'
+import { getItemStyles } from '../utils/itemStyles';
 
 const SWIPE_THRESHOLD = 90;
 const MOVE_CANCEL_PX = 10;
@@ -353,50 +354,8 @@ const DashboardSection = ({
       )
     : [];
   
-  const fontWeightBySection = {
-    events: 600,
-    appointments: 600,
-    routine: 600,
-    todo_list: 400,
-  }; 
-
-  const getUrgencyColor = (item) => {
-    if (item.dateLabelColor) return item.dateLabelColor; // already set upstream
-
-    if (!item.meta) return colors.greenAccent[500]; // fallback, no date info
-
-    if (item.meta === 'Today') return '#4caf50';
-    if (item.meta === 'Tomorrow') return '#42a5f5';
-    if (item.meta === 'Past') return '#ef5350';
-
-    // "N days to go" — extract the number and scale urgency
-    const match = item.meta.match(/^(\d+) days? to go$/);
-    if (match) {
-      const days = parseInt(match[1], 10);
-      if (days <= 3) return '#ff9800';   // orange — coming up soon
-      if (days <= 7) return '#42a5f5';   // blue — this week
-      return colors.grey[300];           // default — further out
-    }
-
-    return colors.greenAccent[500];
-  };
-
-  const secondaryFontWeightBySection = {
-    events: 500,
-    appointments: 400,
-    routine: 400,
-    todo_list: 400,
-  };
-
-  const secondaryColorBySection = {
-    events: colors.grey[300],
-    appointments: colors.grey[300],
-    routine: colors.grey[400],
-    todo_list: colors.grey[400],
-  };
-  
   const defaultRenderItem = (item, i) => {
-    console.log('sectionKey:', sectionKey, 'weight:', fontWeightBySection[sectionKey]);
+    const styles = getItemStyles(item, sectionKey, colors);
     const row = (
       <>
         <Box
@@ -407,9 +366,8 @@ const DashboardSection = ({
           }}
         >
           <Typography
-            color={colors.grey[100]}
-            //fontWeight="600"
-            fontWeight={fontWeightBySection[sectionKey] || 600}
+            color={styles.primaryColor}
+            fontWeight={styles.primaryWeight}
             title={item.primary}
             sx={{
               fontSize: { xs: '1.25rem', sm: '0.875rem' },
@@ -422,10 +380,10 @@ const DashboardSection = ({
           {item.secondary && (
             <Typography
               variant="body2"
-              color={item.dateLabelColor || secondaryColorBySection[sectionKey] || colors.grey[300]}
+              color={styles.secondaryColor}
               sx={{
                 fontSize: { xs: '0.9rem', sm: '0.75rem' },
-                fontWeight: secondaryFontWeightBySection[sectionKey] || 400,
+                fontWeight: styles.secondaryWeight,
                 wordBreak: 'break-word',
                 overflowWrap: 'anywhere',
               }}
@@ -433,12 +391,25 @@ const DashboardSection = ({
               {item.secondary}
             </Typography>
           )}
+          {item.badge && (
+            <Typography
+              variant="body2"
+              color={styles.badgeColor}
+              sx={{
+                fontSize: { xs: '0.9rem', sm: '0.75rem' },
+                fontWeight: styles.badgeWeight,
+                wordBreak: 'break-word',
+                overflowWrap: 'anywhere',
+              }}
+            >
+              {item.badge}
+            </Typography>
+          )}
         </Box>
         {item.meta && (
           <Typography
             variant="body2"
-            // color={item.dateLabelColor || colors.greenAccent[500]}
-            color={getUrgencyColor(item)}
+            color={styles.metaColor}
             whiteSpace="nowrap"
             sx={{ flexShrink: 0, fontSize: { xs: '0.9rem', sm: '0.75rem' } }}
           >

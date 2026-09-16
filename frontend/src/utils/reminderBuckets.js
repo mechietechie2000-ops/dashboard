@@ -58,13 +58,13 @@ export function bucketReminders(reminders, today = new Date()) {
   ];
 
   for (const reminder of reminders) {
-    const windowStart = toDate(reminder.window_start);
+    //const windowStart = toDate(reminder.window_start);
     const dueDate = toDate(reminder.due_date);
     // Already-open items (window_start in the past) should surface under
     // Today, not their literal window_start date.
-    const earliestRelevantDay = windowStart < day0 ? day0 : windowStart;
-
-    const match = ranges.find(([, rangeEnd]) => earliestRelevantDay <= rangeEnd);
+    //const earliestRelevantDay = windowStart < day0 ? day0 : windowStart;
+    //const match = ranges.find(([, rangeEnd]) => earliestRelevantDay <= rangeEnd);
+    const match = ranges.find(([, rangeEnd]) => dueDate <= rangeEnd);
     const bucketKey = match ? match[0] : "later";
     buckets[bucketKey].push(reminder);
 
@@ -86,3 +86,39 @@ export const BUCKET_LABELS = {
   thisYear: "This Year",
   later: "Later",
 };
+
+const toISODate = (date) => {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+};
+
+const endOfDayISO = (date) => `${toISODate(date)}T23:59:59`;
+
+// Maps a single bucket preset key to a {from, to} date range for the
+// server-side query (getReminderCard's `from`/`to`, overlap-tested against
+// each reminder's [window_start, due_date]). Mirrors the same range
+// boundaries bucketReminders() uses client-side, so picking "Today" here
+// matches what would land in the "today" bucket of the "All" view.
+// Uses the browser's local wall-clock, same as bucketReminders().
+export function bucketToRange(key, today = new Date()) {
+  const day0 = startOfDay(today);
+  const day1 = addDays(day0, 1);
+  const weekEnd = endOfWeek(day0);
+  const nextWeekStart = addDays(weekEnd, 1);
+  const nextWeekEnd = addDays(weekEnd, 7);
+
+  switch (key) {
+    case 'today':
+      return { from: toISODate(day0), to: endOfDayISO(day0) };
+    case 'tomorrow':
+      return { from: toISODate(day1), to: endOfDayISO(day1) };
+    case 'this_week':
+      return { from: toISODate(day0), to: endOfDayISO(weekEnd) };
+    case 'next_week':
+      return { from: toISODate(nextWeekStart), to: endOfDayISO(nextWeekEnd) };
+    default:
+      return { from: undefined, to: undefined };
+  }
+}
