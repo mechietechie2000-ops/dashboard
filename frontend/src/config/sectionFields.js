@@ -20,16 +20,76 @@ import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 // palette key resolved at render time (component has the theme, this file
 // doesn't).
 export const STATUS_OPTIONS = [
-  { value: 'done', label: 'Done', icon: CheckCircleOutlineIcon, colorKey: 'greenAccent', color: '#1b5e20' },
-  { value: 'not_started', label: 'Not Started', icon: RadioButtonUncheckedIcon, colorKey: 'grey', color: '#424242' },
-  { value: 'backlog', label: 'Backlog', icon: InboxOutlinedIcon, colorKey: 'grey', color: '#424242' },
-  { value: 'in_progress', label: 'WIP', icon: AutorenewOutlinedIcon, colorKey: 'blueAccent', color: '#0d47a1' },
+  {
+    value: 'done',
+    label: 'Done',
+    icon: CheckCircleOutlineIcon,
+    colorKey: 'greenAccent',
+    color: '#1b5e20',
+  },
+  {
+    value: 'not_started',
+    label: 'Not Started',
+    icon: RadioButtonUncheckedIcon,
+    colorKey: 'grey',
+    color: '#424242',
+  },
+  {
+    value: 'backlog',
+    label: 'Backlog',
+    icon: InboxOutlinedIcon,
+    colorKey: 'grey',
+    color: '#424242',
+  },
+  {
+    value: 'in_progress',
+    label: 'WIP',
+    icon: AutorenewOutlinedIcon,
+    colorKey: 'blueAccent',
+    color: '#0d47a1',
+  },
   { value: 'blocked', label: 'Blocked', icon: BlockIcon, colorKey: 'redAccent', color: '#7f0000' },
 ];
 
 export const ROUTINE_STATUS_OPTIONS = [
-  { value: 'done', label: 'Done', icon: CheckCircleOutlineIcon, colorKey: 'greenAccent', color: '#1b5e20' },
+  {
+    value: 'done',
+    label: 'Done',
+    icon: CheckCircleOutlineIcon,
+    colorKey: 'greenAccent',
+    color: '#1b5e20',
+  },
   { value: 'skipped', label: 'Skip', icon: BlockIcon, colorKey: 'redAccent', color: '#7f0000' },
+];
+
+// Matches the appointments table's `status` column exactly:
+// status TEXT NOT NULL DEFAULT 'scheduled' -- scheduled | completed | cancelled
+// `scheduled` is included (even though it's the default) so the swipe panel
+// can undo an accidental completed/cancelled tap. availableStatuses always
+// filters out whatever item.status currently is, so it won't clutter the
+// panel for a normal scheduled appointment.
+export const APPOINTMENT_STATUS_OPTIONS = [
+  {
+    value: 'completed',
+    label: 'Done',
+    icon: CheckCircleOutlineIcon,
+    colorKey: 'greenAccent',
+    color: '#1b5e20',
+  },
+  {
+    value: 'cancelled',
+    label: 'Cancelled',
+    icon: BlockIcon,
+    colorKey: 'redAccent',
+    color: '#7f0000',
+  },
+  {
+    value: 'scheduled',
+    label: 'Scheduled',
+    icon: RadioButtonUncheckedIcon,
+    colorKey: 'grey',
+    color: '#424242',
+  },
 ];
 
 const fmtDate = (value) => {
@@ -110,7 +170,6 @@ const fmtTime12 = (value) => {
 };
 const currentYear = new Date().getFullYear();
 
-
 // This file has no access to the theme (colors are resolved at render time
 // in components), so hardcode the three accent colors here directly rather
 // than pulling from `tokens`/`colors`.
@@ -141,14 +200,11 @@ const getRecurringDateKeyword = (dateStr) => {
   const diffDaysThisYear = Math.round((thisYear - today) / 86400000);
   const nextYear = new Date(year + 1, target.getMonth(), target.getDate());
   const diffDays =
-    diffDaysThisYear < 0
-      ? Math.round((nextYear - today) / 86400000)
-      : diffDaysThisYear;
+    diffDaysThisYear < 0 ? Math.round((nextYear - today) / 86400000) : diffDaysThisYear;
 
   if (diffDaysThisYear === 0) return { label: 'Today', color: '#4caf50' };
   if (diffDaysThisYear === 1) return { label: 'Tomorrow', color: '#42a5f5' };
-  if (diffDaysThisYear < 0 && diffDaysThisYear >= -2)
-    return { label: 'Past', color: '#ef5350' };
+  if (diffDaysThisYear < 0 && diffDaysThisYear >= -2) return { label: 'Past', color: '#ef5350' };
   return { label: `${diffDays} days to go`, color: '#4caf50' };
 };
 
@@ -217,7 +273,7 @@ const sectionFields = {
       primary: [fmtTime12(row.scheduled_time), '', row.title].filter(Boolean).join(' • '),
       secondary: row.family_member_name,
       //meta: row.scheduled_time,
-      status: row.status, 
+      status: row.status,
     }),
   },
 
@@ -321,7 +377,7 @@ const sectionFields = {
       },
       { name: 'event_date', label: 'Date', type: 'date', required: true },
     ],
-/*     mapRowToItem: (row) => ({
+    /*     mapRowToItem: (row) => ({
       id: row.id,
       primary: row.person_name,
       secondary: row.event_type
@@ -333,18 +389,18 @@ const sectionFields = {
       // const dateKeyword = getDateKeyword(row.event_date);
       const dateKeyword = getRecurringDateKeyword(row.event_date);
       return {
-      id: row.id,
-      // primary: row.person_name,
-      // primary: `${fmtDate(row.event_date)}   -  ${row.person_name}`,
-      // primary: [fmtDate(row.event_date), row.person_name].filter(Boolean).join('    •    '),
-      primary: `${fmtDate(row.event_date)}${
-        row.person_name
-          ? `  •  ${row.person_name}'s ${row.event_type || 'other'}`
-          : '  •  some event'
-      }`,
-      meta: dateKeyword?.label,
-      dateLabelColor: dateKeyword?.color,
- /*      meta: row.event_type
+        id: row.id,
+        // primary: row.person_name,
+        // primary: `${fmtDate(row.event_date)}   -  ${row.person_name}`,
+        // primary: [fmtDate(row.event_date), row.person_name].filter(Boolean).join('    •    '),
+        primary: `${fmtDate(row.event_date)}${
+          row.person_name
+            ? `  •  ${row.person_name}'s ${row.event_type || 'other'}`
+            : '  •  some event'
+        }`,
+        meta: dateKeyword?.label,
+        dateLabelColor: dateKeyword?.color,
+        /*      meta: row.event_type
         ? row.event_type[0].toUpperCase() + row.event_type.slice(1)
         : undefined,
       // meta: fmtDate(row.event_date),
@@ -359,6 +415,17 @@ const sectionFields = {
     icon: <LocalHospitalIcon />,
     viewAllLink: '/section/appointments',
     emptyMessage: 'No upcoming appointments',
+    statusOptions: APPOINTMENT_STATUS_OPTIONS,
+    // Upcoming 180 days, scheduled only by default; completed/cancelled
+    // hidden unless explicitly selected in the filter sheet. NOTE: the
+    // hiddenStatuses key is only honored once applyDashboardFilters in
+    // index.jsx is generalized past its current hardcoded backlog/done
+    // check — flagging so this doesn't look "wired" before that lands.
+    dashboardFilter: {
+      dateField: 'appointment_datetime',
+      defaultRangeDays: 180,
+      hiddenStatuses: ['completed', 'cancelled'],
+    },
     fields: [
       {
         name: 'category',
@@ -387,10 +454,7 @@ const sectionFields = {
       const dateKeyword = getDateKeyword(row.appointment_datetime);
       const datePart = fmtDateOnly(row.appointment_datetime);
       const timePart = fmtTime12(row.appointment_datetime);
-      const label =
-        row.category === 'Doctor'
-          ? `Dr. Appt. ${row.family_member_name}`
-          : row.title;
+      const label = row.category === 'Doctor' ? `Dr. Appt. ${row.family_member_name}` : row.title;
 
       return {
         id: row.id,
@@ -398,6 +462,7 @@ const sectionFields = {
         // secondary: `${row.family_member_name}'s appointment`,
         badge: dateKeyword?.label,
         dateLabelColor: dateKeyword?.color,
+        status: row.status,
       };
     },
   },
@@ -635,7 +700,7 @@ const sectionFields = {
         required: false,
       },
     ],
-/*     mapRowToItem: (row) => ({
+    /*     mapRowToItem: (row) => ({
       id: row.id,
       // primary: `${row.category} ${row.renewal_type}`,
       primary: `${row.title}`,
@@ -646,11 +711,11 @@ const sectionFields = {
     mapRowToItem: (row) => {
       const dateKeyword = getDateKeyword(row.expiry_date);
       return {
-      id: row.id,
-      primary: `${fmtDate(row.expiry_date)}  •  ${row.title}`,
-      meta: dateKeyword?.label,
-      dateLabelColor: dateKeyword?.color,
-     }
+        id: row.id,
+        primary: `${fmtDate(row.expiry_date)}  •  ${row.title}`,
+        meta: dateKeyword?.label,
+        dateLabelColor: dateKeyword?.color,
+      };
     },
   },
 
@@ -818,7 +883,7 @@ const sectionFields = {
 
   home_maintenance: {
     tableName: 'home_maintenance',
-    label: 'Maintenance',   // this is display on the page
+    label: 'Maintenance', // this is display on the page
     icon: <BuildOutlinedIcon />,
     viewAllLink: '/homeMaintenance',
     emptyMessage: 'No maintenance records yet',
@@ -842,7 +907,17 @@ const sectionFields = {
         label: 'Category',
         type: 'select',
         required: true,
-        options: ['Plumbing', 'Grouting', 'AC', 'Electricity','Painting','Cleaning','Repair','Gutter','Roof'],
+        options: [
+          'Plumbing',
+          'Grouting',
+          'AC',
+          'Electricity',
+          'Painting',
+          'Cleaning',
+          'Repair',
+          'Gutter',
+          'Roof',
+        ],
       },
       {
         name: 'location',
@@ -856,7 +931,7 @@ const sectionFields = {
         label: 'Title',
         type: 'text',
         required: false,
-      },             
+      },
       { name: 'date_of_work', label: 'Date of Work', type: 'date', required: false },
       { name: 'details', label: 'Work Detail', type: 'textarea', required: false },
       { name: 'cost', label: 'Cost', type: 'number', required: false },
@@ -899,20 +974,19 @@ const sectionFields = {
     ],
 
     mapRowToItem: (row) => ({
-    id: row.id,
-    secondary: [
-      row.address,
-      [row.category, row.location].filter(Boolean).join(' • '),
-      row.date_of_work ? fmtDate(row.date_of_work) : null,
-      row.cost != null ? `${row.currency || 'INR'} ${Number(row.cost).toLocaleString()}` : null,
-      row.account,
-      row.status,
-    ]
-      .filter(Boolean)
-      .join(' | '),
-    status: row.status,
-  }),
-
+      id: row.id,
+      secondary: [
+        row.address,
+        [row.category, row.location].filter(Boolean).join(' • '),
+        row.date_of_work ? fmtDate(row.date_of_work) : null,
+        row.cost != null ? `${row.currency || 'INR'} ${Number(row.cost).toLocaleString()}` : null,
+        row.account,
+        row.status,
+      ]
+        .filter(Boolean)
+        .join(' | '),
+      status: row.status,
+    }),
   },
 };
 

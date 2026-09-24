@@ -13,7 +13,6 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-
 } from '@mui/material';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import RestartAltIcon from '@mui/icons-material/RestartAlt';
@@ -33,9 +32,14 @@ import {
   updateRecord,
   deleteRecord,
 } from '../../data/sectionRepository';
-import { runDailyResetManual, listTodayRoutineTasks, markRoutineDone, markRoutineSkipped,toggleRoutineMute } from '../../data/routineRepository';
+import {
+  runDailyResetManual,
+  listTodayRoutineTasks,
+  markRoutineDone,
+  markRoutineSkipped,
+  toggleRoutineMute,
+} from '../../data/routineRepository';
 // import {SKIP_REASONS} from '../routine'
-
 
 //SKIP_REASONS = ['lazy', 'tired', 'office work', 'guest', 'outdoor', 'no reason'];
 
@@ -79,7 +83,10 @@ const withinRangeDays = (dateStr, rangeDays) => {
 
 const parseFamilyMemberNames = () => {
   const raw = process.env.REACT_APP_FAMILY_MEMBER_NAMES || '';
-  return raw.split(',').map((s) => s.trim().toLowerCase()).filter(Boolean);
+  return raw
+    .split(',')
+    .map((s) => s.trim().toLowerCase())
+    .filter(Boolean);
 };
 const FAMILY_MEMBER_NAMES = parseFamilyMemberNames();
 
@@ -158,15 +165,12 @@ const applyDashboardFilters = (items, config, filterState) => {
   const { dateField, defaultRangeDays } = config.dashboardFilter;
   const rangeDays = filterState.rangeDays ?? defaultRangeDays ?? 0;
   const statusFilterActive = Boolean(filterState.status);
+  const hiddenStatuses = config.dashboardFilter?.hiddenStatuses || [];
+
   return items.filter((item) => {
-    // Backlog/Done are hidden from the default view to reduce clutter;
-    // explicitly selecting that status in the filter sheet still shows it.
-    if (!statusFilterActive && (item.status === 'backlog' || item.status === 'done')) {
+    if (!statusFilterActive && hiddenStatuses.includes(item.status)) {
       return false;
     }
-    // Any other status (not_started, in_progress, blocked) is always visible
-    // by default. The date-range dropdown only narrows results when the
-    // user explicitly picks a range other than "All".
     if (filterState.rangeDays !== undefined && dateField) {
       if (!withinRangeDays(item.raw?.[dateField], rangeDays)) return false;
     }
@@ -177,9 +181,6 @@ const applyDashboardFilters = (items, config, filterState) => {
     return true;
   });
 };
-
-
-
 
 const HomeDashboard = () => {
   const theme = useTheme();
@@ -244,22 +245,21 @@ const HomeDashboard = () => {
     }
   }, []); */
 
-const loadSection = useCallback(async (sectionKey) => {
-  try {
-    const items =
-      sectionKey === 'routine'
-        ? (await listTodayRoutineTasks()).map((row) => ({
-            ...sectionFields.routine.mapRowToItem(row),
-            raw: row,
-          }))
-        : await listRecords(sectionKey);
-    setItemsBySection((prev) => ({ ...prev, [sectionKey]: items }));
-  } catch (err) {
-    console.error(`Failed to load ${sectionKey}:`, err);
-    setItemsBySection((prev) => ({ ...prev, [sectionKey]: [] }));
-  }
-}, []);
-  
+  const loadSection = useCallback(async (sectionKey) => {
+    try {
+      const items =
+        sectionKey === 'routine'
+          ? (await listTodayRoutineTasks()).map((row) => ({
+              ...sectionFields.routine.mapRowToItem(row),
+              raw: row,
+            }))
+          : await listRecords(sectionKey);
+      setItemsBySection((prev) => ({ ...prev, [sectionKey]: items }));
+    } catch (err) {
+      console.error(`Failed to load ${sectionKey}:`, err);
+      setItemsBySection((prev) => ({ ...prev, [sectionKey]: [] }));
+    }
+  }, []);
 
   useEffect(() => {
     SECTION_KEYS.forEach(loadSection);
@@ -316,7 +316,7 @@ const loadSection = useCallback(async (sectionKey) => {
     setPendingUndo({ sectionKey, item, timeoutId });
   };
 
-/*   const handleStatusChange = async (sectionKey, item, newStatus) => {
+  /*   const handleStatusChange = async (sectionKey, item, newStatus) => {
     const prevStatus = item.status;
 
     setItemsBySection((prev) => ({
@@ -339,9 +339,9 @@ const loadSection = useCallback(async (sectionKey) => {
     }
   }; */
 
-    const handleStatusChange = async (sectionKey, item, newStatus) => {
+  const handleStatusChange = async (sectionKey, item, newStatus) => {
     if (sectionKey === 'routine') {
-/*       if (newStatus === 'done') {
+      /*       if (newStatus === 'done') {
         // Optimistic remove — markDone deletes the temp row server-side,
         // it doesn't set a status we can patch in place like other sections.
         const prevItems = itemsBySection.routine || [];
@@ -400,7 +400,7 @@ const loadSection = useCallback(async (sectionKey) => {
     }
   };
 
-/*   const confirmRoutineSkip = async () => {
+  /*   const confirmRoutineSkip = async () => {
     if (!routineSkipReason || !routineSkipTarget) return;
     const target = routineSkipTarget;
     const prevItems = itemsBySection.routine || [];
@@ -476,11 +476,11 @@ const loadSection = useCallback(async (sectionKey) => {
 
     setPendingUndo({ sectionKey: 'routine', item, action, reason, timeoutId, prevItems });
   };
-  
+
   return (
     <Box m={{ xs: '0px', sm: '20px' }}>
       {/* <Header title="HOME" subtitle="Welcome back!" /> */}
-      <Header title="Dashboard"/> 
+      <Header title="Dashboard" />
 
       <Box
         display={{ xs: 'block', sm: 'grid' }}
@@ -593,11 +593,17 @@ const loadSection = useCallback(async (sectionKey) => {
                   isCollapsed={isCollapsed}
                   // onEditRequest={(item) => openEdit(sectionKey, item)}
                   // onDeleteRequest={(item) => queueDelete(sectionKey, item)}
-                  onEditRequest={sectionKey === 'routine' ? undefined : (item) => openEdit(sectionKey, item)}
-                  onDeleteRequest={sectionKey === 'routine' ? undefined : (item) => queueDelete(sectionKey, item)}
+                  onEditRequest={
+                    sectionKey === 'routine' ? undefined : (item) => openEdit(sectionKey, item)
+                  }
+                  onDeleteRequest={
+                    sectionKey === 'routine' ? undefined : (item) => queueDelete(sectionKey, item)
+                  }
                   onCloneRequest={(item) => handleClone(sectionKey, item)}
                   statusOptions={config.statusOptions}
-                  onStatusChange={(item, newStatus) => handleStatusChange(sectionKey, item, newStatus)}
+                  onStatusChange={(item, newStatus) =>
+                    handleStatusChange(sectionKey, item, newStatus)
+                  }
                   sectionKey={sectionKey}
                 />
               </Box>
@@ -708,15 +714,23 @@ const loadSection = useCallback(async (sectionKey) => {
       <Dialog open={!!routineSkipTarget} onClose={() => setRoutineSkipTarget(null)}>
         <DialogTitle>Why skip "{routineSkipTarget?.primary}"?</DialogTitle>
         <DialogContent>
-          <Select fullWidth value={routineSkipReason} onChange={(e) => setRoutineSkipReason(e.target.value)}>
+          <Select
+            fullWidth
+            value={routineSkipReason}
+            onChange={(e) => setRoutineSkipReason(e.target.value)}
+          >
             {SKIP_REASONS.map((r) => (
-              <MenuItem key={r} value={r}>{r}</MenuItem>
+              <MenuItem key={r} value={r}>
+                {r}
+              </MenuItem>
             ))}
           </Select>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setRoutineSkipTarget(null)}>Cancel</Button>
-          <Button disabled={!routineSkipReason} onClick={confirmRoutineSkip}>Skip</Button>
+          <Button disabled={!routineSkipReason} onClick={confirmRoutineSkip}>
+            Skip
+          </Button>
         </DialogActions>
       </Dialog>
 

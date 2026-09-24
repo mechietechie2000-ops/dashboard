@@ -14,17 +14,17 @@ import {
   MenuItem,
   ListItemIcon,
   ListItemText,
-} from "@mui/material";
-import CloseIcon from "@mui/icons-material/Close";
-import MoreVertIcon from "@mui/icons-material/MoreVert";
-import EditIcon from "@mui/icons-material/Edit";
-import VisibilityIcon from "@mui/icons-material/Visibility";
-import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
-import ContentCopyIcon from "@mui/icons-material/ContentCopy";
-import { Link } from "react-router-dom";
-import { tokens } from "../theme";
+} from '@mui/material';
+import CloseIcon from '@mui/icons-material/Close';
+import MoreVertIcon from '@mui/icons-material/MoreVert';
+import EditIcon from '@mui/icons-material/Edit';
+import VisibilityIcon from '@mui/icons-material/Visibility';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import { Link } from 'react-router-dom';
+import { tokens } from '../theme';
 import Collapse from '@mui/material/Collapse';
-import sectionFieldsConfig from '../config/sectionFields'
+import sectionFieldsConfig from '../config/sectionFields';
 import { getItemStyles } from '../utils/itemStyles';
 
 const SWIPE_THRESHOLD = 90;
@@ -56,9 +56,7 @@ const SectionItemRow = ({
   const startX = useRef(0);
   const touchMoved = useRef(false);
 
-  const availableStatuses = (statusOptions || []).filter(
-    (opt) => opt.value !== item.status
-  );
+  const availableStatuses = (statusOptions || []).filter((opt) => opt.value !== item.status);
 
   const handlePickStatus = (value) => (e) => {
     e.stopPropagation();
@@ -95,8 +93,8 @@ const SectionItemRow = ({
 
   const onTouchMove = (e) => {
     if (!dragging.current) return;
-      const x = e.touches[0].clientX - startX.current;
-      const y = e.touches[0].clientY - startY.current;
+    const x = e.touches[0].clientX - startX.current;
+    const y = e.touches[0].clientY - startY.current;
     // Vertical scroll intent: bail out of the horizontal drag entirely so
     // the row snaps back and the page scrolls normally.
     if (Math.abs(y) > Math.abs(x) && Math.abs(y) > MOVE_CANCEL_PX) {
@@ -111,11 +109,10 @@ const SectionItemRow = ({
   };
 
   const onTouchEnd = () => {
-    
     if (!dragging.current) return;
     dragging.current = false;
     try {
-      if (dragX < -SWIPE_THRESHOLD  && onDeleteRequest ) {
+      if (dragX < -SWIPE_THRESHOLD && onDeleteRequest) {
         onDeleteRequest(item);
       } else if (dragX > 40 && availableStatuses.length > 0) {
         setStatusOpen(true);
@@ -172,7 +169,17 @@ const SectionItemRow = ({
       )}
 
       {statusOpen && availableStatuses.length > 0 && (
-        <Box sx={{ position: 'absolute', top: 0, bottom: 0, left: 0, width: '190px', display: 'flex', zIndex: 1 }}>
+        <Box
+          sx={{
+            position: 'absolute',
+            top: 0,
+            bottom: 0,
+            left: 0,
+            width: '190px',
+            display: 'flex',
+            zIndex: 1,
+          }}
+        >
           {availableStatuses.map((opt) => {
             const StatusIcon = opt.icon;
             const c = colors[opt.colorKey] || colors.grey;
@@ -291,7 +298,10 @@ const SectionItemRow = ({
               const StatusIcon = opt.icon;
               const c = colors[opt.colorKey] || colors.grey;
               return (
-                <MenuItem key={opt.value} onClick={handleAction(() => onStatusChange && onStatusChange(item, opt.value))}>
+                <MenuItem
+                  key={opt.value}
+                  onClick={handleAction(() => onStatusChange && onStatusChange(item, opt.value))}
+                >
                   <ListItemIcon sx={{ color: c[500] }}>
                     <StatusIcon fontSize="small" />
                   </ListItemIcon>
@@ -353,7 +363,7 @@ const DashboardSection = ({
         ([, value]) => value !== null && value !== undefined && value !== ''
       )
     : [];
-  
+
   const defaultRenderItem = (item, i) => {
     const styles = getItemStyles(item, sectionKey, colors);
     const row = (
@@ -487,60 +497,60 @@ const DashboardSection = ({
         {/* SMOOTH COLLAPSIBLE BODY AREA */}
         {/* BODY */}
         <Collapse in={!isCollapsed} timeout="auto" unmountOnExit={false}>
-        <Box
-          sx={{
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'space-between',
-          }}
-        >
-          {/* ITEM LIST */}
-          <Box flex={1} overflow="auto">
-            {items.length === 0 ? (
+          <Box
+            sx={{
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between',
+            }}
+          >
+            {/* ITEM LIST */}
+            <Box flex={1} overflow="auto">
+              {items.length === 0 ? (
+                <Box
+                  height="100%"
+                  minHeight="80px"
+                  display="flex"
+                  alignItems="center"
+                  justifyContent="center"
+                >
+                  <Typography color={colors.grey[300]} fontStyle="italic">
+                    {emptyMessage}
+                  </Typography>
+                </Box>
+              ) : (
+                items.map((item, i) =>
+                  renderItem ? renderItem(item, i) : defaultRenderItem(item, i)
+                )
+              )}
+            </Box>
+
+            {/* FOOTER - VIEW ALL LINK - Pinned to absolute bottom edge */}
+            {viewAllLink && (
               <Box
-                height="100%"
-                minHeight="80px"
                 display="flex"
-                alignItems="center"
-                justifyContent="center"
+                justifyContent="flex-end"
+                mt="10px"
+                pt="10px"
+                borderTop={`1px solid ${colors.primary[500]}`}
               >
-                <Typography color={colors.grey[300]} fontStyle="italic">
-                  {emptyMessage}
+                <Typography
+                  component={Link}
+                  to={viewAllLink}
+                  variant="body2"
+                  sx={{
+                    color: colors.greenAccent[400],
+                    textDecoration: 'none',
+                    whiteSpace: 'nowrap',
+                    '&:hover': { textDecoration: 'underline' },
+                  }}
+                >
+                  View all
                 </Typography>
               </Box>
-            ) : (
-              items.map((item, i) =>
-                renderItem ? renderItem(item, i) : defaultRenderItem(item, i)
-              )
             )}
           </Box>
-
-        {/* FOOTER - VIEW ALL LINK - Pinned to absolute bottom edge */}
-        {viewAllLink && (
-          <Box
-            display="flex"
-            justifyContent="flex-end"
-            mt="10px"
-            pt="10px"
-            borderTop={`1px solid ${colors.primary[500]}`}
-          >
-            <Typography
-              component={Link}
-              to={viewAllLink}
-              variant="body2"
-              sx={{
-                color: colors.greenAccent[400],
-                textDecoration: "none",
-                whiteSpace: "nowrap",
-                "&:hover": { textDecoration: "underline" },
-              }}
-            >
-              View all
-            </Typography>
-          </Box>
-        )}
-       </Box>
-      </Collapse>
+        </Collapse>
       </Box>
 
       {/* VIEW DETAILS DIALOG (Color matched to theme) */}
@@ -552,18 +562,18 @@ const DashboardSection = ({
         PaperProps={{
           sx: {
             backgroundColor: colors.primary[400],
-            backgroundImage: "none",
+            backgroundImage: 'none',
             borderRadius: '16px',
             color: colors.grey[100],
           },
         }}
       >
         <DialogTitle sx={{ pr: 6, color: colors.grey[100], fontWeight: 'bold' }}>
-          {selectedItem?.primary || "Details"}
+          {selectedItem?.primary || 'Details'}
           <IconButton
             aria-label="Close"
             onClick={handleCloseDetails}
-            sx={{ position: "absolute", right: 8, top: 8, color: colors.grey[300] }}
+            sx={{ position: 'absolute', right: 8, top: 8, color: colors.grey[300] }}
           >
             <CloseIcon />
           </IconButton>
@@ -590,14 +600,9 @@ const DashboardSection = ({
               {detailFields.map(([key, value], index) => (
                 <Box key={key}>
                   {index > 0 && <Divider sx={{ borderColor: colors.primary[500] }} />}
-                  <Box
-                    display="flex"
-                    justifyContent="space-between"
-                    gap={2}
-                    py={1.25}
-                  >
-                    <Typography color={colors.grey[300]} sx={{ textTransform: "capitalize" }}>
-                      {key.replace(/_/g, " ")}
+                  <Box display="flex" justifyContent="space-between" gap={2} py={1.25}>
+                    <Typography color={colors.grey[300]} sx={{ textTransform: 'capitalize' }}>
+                      {key.replace(/_/g, ' ')}
                     </Typography>
                     <Typography
                       color={colors.grey[100]}
