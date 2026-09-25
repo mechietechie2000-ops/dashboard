@@ -808,7 +808,11 @@ const sectionFields = {
     // Drives the dashboard-widget filter row (see scenes/dashboard/index.jsx).
     // dateField is what "next N days" filters against; any field below
     // marked dashboardFilterable becomes a dropdown filter automatically.
-    dashboardFilter: { dateField: 'target_date', defaultRangeDays: 30 },
+    dashboardFilter: {
+      dateField: 'target_date',
+      defaultRangeDays: 30,
+      hiddenStatuses: ['backlog', 'done'],
+    },
     statusOptions: STATUS_OPTIONS,
     fields: [
       { name: 'title', label: 'Title', type: 'text', required: true },
