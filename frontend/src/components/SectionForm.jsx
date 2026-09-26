@@ -7,6 +7,7 @@ import {
   MenuItem,
   TextField,
   useTheme,
+  FormControl, FormLabel, RadioGroup, Radio
 } from '@mui/material';
 import { tokens } from '../theme';
 import sectionFields from '../config/sectionFields';
@@ -159,6 +160,23 @@ const SectionForm = ({ sectionKey, initialValues, onSubmit, onCancel, fieldsOver
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sectionKey, fieldsOverride]);
 
+  useEffect(() => {
+    const derivable = fields.filter((f) => typeof f.derive === 'function');
+    if (!derivable.length) return;
+    setValues((prev) => {
+      let changed = false;
+      const next = { ...prev };
+      for (const field of derivable) {
+        const computed = field.derive(prev);
+        if (computed !== undefined && next[field.name] !== computed) {
+          next[field.name] = computed;
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [values, fields]);
+
   if (!config && !fieldsOverride) return null;
 
   const handleChange = (name) => (e) => {
@@ -220,6 +238,10 @@ const SectionForm = ({ sectionKey, initialValues, onSubmit, onCancel, fieldsOver
       {fields.map((field) => {
         if (!isFieldVisible(field, values)) return null;
 
+        /**
+         * Important catch: your current buildPayload skips all readOnly fields, so a derived-but-readOnly currency would never actually get sent to the backend. You have two options:
+          Option A — don't mark it readOnly for payload purposes; instead add a separate flag like locked: true for "disable the input" and keep buildPayload sending it:
+         */
         const common = {
           key: field.name,
           label: field.label,
@@ -228,7 +250,8 @@ const SectionForm = ({ sectionKey, initialValues, onSubmit, onCancel, fieldsOver
           error: Boolean(errors[field.name]),
           helperText: errors[field.name],
           fullWidth: true,
-          disabled: Boolean(field.readOnly),
+          // disabled: Boolean(field.readOnly),
+          disabled: Boolean(field.readOnly || field.locked),
           sx: fieldSx,
         };
 
@@ -281,6 +304,49 @@ const SectionForm = ({ sectionKey, initialValues, onSubmit, onCancel, fieldsOver
           );
         }
 
+        if (field.type === 'radio') {
+        return (
+          <FormControl key={field.name} component="fieldset" margin="normal">
+            <FormLabel component="legend">{field.label}</FormLabel>
+            <RadioGroup
+              name={field.name}
+              value={values[field.name] || ''}
+              onChange={common.onChange} // or common.handleChange depending on your setup
+              row // Remove 'row' if you want radio buttons stacked vertically
+            >
+              {resolveOptions(field, values).map((opt) => {
+                const optValue = typeof opt === 'object' ? opt.value : opt;
+                const optLabel = typeof opt === 'object' ? opt.label : opt;
+                return (
+                  <FormControlLabel
+                    key={optValue}
+                    value={optValue}
+                    control={<Radio />}
+                    label={optLabel}
+                  />
+                );
+              })}
+            </RadioGroup>
+          </FormControl>
+        );
+      }
+
+        /**
+         * // Example of missing case in custom component logic:
+switch (field.type) {
+  case 'text':
+    return <input type="text" {...props} />;
+  case 'radio': // <-- Ensure this block exists to handle looping field.options
+    return field.options.map(opt => (
+      <label key={opt.value}>
+        <input type="radio" name={field.name} value={opt.value} />
+        {opt.label}
+      </label>
+    ));
+  default:
+    return <input type="text" {...props} />; // Falls back here when unrecognized!
+}
+         */
         if (field.type === 'textarea') {
           return <TextField {...common} multiline minRows={3} />;
         }
@@ -292,7 +358,9 @@ const SectionForm = ({ sectionKey, initialValues, onSubmit, onCancel, fieldsOver
         if (field.type === 'time') {
           return <TextField {...common} type="time" InputLabelProps={{ shrink: true }} />;
         }
-
+        if (field.type === 'datetime') {
+          return <TextField {...common} type="datetime-local" InputLabelProps={{ shrink: true }} />;
+        }
         if (field.type === 'number') {
           return <TextField {...common} type="number" />;
         }

@@ -8,6 +8,89 @@ import PaymentsOutlinedIcon from '@mui/icons-material/PaymentsOutlined';
 import SportsHandballRoundedIcon from '@mui/icons-material/SportsHandballRounded';
 import LocalLibraryOutlinedIcon from '@mui/icons-material/LocalLibraryOutlined';
 import ChecklistOutlinedIcon from '@mui/icons-material/ChecklistOutlined';
+import BuildOutlinedIcon from '@mui/icons-material/BuildOutlined';
+import PlaylistAddCheckOutlinedIcon from '@mui/icons-material/PlaylistAddCheckOutlined';
+import RadioButtonUncheckedIcon from '@mui/icons-material/RadioButtonUnchecked';
+import InboxOutlinedIcon from '@mui/icons-material/InboxOutlined';
+import BlockIcon from '@mui/icons-material/Block';
+import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
+
+// Consolidated status set shared by sections that support swipe-to-status
+// (see DashboardSection's SectionItemRow). colorKey maps to a `colors`
+// palette key resolved at render time (component has the theme, this file
+// doesn't).
+export const STATUS_OPTIONS = [
+  {
+    value: 'done',
+    label: 'Done',
+    icon: CheckCircleOutlineIcon,
+    colorKey: 'greenAccent',
+    color: '#1b5e20',
+  },
+  {
+    value: 'not_started',
+    label: 'Not Started',
+    icon: RadioButtonUncheckedIcon,
+    colorKey: 'grey',
+    color: '#424242',
+  },
+  {
+    value: 'backlog',
+    label: 'Backlog',
+    icon: InboxOutlinedIcon,
+    colorKey: 'grey',
+    color: '#424242',
+  },
+  {
+    value: 'in_progress',
+    label: 'WIP',
+    icon: AutorenewOutlinedIcon,
+    colorKey: 'blueAccent',
+    color: '#0d47a1',
+  },
+  { value: 'blocked', label: 'Blocked', icon: BlockIcon, colorKey: 'redAccent', color: '#7f0000' },
+];
+
+export const ROUTINE_STATUS_OPTIONS = [
+  {
+    value: 'done',
+    label: 'Done',
+    icon: CheckCircleOutlineIcon,
+    colorKey: 'greenAccent',
+    color: '#1b5e20',
+  },
+  { value: 'skipped', label: 'Skip', icon: BlockIcon, colorKey: 'redAccent', color: '#7f0000' },
+];
+
+// Matches the appointments table's `status` column exactly:
+// status TEXT NOT NULL DEFAULT 'scheduled' -- scheduled | completed | cancelled
+// `scheduled` is included (even though it's the default) so the swipe panel
+// can undo an accidental completed/cancelled tap. availableStatuses always
+// filters out whatever item.status currently is, so it won't clutter the
+// panel for a normal scheduled appointment.
+export const APPOINTMENT_STATUS_OPTIONS = [
+  {
+    value: 'completed',
+    label: 'Done',
+    icon: CheckCircleOutlineIcon,
+    colorKey: 'greenAccent',
+    color: '#1b5e20',
+  },
+  {
+    value: 'cancelled',
+    label: 'Cancelled',
+    icon: BlockIcon,
+    colorKey: 'redAccent',
+    color: '#7f0000',
+  },
+  {
+    value: 'scheduled',
+    label: 'Scheduled',
+    icon: RadioButtonUncheckedIcon,
+    colorKey: 'grey',
+    color: '#424242',
+  },
+];
 
 const fmtDate = (value) => {
   if (!value) return undefined;
@@ -28,7 +111,102 @@ const fmtDateTime = (value) => {
     minute: '2-digit',
   });
 };
+
+const fmtDateOnly = (value) => {
+  if (!value) return undefined;
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return value;
+  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+};
+/* 
+const fmtTime12 = (value) => {
+  if (!value) return undefined;
+
+  // Handle time-only strings (e.g., "14:30" or "14:30:00")
+  if (typeof value === 'string' && /^\d{2}:\d{2}(:\d{2})?$/.test(value)) {
+    const [hours, minutes] = value.split(':');
+    const d = new Date();
+    d.setHours(parseInt(hours, 10), parseInt(minutes, 10), 0, 0);
+    return d.toLocaleTimeString(undefined, {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+    });
+  }
+
+  // Handle standard Date objects or ISO strings
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return value;
+
+  return d.toLocaleTimeString(undefined, {
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+  });
+};
+
+ */
+
+const fmtTime12 = (value) => {
+  if (!value) return undefined;
+
+  // Handle time-only strings (e.g., "14:30" or "14:30:00")
+  if (typeof value === 'string' && /^\d{2}:\d{2}(:\d{2})?$/.test(value)) {
+    const [hours, minutes] = value.split(':');
+    const d = new Date();
+    d.setHours(parseInt(hours, 10), parseInt(minutes, 10), 0, 0);
+    return d
+      .toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit', hour12: true })
+      .replace(':00 ', ' ');
+  }
+
+  // Handle standard Date objects or ISO strings
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return value;
+
+  return d
+    .toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit', hour12: true })
+    .replace(':00 ', ' ');
+};
 const currentYear = new Date().getFullYear();
+
+// This file has no access to the theme (colors are resolved at render time
+// in components), so hardcode the three accent colors here directly rather
+// than pulling from `tokens`/`colors`.
+const getDateKeyword = (dateStr) => {
+  const target = new Date(dateStr);
+  if (Number.isNaN(target.getTime())) return null;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  target.setHours(0, 0, 0, 0);
+  const diffDays = Math.round((target - today) / 86400000);
+
+  if (diffDays === 0) return { label: 'Today', color: '#4caf50' };
+  if (diffDays === 1) return { label: 'Tomorrow', color: '#42a5f5' };
+  if (diffDays > 1) return { label: `${diffDays} days to go`, color: '#4caf50' };
+  if (diffDays < 0) return { label: 'Past', color: '#ef5350' };
+  return null;
+};
+
+const getRecurringDateKeyword = (dateStr) => {
+  if (!dateStr) return null;
+  const target = new Date(`${dateStr}T00:00:00`);
+  if (Number.isNaN(target.getTime())) return null;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const year = today.getFullYear();
+
+  const thisYear = new Date(year, target.getMonth(), target.getDate());
+  const diffDaysThisYear = Math.round((thisYear - today) / 86400000);
+  const nextYear = new Date(year + 1, target.getMonth(), target.getDate());
+  const diffDays =
+    diffDaysThisYear < 0 ? Math.round((nextYear - today) / 86400000) : diffDaysThisYear;
+
+  if (diffDaysThisYear === 0) return { label: 'Today', color: '#4caf50' };
+  if (diffDaysThisYear === 1) return { label: 'Tomorrow', color: '#42a5f5' };
+  if (diffDaysThisYear < 0 && diffDaysThisYear >= -2) return { label: 'Past', color: '#ef5350' };
+  return { label: `${diffDays} days to go`, color: '#4caf50' };
+};
 
 // sectionKey -> UI config. `fields` drives the generic form (SectionForm);
 // `mapRowToItem` turns a raw DB row (from listRecords) into the
@@ -40,6 +218,7 @@ const sectionFields = {
     icon: <QueryBuilderIcon />,
     viewAllLink: '/routine',
     emptyMessage: 'No routine items today',
+    statusOptions: ROUTINE_STATUS_OPTIONS,
     fields: [
       { name: 'title', label: 'Task', type: 'text', required: true },
       {
@@ -75,48 +254,26 @@ const sectionFields = {
         ],
       },
       { name: 'scheduled_time', label: 'Time (HH:MM)', type: 'time', required: true },
-      { name: 'mute', label: 'Mute', type: 'radio', required: false },
-      { name: 'announce', label: 'Announce', type: 'radio', required: false },
+      { name: 'mute', label: 'Mute', type: 'checkbox', required: false },
+      { name: 'announce', label: 'Announce', type: 'checkbox', required: false },
+      /* {
+        name: 'announce',
+        label: 'Notification Setting',
+        type: 'radio',
+        required: false,
+        options: [
+          { label: 'Mute', value: 1 },
+          { label: 'Announce', value: 1 }
+        ]
+      }, */
       { name: 'description', label: 'Description', type: 'text', required: false },
     ],
     mapRowToItem: (row) => ({
       id: row.id,
-      primary: row.title,
+      primary: [fmtTime12(row.scheduled_time), '', row.title].filter(Boolean).join(' • '),
       secondary: row.family_member_name,
-      meta: row.scheduled_time,
-    }),
-  },
-
-  reminders: {
-    tableName: 'reminders',
-    label: 'Reminders',
-    icon: <NotificationsActiveOutlinedIcon />,
-    emptyMessage: 'No reminders',
-    fields: [
-      { name: 'title', label: 'Reminder', type: 'text', required: true },
-      { name: 'notes', label: 'Notes', type: 'textarea', required: false },
-      { name: 'due_date', label: 'Due date', type: 'date', required: true },
-      {
-        name: 'priority',
-        label: 'Priority',
-        type: 'select',
-        required: false,
-        options: ['low', 'medium', 'high'],
-      },
-      {
-        name: 'family_member_id',
-        label: 'For',
-        type: 'asyncSelect',
-        source: 'familyMembers',
-        required: false,
-      },
-      { name: 'is_completed', label: 'Completed', type: 'checkbox', required: false },
-    ],
-    mapRowToItem: (row) => ({
-      id: row.reminder_id,
-      primary: row.title,
-      secondary: row.note,
-      meta: fmtDate(row.due_date),
+      //meta: row.scheduled_time,
+      status: row.status,
     }),
   },
 
@@ -202,7 +359,7 @@ const sectionFields = {
     tableName: 'events',
     label: 'Events (Birthdays, Anniversaries)',
     icon: <CakeOutlinedIcon />,
-    viewAllLink: '/events', // check if the route exist yet
+    viewAllLink: '/section/events', // check if the route exist yet
     emptyMessage: 'No upcoming birthdays or anniversaries',
     fields: [
       { name: 'person_name', label: 'Person Name', type: 'text', required: true },
@@ -220,22 +377,55 @@ const sectionFields = {
       },
       { name: 'event_date', label: 'Date', type: 'date', required: true },
     ],
-    mapRowToItem: (row) => ({
+    /*     mapRowToItem: (row) => ({
       id: row.id,
       primary: row.person_name,
       secondary: row.event_type
         ? row.event_type[0].toUpperCase() + row.event_type.slice(1)
         : undefined,
       meta: fmtDate(row.event_date),
-    }),
+    }), */
+    mapRowToItem: (row) => {
+      // const dateKeyword = getDateKeyword(row.event_date);
+      const dateKeyword = getRecurringDateKeyword(row.event_date);
+      return {
+        id: row.id,
+        // primary: row.person_name,
+        // primary: `${fmtDate(row.event_date)}   -  ${row.person_name}`,
+        // primary: [fmtDate(row.event_date), row.person_name].filter(Boolean).join('    •    '),
+        primary: `${fmtDate(row.event_date)}${
+          row.person_name
+            ? `  •  ${row.person_name}'s ${row.event_type || 'other'}`
+            : '  •  some event'
+        }`,
+        meta: dateKeyword?.label,
+        dateLabelColor: dateKeyword?.color,
+        /*      meta: row.event_type
+        ? row.event_type[0].toUpperCase() + row.event_type.slice(1)
+        : undefined,
+      // meta: fmtDate(row.event_date),
+      status: 'N/A', */
+      };
+    },
   },
 
   appointments: {
     tableName: 'appointments',
     label: 'Appointments',
     icon: <LocalHospitalIcon />,
-    viewAllLink: '/medical',
+    viewAllLink: '/section/appointments',
     emptyMessage: 'No upcoming appointments',
+    statusOptions: APPOINTMENT_STATUS_OPTIONS,
+    // Upcoming 180 days, scheduled only by default; completed/cancelled
+    // hidden unless explicitly selected in the filter sheet. NOTE: the
+    // hiddenStatuses key is only honored once applyDashboardFilters in
+    // index.jsx is generalized past its current hardcoded backlog/done
+    // check — flagging so this doesn't look "wired" before that lands.
+    dashboardFilter: {
+      dateField: 'appointment_datetime',
+      defaultRangeDays: 180,
+      hiddenStatuses: ['completed', 'cancelled'],
+    },
     fields: [
       {
         name: 'category',
@@ -260,20 +450,42 @@ const sectionFields = {
         required: true,
       },
     ],
-    mapRowToItem: (row) => ({
-      id: row.id,
-      // primary: `${row.doctor_name}${row.doctor_special ? ` — ${row.doctor_special}` : ''}`,
-      primary: `${row.category} ${row.title}`,
-      secondary: `${row.family_member_name}'s appointment`,
-      meta: fmtDate(row.appointment_datetime),
-    }),
+    mapRowToItem: (row) => {
+      const dateKeyword = getDateKeyword(row.appointment_datetime);
+      const datePart = fmtDateOnly(row.appointment_datetime);
+      const timePart = fmtTime12(row.appointment_datetime);
+      const label = row.category === 'Doctor' ? `Dr. Appt. ${row.family_member_name}` : row.title;
+
+      return {
+        id: row.id,
+        primary: `${datePart} - ${label} @${timePart}`,
+        // secondary: `${row.family_member_name}'s appointment`,
+        badge: dateKeyword?.label,
+        dateLabelColor: dateKeyword?.color,
+        status: row.status,
+      };
+    },
   },
 
+  /**
+    mapRowToItem: (row) => {
+      const dateKeyword = getDateKeyword(row.event_date);
+      return {
+      id: row.id,
+      primary: `${fmtDate(row.event_date)}${
+        row.person_name
+          ? `  •  ${row.person_name}'s ${row.event_type || 'other'}`
+          : '  •  some event'
+      }`,
+      meta: dateKeyword?.label,
+      dateLabelColor: dateKeyword?.color,
+   * 
+   */
   renewals: {
     tableName: 'renewals',
     label: 'Renewals',
     icon: <AutorenewOutlinedIcon />,
-    viewAllLink: '/renewals', // check if the route exist yet
+    viewAllLink: '/section/renewals', // check if the route exist yet
     emptyMessage: 'Nothing due for renewal',
     fields: [
       {
@@ -488,16 +700,23 @@ const sectionFields = {
         required: false,
       },
     ],
-    mapRowToItem: (row) => ({
+    /*     mapRowToItem: (row) => ({
       id: row.id,
-      // family_member_name comes from the LEFT JOIN in sectionConfig.js
-      // (renewals only stores family_member_id). Fall back to the item's
-      // own title/category when no family member is set on the record.
-      primary: `${row.category} ${row.renewal_type}`,
+      // primary: `${row.category} ${row.renewal_type}`,
+      primary: `${row.title}`,
       secondary: row.subcategory,
       //secondary: [row.category, row.subcategory, row.renewal_type].filter(Boolean).join(' — '),
-      meta: row.expiry_date ? fmtDate(row.expiry_date) : undefined,
-    }),
+      meta: row.expiry_date ? fmtDate(row.expiry_date) : undefined, */
+
+    mapRowToItem: (row) => {
+      const dateKeyword = getDateKeyword(row.expiry_date);
+      return {
+        id: row.id,
+        primary: `${fmtDate(row.expiry_date)}  •  ${row.title}`,
+        meta: dateKeyword?.label,
+        dateLabelColor: dateKeyword?.color,
+      };
+    },
   },
 
   bills: {
@@ -557,21 +776,44 @@ const sectionFields = {
     }),
   },
 
+  recipe: {
+    tableName: 'recipe',
+    label: 'Recipe',
+    icon: <LocalLibraryOutlinedIcon />,
+    emptyMessage: 'No Recipe currently available, click + to add',
+    fields: [
+      { name: 'recipe_name', label: 'Recipe Name', type: 'text', required: true },
+      { name: 'recipe_type', label: 'Veg/Non-Veg', type: 'text', required: true },
+      { name: 'ingredients', label: 'Ingredients', type: 'text', required: false },
+      { name: 'instructions', label: 'Instructions', type: 'text', required: false },
+    ],
+    mapRowToItem: (row) => ({
+      id: row.id,
+      primary: row.recipe_name,
+      secondary: row.recipe_type,
+      meta: fmtDate(row.recipe_name),
+    }),
+  },
   // 10th section. `fields` is the short quick-add set (dashboard card "+"
   // and /todo-task/new); `detailFields` is new — extra columns that only
   // show up in the View All detail table/form (see SectionDetailView.jsx).
   // Existing sections keep working unchanged since nothing reads
   // detailFields unless it's present.
-  todo_task: {
+  todo_list: {
     tableName: 'todo_task',
-    label: 'Todo Task',
-    icon: <LocalLibraryOutlinedIcon />,
-    viewAllLink: '/todoList',
+    label: 'Todo List',
+    icon: <PlaylistAddCheckOutlinedIcon />,
+    viewAllLink: '/section/todo_list',
     emptyMessage: 'No open tasks',
     // Drives the dashboard-widget filter row (see scenes/dashboard/index.jsx).
     // dateField is what "next N days" filters against; any field below
     // marked dashboardFilterable becomes a dropdown filter automatically.
-    dashboardFilter: { dateField: 'target_date', defaultRangeDays: 30 },
+    dashboardFilter: {
+      dateField: 'target_date',
+      defaultRangeDays: 30,
+      hiddenStatuses: ['backlog', 'done'],
+    },
+    statusOptions: STATUS_OPTIONS,
     fields: [
       { name: 'title', label: 'Title', type: 'text', required: true },
       {
@@ -639,6 +881,115 @@ const sectionFields = {
       primary: row.title,
       secondary: [row.family_member_name, row.category].filter(Boolean).join(' • '),
       meta: row.target_date ? fmtDate(row.target_date) : undefined,
+      status: row.status,
+    }),
+  },
+
+  home_maintenance: {
+    tableName: 'home_maintenance',
+    label: 'Maintenance', // this is display on the page
+    icon: <BuildOutlinedIcon />,
+    viewAllLink: '/homeMaintenance',
+    emptyMessage: 'No maintenance records yet',
+    statusOptions: STATUS_OPTIONS,
+    fields: [
+      {
+        name: 'address',
+        label: 'Address',
+        type: 'select',
+        required: true,
+        options: [
+          { value: 'C16', label: 'C16' },
+          { value: 'LR-D504', label: 'LR-D504' },
+          { value: '53 Manohar', label: '53 Manohar' },
+          { value: 'DB City', label: 'DB City' },
+          { value: '218 Nathan', label: '218 Nathan' },
+        ],
+      },
+      {
+        name: 'category',
+        label: 'Category',
+        type: 'select',
+        required: true,
+        options: [
+          'Plumbing',
+          'Grouting',
+          'AC',
+          'Electricity',
+          'Painting',
+          'Cleaning',
+          'Repair',
+          'Gutter',
+          'Roof',
+        ],
+      },
+      {
+        name: 'location',
+        label: 'Location',
+        type: 'text',
+        required: true,
+        // options: ['Plumbing', 'Grouting', 'AC', 'Electricity'],
+      },
+      {
+        name: 'title',
+        label: 'Title',
+        type: 'text',
+        required: false,
+      },
+      { name: 'date_of_work', label: 'Date of Work', type: 'date', required: false },
+      { name: 'details', label: 'Work Detail', type: 'textarea', required: false },
+      { name: 'cost', label: 'Cost', type: 'number', required: false },
+      {
+        name: 'status',
+        label: 'Status',
+        type: 'select',
+        required: true,
+        dashboardFilterable: true,
+        options: STATUS_OPTIONS.map(({ value, label }) => ({ value, label })),
+      },
+    ],
+    // Extra columns — only shown on the View All page/table, appended to
+    // `fields` there (same pattern as todo_list.detailFields).
+    detailFields: [
+      {
+        name: 'currency',
+        label: 'Currency',
+        type: 'text',
+        required: false,
+        readOnly: true, // auto-computed, not user-editable — flip to false if you want it overridable
+        derive: (values) => (values.address === '218 Nathan' ? 'USD' : 'INR'),
+      },
+      { name: 'receipt_saved', label: 'Receipt Saved', type: 'checkbox', required: false },
+      {
+        name: 'payment_method',
+        label: 'Payment Method',
+        type: 'select',
+        required: false,
+        options: [
+          { value: 'cash', label: 'Cash' },
+          { value: 'credit card', label: 'Credit Card' },
+          { value: 'debit card', label: 'Debit Card' },
+        ],
+      },
+      { name: 'account', label: 'Account', type: 'text', required: false },
+      { name: 'paid_by', label: 'Paid By', type: 'text', required: false },
+      { name: 'created_at', label: 'Created', type: 'text', required: false, readOnly: true },
+      { name: 'updated_at', label: 'Updated', type: 'text', required: false, readOnly: true },
+    ],
+
+    mapRowToItem: (row) => ({
+      id: row.id,
+      secondary: [
+        row.address,
+        [row.category, row.location].filter(Boolean).join(' • '),
+        row.date_of_work ? fmtDate(row.date_of_work) : null,
+        row.cost != null ? `${row.currency || 'INR'} ${Number(row.cost).toLocaleString()}` : null,
+        row.account,
+        row.status,
+      ]
+        .filter(Boolean)
+        .join(' | '),
+      status: row.status,
     }),
   },
 };

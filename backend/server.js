@@ -61,17 +61,20 @@ app.use("/api/auth", require("./routes/auth"));
 
 // Application Routes
 app.use(require("./routes/routine")); 
-app.use(require("./routes/notes")); 
-// app.use("/api", require("./routes/meals"));
-app.use(require("./routes/appointments")); // still used by scenes/medical (table renamed from doctor_appointment)
-app.use(require("./routes/sports")); // still used by scenes/kids/sports
+// app.use(require("./routes/notes")); 
+// app.use(require("./routes/meals"));
+// app.use(require("./routes/recipe"));
+// app.use(require("./routes/appointments")); // still used by scenes/medical (table renamed from doctor_appointment)
+// app.use(require("./routes/sports")); // still used by scenes/kids/sports
 app.use(require("./routes/upload"));
 app.use(require("./routes/sections")); // generic CRUD for Home Dashboard sections
 app.use(require("./routes/reminders")); // computed feed across events/goals/renewals/appointments
 app.use(require("./routes/family")); // GET /api/family-members, used by DigiLocker's person dropdown
 app.use(require("./routes/calendar")); // GET /api/calendar
-
 app.use("/api/push", require("./routes/push").router);
+
+const localLLMRoutes = require('./routes/localLLM');
+app.use('/api/local-llm', localLLMRoutes);
 
 // Development Proxy (Keep at the end after API routes)
 app.use(

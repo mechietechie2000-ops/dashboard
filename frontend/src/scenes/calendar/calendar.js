@@ -1,9 +1,9 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
-import FullCalendar from "@fullcalendar/react";
-import dayGridPlugin from "@fullcalendar/daygrid";
-import timeGridPlugin from "@fullcalendar/timegrid";
-import interactionPlugin from "@fullcalendar/interaction";
-import listPlugin from "@fullcalendar/list";
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import FullCalendar from '@fullcalendar/react';
+import dayGridPlugin from '@fullcalendar/daygrid';
+import timeGridPlugin from '@fullcalendar/timegrid';
+import interactionPlugin from '@fullcalendar/interaction';
+import listPlugin from '@fullcalendar/list';
 import {
   Box,
   Popover,
@@ -16,38 +16,52 @@ import {
   Alert,
   Divider,
   useTheme,
-} from "@mui/material";
-import AddRoundedIcon from "@mui/icons-material/AddRounded";
-import DeleteOutlineRoundedIcon from "@mui/icons-material/DeleteOutlineRounded";
-import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
-import CheckRoundedIcon from "@mui/icons-material/CheckRounded";
-import { tokens } from "../../theme";
+  useMediaQuery,
+} from '@mui/material';
+import AddRoundedIcon from '@mui/icons-material/AddRounded';
+import DeleteOutlineRoundedIcon from '@mui/icons-material/DeleteOutlineRounded';
+import CloseRoundedIcon from '@mui/icons-material/CloseRounded';
+import CheckRoundedIcon from '@mui/icons-material/CheckRounded';
+import ChevronLeftRoundedIcon from '@mui/icons-material/ChevronLeftRounded';
+import ChevronRightRoundedIcon from '@mui/icons-material/ChevronRightRounded';
+import { tokens } from '../../theme';
+
+// ---- Custom 2-line mobile-friendly toolbar (replaces FullCalendar's own
+// single-row headerToolbar, which has no responsive behavior of its own and
+// overflows/wraps badly under ~400px). Line 1 is nav (prev/today/next) +
+// the current title, which gets the rest of the line so long titles (e.g.
+// a Week view's date range) never wrap. Line 2 is the view switcher. -----
+const VIEW_BUTTONS = [
+  { view: 'dayGridMonth', label: 'Month' },
+  { view: 'timeGridWeek', label: 'Week' },
+  { view: 'timeGridDay', label: 'Day' },
+  { view: 'listMonth', label: 'List' },
+];
 
 // ---- Category palette ---------------------------------------------------
 // Free-text `category` column on the backend, but we constrain the UI to a
 // fixed, color-coded set so the calendar reads at a glance (Apple Calendar
 // style colored dots/pills) instead of everything looking the same.
 const CATEGORIES = [
-  { key: "general", label: "General", color: "#6870fa" },
-  { key: "work", label: "Work", color: "#4cceac" },
-  { key: "personal", label: "Personal", color: "#f2a65a" },
-  { key: "birthday", label: "Birthday", color: "#c084fc" },
-  { key: "holiday", label: "Holiday", color: "#e2726e" },
+  { key: 'general', label: 'General', color: '#6870fa' },
+  { key: 'work', label: 'Work', color: '#4cceac' },
+  { key: 'personal', label: 'Personal', color: '#f2a65a' },
+  { key: 'birthday', label: 'Birthday', color: '#c084fc' },
+  { key: 'holiday', label: 'Holiday', color: '#e2726e' },
 ];
-const categoryOf = (key) =>
-  CATEGORIES.find((c) => c.key === key) || CATEGORIES[0];
+const categoryOf = (key) => CATEGORIES.find((c) => c.key === key) || CATEGORIES[0];
 
 const generateId = () =>
-  typeof crypto !== "undefined" && crypto.randomUUID
+  typeof crypto !== 'undefined' && crypto.randomUUID
     ? crypto.randomUUID()
     : `evt-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 
 // datetime-local / date <input> <-> ISO helpers
 const toInputValue = (iso, allDay) => {
-  if (!iso) return "";
+  if (!iso) return '';
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return allDay ? iso.slice(0, 10) : iso.slice(0, 16);
-  const pad = (n) => String(n).padStart(2, "0");
+  const pad = (n) => String(n).padStart(2, '0');
   const date = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
   if (allDay) return date;
   return `${date}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
@@ -55,26 +69,34 @@ const toInputValue = (iso, allDay) => {
 
 const emptyDraft = () => ({
   id: null,
-  title: "",
-  category: "general",
+  title: '',
+  category: 'general',
   allDay: true,
   start: toInputValue(new Date().toISOString(), true),
-  end: "",
+  end: '',
 });
 
 const Calendar = () => {
   const theme = useTheme();
   const colors = tokens(theme.palette.mode);
-  const isDark = theme.palette.mode === "dark";
+  const isDark = theme.palette.mode === 'dark';
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
   const [currentEvents, setCurrentEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(null);
 
+  // Custom toolbar state — driven by FullCalendar's datesSet callback so
+  // the title/active-view button stay in sync with prev/next/today clicks
+  // made through the imperative calendarApi below.
+  const calendarRef = useRef(null);
+  const [viewTitle, setViewTitle] = useState('');
+  const [activeView, setActiveView] = useState('dayGridMonth');
+
   // Popover / editor state
   const [anchorPos, setAnchorPos] = useState(null); // { top, left } or null (closed)
   const [draft, setDraft] = useState(emptyDraft());
-  const [mode, setMode] = useState("create"); // "create" | "edit"
+  const [mode, setMode] = useState('create'); // "create" | "edit"
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState(null);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
@@ -87,7 +109,7 @@ const Calendar = () => {
       setLoading(true);
       setLoadError(null);
       try {
-        const response = await fetch("/api/calendar");
+        const response = await fetch('/api/calendar');
         if (!response.ok) {
           throw new Error(
             response.status === 401 || response.status === 403
@@ -98,7 +120,7 @@ const Calendar = () => {
         const data = await response.json();
         setCurrentEvents(Array.isArray(data) ? data : []);
       } catch (error) {
-        console.error("Failed to fetch events:", error);
+        console.error('Failed to fetch events:', error);
         setLoadError(error.message || "Couldn't load events.");
       } finally {
         setLoading(false);
@@ -109,7 +131,7 @@ const Calendar = () => {
 
   // ---- Popover open helpers ------------------------------------------
   const openCreateAt = useCallback((point, prefill) => {
-    setMode("create");
+    setMode('create');
     setSaveError(null);
     setConfirmingDelete(false);
     setDraft({ ...emptyDraft(), ...prefill });
@@ -117,17 +139,17 @@ const Calendar = () => {
   }, []);
 
   const openEditAt = useCallback((point, event) => {
-    setMode("edit");
+    setMode('edit');
     setSaveError(null);
     setConfirmingDelete(false);
     const allDay = event.allDay;
     setDraft({
       id: event.id,
       title: event.title,
-      category: event.extendedProps?.category || "general",
+      category: event.extendedProps?.category || 'general',
       allDay,
       start: toInputValue(event.startStr, allDay),
-      end: event.endStr ? toInputValue(event.endStr, allDay) : "",
+      end: event.endStr ? toInputValue(event.endStr, allDay) : '',
     });
     setAnchorPos(point);
   }, []);
@@ -145,7 +167,7 @@ const Calendar = () => {
     openCreateAt(point, {
       allDay: selected.allDay,
       start: toInputValue(selected.startStr, selected.allDay),
-      end: selected.endStr ? toInputValue(selected.endStr, selected.allDay) : "",
+      end: selected.endStr ? toInputValue(selected.endStr, selected.allDay) : '',
     });
   };
 
@@ -161,14 +183,17 @@ const Calendar = () => {
 
   const openEditFromList = (e, event) => {
     const rect = e.currentTarget.getBoundingClientRect();
-    openEditAt({ top: rect.top, left: rect.right + 12 }, {
-      id: event.id,
-      title: event.title,
-      allDay: event.allDay,
-      startStr: event.start,
-      endStr: event.end,
-      extendedProps: { category: event.category },
-    });
+    openEditAt(
+      { top: rect.top, left: rect.right + 12 },
+      {
+        id: event.id,
+        title: event.title,
+        allDay: event.allDay,
+        startStr: event.start,
+        endStr: event.end,
+        extendedProps: { category: event.category },
+      }
+    );
   };
 
   // Drag / resize persistence — this is what was missing before: editable
@@ -177,8 +202,8 @@ const Calendar = () => {
     const { event, revert } = changeInfo;
     try {
       const response = await fetch(`/api/calendar/${event.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           title: event.title,
           start: event.startStr,
@@ -186,10 +211,10 @@ const Calendar = () => {
           allDay: event.allDay,
           // Always resend category — the backend defaults missing category
           // to "general", so omitting it here would silently wipe it.
-          category: event.extendedProps?.category || "general",
+          category: event.extendedProps?.category || 'general',
         }),
       });
-      if (!response.ok) throw new Error("Update failed");
+      if (!response.ok) throw new Error('Update failed');
       setCurrentEvents((prev) =>
         prev.map((e) =>
           e.id === event.id
@@ -198,7 +223,7 @@ const Calendar = () => {
         )
       );
     } catch (error) {
-      console.error("Error updating event:", error);
+      console.error('Error updating event:', error);
       revert();
       setLoadError("Couldn't save that change — the event was moved back.");
     }
@@ -207,7 +232,11 @@ const Calendar = () => {
   // ---- Save (create or edit) -------------------------------------------
   const handleSave = async () => {
     if (!draft.title.trim()) {
-      setSaveError("Give the event a title.");
+      setSaveError('Give the event a title.');
+      return;
+    }
+    if (!draft.start) {
+      setSaveError('Pick a date.');
       return;
     }
     setSaving(true);
@@ -223,10 +252,10 @@ const Calendar = () => {
     };
 
     try {
-      if (mode === "create") {
-        const response = await fetch("/api/calendar", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
+      if (mode === 'create') {
+        const response = await fetch('/api/calendar', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
         });
         if (!response.ok) throw new Error("Couldn't save the event.");
@@ -234,8 +263,8 @@ const Calendar = () => {
         setCurrentEvents((prev) => [...prev, saved?.id ? saved : payload]);
       } else {
         const response = await fetch(`/api/calendar/${payload.id}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
         });
         if (!response.ok) throw new Error("Couldn't save the event.");
@@ -245,7 +274,7 @@ const Calendar = () => {
       }
       closePopover();
     } catch (error) {
-      console.error("Error saving event:", error);
+      console.error('Error saving event:', error);
       setSaveError(error.message || "Couldn't save the event.");
     } finally {
       setSaving(false);
@@ -259,34 +288,59 @@ const Calendar = () => {
     }
     setSaving(true);
     try {
-      const response = await fetch(`/api/calendar/${draft.id}`, { method: "DELETE" });
+      const response = await fetch(`/api/calendar/${draft.id}`, { method: 'DELETE' });
       if (!response.ok) throw new Error("Couldn't delete the event.");
       setCurrentEvents((prev) => prev.filter((e) => e.id !== draft.id));
       closePopover();
     } catch (error) {
-      console.error("Error deleting event:", error);
+      console.error('Error deleting event:', error);
       setSaveError(error.message || "Couldn't delete the event.");
     } finally {
       setSaving(false);
     }
   };
 
-  // ---- Sidebar list: sorted, colored ------------------------------------
+  // ---- Events list: sorted, colored --------------------------------------
+  // Past events stay visible here (no date filtering) — this list is meant
+  // to be a full record, not just "what's coming up".
   const upcoming = useMemo(
-    () =>
-      [...currentEvents]
-        .filter((e) => e.start)
-        .sort((a, b) => new Date(a.start) - new Date(b.start)),
+    () => [...currentEvents].sort((a, b) => new Date(a.start) - new Date(b.start)),
     [currentEvents]
   );
 
+  // Picks black or white text based on the category color's luminance, so
+  // event pills stay readable regardless of theme or which category color
+  // is used (previously text was hardcoded to a light grey, which read
+  // fine on dark backgrounds but was low-contrast on the light theme).
+  const readableTextOn = (hex) => {
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+    return luminance > 0.6 ? '#111318' : '#ffffff';
+  };
+
   const eventDidMount = (info) => {
     const cat = categoryOf(info.event.extendedProps?.category);
-    info.el.style.backgroundColor = isDark ? `${cat.color}33` : `${cat.color}22`;
+    info.el.style.backgroundColor = cat.color;
     info.el.style.borderColor = cat.color;
-    info.el.style.color = colors.grey[100];
-    const dot = info.el.querySelector(".fc-daygrid-event-dot");
-    if (dot) dot.style.borderColor = cat.color;
+    info.el.style.color = readableTextOn(cat.color);
+    const dot = info.el.querySelector('.fc-daygrid-event-dot');
+    if (dot) dot.style.borderColor = readableTextOn(cat.color);
+  };
+
+  // ---- Custom toolbar handlers -------------------------------------------
+  // All routed through calendarApi imperatively since headerToolbar={false}
+  // hands off navigation/view-switching to us.
+  const goNextDay = () => calendarRef.current?.getApi().incrementDate({ days: 1 });
+  const goPrevDay = () => calendarRef.current?.getApi().incrementDate({ days: -1 });
+  const goPrev = () => calendarRef.current?.getApi().prev();
+  const goNext = () => calendarRef.current?.getApi().next();
+  const goToday = () => calendarRef.current?.getApi().today();
+  const changeView = (view) => calendarRef.current?.getApi().changeView(view);
+  const handleDatesSet = (arg) => {
+    setViewTitle(arg.view.title);
+    setActiveView(arg.view.type);
   };
 
   return (
@@ -296,21 +350,21 @@ const Calendar = () => {
           <Typography variant="h3" fontWeight="600">
             Calendar
           </Typography>
-          <Typography variant="body2" color={colors.grey[300]}>
+          {/* <Typography variant="body2" color={colors.grey[300]}>
             Click a date to add something, drag an event to reschedule it.
-          </Typography>
+          </Typography> */}
         </Box>
         <Button
           variant="contained"
           startIcon={<AddRoundedIcon />}
           onClick={openCreateFromButton}
           sx={{
-            borderRadius: "999px",
-            textTransform: "none",
+            borderRadius: '999px',
+            textTransform: 'none',
             fontWeight: 600,
             backgroundColor: colors.greenAccent[500],
             color: colors.grey[900],
-            "&:hover": { backgroundColor: colors.greenAccent[600] },
+            '&:hover': { backgroundColor: colors.greenAccent[600] },
           }}
         >
           New event
@@ -318,19 +372,32 @@ const Calendar = () => {
       </Box>
 
       {loadError && (
-        <Alert severity="error" sx={{ mb: 2, borderRadius: "10px" }} onClose={() => setLoadError(null)}>
+        <Alert
+          severity="error"
+          sx={{ mb: 2, borderRadius: '10px' }}
+          onClose={() => setLoadError(null)}
+        >
           {loadError}
         </Alert>
       )}
 
-      <Box display="flex" flexDirection={{ xs: "column", md: "row" }} gap="15px">
-        {/* SIDEBAR */}
+      <Box
+        display="flex"
+        flexDirection={{ xs: 'column', md: 'row' }}
+        gap="15px"
+        sx={{ width: '100%', maxWidth: '100%' }}
+      >
+        {/* SIDEBAR — "Events" card. Ordered after the calendar on mobile
+            (enhancement #1); back to its normal position on desktop. */}
         <Box
-          flex={{ xs: "1 1 auto", md: "1 1 26%" }}
+          flex={{ xs: '1 1 auto', md: '1 1 26%' }}
+          order={{ xs: 2, md: 0 }}
           backgroundColor={colors.primary[400]}
           p="16px"
           borderRadius="14px"
-          sx={{ boxShadow: isDark ? "0 1px 0 rgba(255,255,255,0.04)" : "0 1px 3px rgba(0,0,0,0.06)" }}
+          sx={{
+            boxShadow: isDark ? '0 1px 0 rgba(255,255,255,0.04)' : '0 1px 3px rgba(0,0,0,0.06)',
+          }}
         >
           <Typography variant="h5" fontWeight="600" mb="10px">
             Events
@@ -355,16 +422,16 @@ const Calendar = () => {
                     key={event.id}
                     onClick={(e) => openEditFromList(e, event)}
                     sx={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "10px",
-                      p: "9px 10px",
-                      borderRadius: "10px",
-                      cursor: "pointer",
-                      backgroundColor: "transparent",
-                      transition: "background-color 120ms ease",
-                      "&:hover": {
-                        backgroundColor: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.04)",
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '10px',
+                      p: '9px 10px',
+                      borderRadius: '10px',
+                      cursor: 'pointer',
+                      backgroundColor: 'transparent',
+                      transition: 'background-color 120ms ease',
+                      '&:hover': {
+                        backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
                       },
                     }}
                   >
@@ -372,7 +439,7 @@ const Calendar = () => {
                       sx={{
                         width: 9,
                         height: 9,
-                        borderRadius: "50%",
+                        borderRadius: '50%',
                         backgroundColor: cat.color,
                         flexShrink: 0,
                       }}
@@ -383,9 +450,9 @@ const Calendar = () => {
                       </Typography>
                       <Typography variant="caption" color={colors.grey[300]}>
                         {new Date(event.start).toLocaleDateString(undefined, {
-                          month: "short",
-                          day: "numeric",
-                          ...(event.allDay ? {} : { hour: "numeric", minute: "2-digit" }),
+                          month: 'short',
+                          day: 'numeric',
+                          ...(event.allDay ? {} : { hour: 'numeric', minute: '2-digit' }),
                         })}
                       </Typography>
                     </Box>
@@ -397,15 +464,99 @@ const Calendar = () => {
         </Box>
 
         {/* CALENDAR */}
-        <Box flex={{ xs: "1 1 auto", md: "1 1 74%" }} className="hd-calendar">
-          <FullCalendar
-            height="75vh"
-            plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin, listPlugin]}
-            headerToolbar={{
-              left: "prev,next today",
-              center: "title",
-              right: "dayGridMonth,timeGridWeek,timeGridDay,listMonth",
+        <Box
+          flex={{ xs: '1 1 auto', md: '1 1 74%' }}
+          order={{ xs: 1, md: 0 }}
+          className="hd-calendar"
+          sx={{ width: '100%', maxWidth: '100%', minWidth: 0, overflow: 'hidden' }}
+        >
+          {/* Custom 2-line toolbar (headerToolbar={false} below hands nav +
+              view-switching to this). Line 1: prev/today/next + title,
+              title takes the rest of the line so it never wraps. Line 2:
+              view switcher. Fixes both the off-screen button row and the
+              "floating"/unanchored feel on mobile, since nothing here needs
+              to shrink-to-fit or overflow anymore. */}
+          <Box
+            backgroundColor={colors.primary[400]}
+            borderRadius="14px"
+            p="10px 12px"
+            mb="10px"
+            sx={{
+              boxShadow: isDark ? '0 1px 0 rgba(255,255,255,0.04)' : '0 1px 3px rgba(0,0,0,0.06)',
             }}
+          >
+            {/* Line 1: nav + title */}
+            <Box display="flex" alignItems="center" gap="4px" mb="8px">
+              {/* <IconButton size="small" onClick={goPrevDay} aria-label="Previous">
+                <ChevronLeftRoundedIcon />
+              </IconButton>
+              <Button
+                size="small"
+                onClick={goToday}
+                sx={{ textTransform: 'none', fontWeight: 600, minWidth: 'auto', px: '10px' }}
+              >
+                Today
+              </Button>
+              <IconButton size="small" onClick={goNextDay} aria-label="Next">
+                <ChevronRightRoundedIcon />
+              </IconButton> */}
+              <Typography
+                variant="h6"
+                fontWeight={700}
+                noWrap
+                sx={{ flex: 1, textAlign: 'center', pr: '28px' /* balances the arrows' width */ }}
+              >
+                <IconButton size="small" onClick={goPrev} aria-label="Previous">
+                  <ChevronLeftRoundedIcon />
+                </IconButton>
+                {viewTitle}
+                <IconButton size="small" onClick={goNext} aria-label="Previous">
+                  <ChevronRightRoundedIcon />
+                </IconButton>
+              </Typography>
+            </Box>
+
+            {/* Line 2: view switcher */}
+            <Box display="flex" gap="6px">
+              {VIEW_BUTTONS.map((vb) => (
+                <Button
+                  key={vb.view}
+                  size="small"
+                  onClick={() => changeView(vb.view)}
+                  sx={{
+                    flex: 1,
+                    textTransform: 'none',
+                    fontWeight: 600,
+                    borderRadius: '999px',
+                    backgroundColor:
+                      activeView === vb.view
+                        ? colors.greenAccent[500]
+                        : isDark
+                          ? colors.primary[500]
+                          : '#eceff3',
+                    color: activeView === vb.view ? colors.grey[900] : colors.grey[100],
+                    '&:hover': {
+                      backgroundColor:
+                        activeView === vb.view
+                          ? colors.greenAccent[600]
+                          : isDark
+                            ? colors.primary[500]
+                            : '#e0e3e8',
+                    },
+                  }}
+                >
+                  {vb.label}
+                </Button>
+              ))}
+            </Box>
+          </Box>
+
+          <FullCalendar
+            ref={calendarRef}
+            height="75vh"
+            aspectRatio={isMobile ? 0.85 : 1.35}
+            plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin, listPlugin]}
+            headerToolbar={false}
             initialView="dayGridMonth"
             editable={true}
             selectable={true}
@@ -416,6 +567,7 @@ const Calendar = () => {
             eventDrop={persistEventChange}
             eventResize={persistEventChange}
             eventDidMount={eventDidMount}
+            datesSet={handleDatesSet}
             events={currentEvents}
           />
         </Box>
@@ -428,21 +580,22 @@ const Calendar = () => {
         onClose={closePopover}
         anchorReference="anchorPosition"
         anchorPosition={anchorPos || { top: 0, left: 0 }}
-        anchorOrigin={{ vertical: "top", horizontal: "left" }}
-        transformOrigin={{ vertical: "top", horizontal: "left" }}
+        anchorOrigin={{ vertical: 'top', horizontal: 'left' }}
+        transformOrigin={{ vertical: 'top', horizontal: 'left' }}
         PaperProps={{
           sx: {
-            borderRadius: "16px",
-            width: 320,
-            p: "16px",
+            borderRadius: '16px',
+            width: { xs: 'calc(100vw - 32px)', sm: 320 },
+            maxWidth: 320,
+            p: '16px',
             backgroundColor: colors.primary[400],
-            boxShadow: "0 12px 40px rgba(0,0,0,0.35)",
+            boxShadow: '0 12px 40px rgba(0,0,0,0.35)',
           },
         }}
       >
         <Box display="flex" alignItems="center" justifyContent="space-between" mb="8px">
           <Typography variant="subtitle1" fontWeight={700}>
-            {mode === "create" ? "New event" : "Edit event"}
+            {mode === 'create' ? 'New event' : 'Edit event'}
           </Typography>
           <IconButton size="small" onClick={closePopover}>
             <CloseRoundedIcon fontSize="small" />
@@ -456,7 +609,7 @@ const Calendar = () => {
           value={draft.title}
           onChange={(e) => setDraft((d) => ({ ...d, title: e.target.value }))}
           size="small"
-          sx={{ mb: "10px" }}
+          sx={{ mb: '10px' }}
         />
 
         {/* Category swatches */}
@@ -469,23 +622,25 @@ const Calendar = () => {
               sx={{
                 width: 22,
                 height: 22,
-                borderRadius: "50%",
+                borderRadius: '50%',
                 backgroundColor: cat.color,
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                border: draft.category === cat.key ? "2px solid white" : "2px solid transparent",
-                boxShadow: draft.category === cat.key ? `0 0 0 2px ${cat.color}` : "none",
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                border: draft.category === cat.key ? '2px solid white' : '2px solid transparent',
+                boxShadow: draft.category === cat.key ? `0 0 0 2px ${cat.color}` : 'none',
               }}
             >
               {draft.category === cat.key && (
-                <CheckRoundedIcon sx={{ fontSize: 14, color: "#fff" }} />
+                <CheckRoundedIcon sx={{ fontSize: 14, color: '#fff' }} />
               )}
             </Box>
           ))}
         </Box>
 
+        {/* Time is optional — "All day" off is what adds a time component
+            to the date fields below. Date itself stays required. */}
         <FormControlLabel
           control={
             <Switch
@@ -496,61 +651,103 @@ const Calendar = () => {
                 setDraft((d) => ({
                   ...d,
                   allDay,
-                  start: toInputValue(
-                    d.start.length === 10 ? `${d.start}T09:00` : d.start,
-                    allDay
-                  ),
+                  start: toInputValue(d.start.length === 10 ? `${d.start}T09:00` : d.start, allDay),
                   end: d.end
                     ? toInputValue(d.end.length === 10 ? `${d.end}T10:00` : d.end, allDay)
-                    : "",
+                    : '',
                 }));
               }}
             />
           }
-          label={<Typography variant="body2">All day</Typography>}
-          sx={{ mb: "8px" }}
+          label={<Typography variant="body2">All day (no specific time)</Typography>}
+          sx={{ mb: '8px' }}
         />
 
-        <TextField
-          fullWidth
-          size="small"
-          type={draft.allDay ? "date" : "datetime-local"}
-          label="Starts"
-          InputLabelProps={{ shrink: true }}
-          value={draft.start}
-          onChange={(e) => setDraft((d) => ({ ...d, start: e.target.value }))}
-          sx={{ mb: "10px" }}
-        />
-        <TextField
-          fullWidth
-          size="small"
-          type={draft.allDay ? "date" : "datetime-local"}
-          label="Ends (optional)"
-          InputLabelProps={{ shrink: true }}
-          value={draft.end}
-          onChange={(e) => setDraft((d) => ({ ...d, end: e.target.value }))}
-          sx={{ mb: "12px" }}
-        />
+        <Box display="flex" gap="8px" sx={{ mb: '10px' }}>
+          <TextField
+            fullWidth
+            size="small"
+            type="date"
+            label="Starts"
+            InputLabelProps={{ shrink: true }}
+            value={draft.start.slice(0, 10)}
+            onChange={(e) =>
+              setDraft((d) => ({
+                ...d,
+                start: d.allDay
+                  ? e.target.value
+                  : `${e.target.value}T${d.start.slice(11, 16) || '09:00'}`,
+              }))
+            }
+          />
+          {!draft.allDay && (
+            <TextField
+              size="small"
+              type="time"
+              label="Time"
+              InputLabelProps={{ shrink: true }}
+              value={draft.start.slice(11, 16)}
+              onChange={(e) =>
+                setDraft((d) => ({ ...d, start: `${d.start.slice(0, 10)}T${e.target.value}` }))
+              }
+              sx={{ width: '130px' }}
+            />
+          )}
+        </Box>
+
+        <Box display="flex" gap="8px" sx={{ mb: '12px' }}>
+          <TextField
+            fullWidth
+            size="small"
+            type="date"
+            label="Ends (optional)"
+            InputLabelProps={{ shrink: true }}
+            value={draft.end.slice(0, 10)}
+            onChange={(e) =>
+              setDraft((d) => ({
+                ...d,
+                end: !e.target.value
+                  ? ''
+                  : d.allDay
+                    ? e.target.value
+                    : `${e.target.value}T${d.end.slice(11, 16) || '10:00'}`,
+              }))
+            }
+          />
+          {!draft.allDay && draft.end && (
+            <TextField
+              size="small"
+              type="time"
+              label="Time"
+              InputLabelProps={{ shrink: true }}
+              value={draft.end.slice(11, 16)}
+              onChange={(e) =>
+                setDraft((d) => ({ ...d, end: `${d.end.slice(0, 10)}T${e.target.value}` }))
+              }
+              sx={{ width: '130px' }}
+            />
+          )}
+        </Box>
 
         {saveError && (
-          <Alert severity="error" sx={{ mb: "10px", borderRadius: "8px" }}>
+          <Alert severity="error" sx={{ mb: '10px', borderRadius: '8px' }}>
             {saveError}
           </Alert>
         )}
 
-        <Divider sx={{ mb: "12px", opacity: 0.2 }} />
+        <Divider sx={{ mb: '12px', opacity: 0.2 }} />
 
         <Box display="flex" alignItems="center" justifyContent="space-between">
-          {mode === "edit" ? (
+          {mode === 'edit' ? (
             <Button
               size="small"
               onClick={handleDelete}
               disabled={saving}
-              color={confirmingDelete ? "error" : "inherit"}
+              color={confirmingDelete ? 'error' : 'inherit'}
               startIcon={<DeleteOutlineRoundedIcon fontSize="small" />}
-              sx={{ textTransform: "none", fontWeight: 600 }}
+              sx={{ textTransform: 'none', fontWeight: 600 }}
             >
-              {confirmingDelete ? "Confirm delete" : "Delete"}
+              {confirmingDelete ? 'Confirm delete' : 'Delete'}
             </Button>
           ) : (
             <span />
@@ -561,16 +758,16 @@ const Calendar = () => {
             disabled={saving}
             onClick={handleSave}
             sx={{
-              textTransform: "none",
+              textTransform: 'none',
               fontWeight: 700,
-              borderRadius: "999px",
-              px: "18px",
+              borderRadius: '999px',
+              px: '18px',
               backgroundColor: colors.greenAccent[500],
               color: colors.grey[900],
-              "&:hover": { backgroundColor: colors.greenAccent[600] },
+              '&:hover': { backgroundColor: colors.greenAccent[600] },
             }}
           >
-            {saving ? "Saving…" : "Save"}
+            {saving ? 'Saving…' : 'Save'}
           </Button>
         </Box>
       </Popover>
@@ -579,9 +776,11 @@ const Calendar = () => {
           it needs plain CSS rather than the theme/sx system). */}
       <style>{`
         .hd-calendar .fc {
-          --fc-border-color: ${isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)"};
-          --fc-today-bg-color: ${isDark ? "rgba(76,206,172,0.08)" : "rgba(76,206,172,0.12)"};
+          --fc-border-color: ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'};
+          --fc-today-bg-color: ${isDark ? 'rgba(76,206,172,0.08)' : 'rgba(76,206,172,0.12)'};
           --fc-page-bg-color: transparent;
+          width: 100%;
+          max-width: 100%;
         }
         .hd-calendar .fc-toolbar-title {
           font-weight: 700;
@@ -591,7 +790,7 @@ const Calendar = () => {
           text-transform: capitalize;
           border-radius: 999px !important;
           border: none !important;
-          background: ${isDark ? colors.primary[400] : "#eceff3"} !important;
+          background: ${isDark ? colors.primary[400] : '#eceff3'} !important;
           color: ${colors.grey[100]} !important;
           box-shadow: none !important;
           padding: 6px 14px !important;
@@ -601,9 +800,17 @@ const Calendar = () => {
           background: ${colors.greenAccent[500]} !important;
           color: ${colors.grey[900]} !important;
         }
-        .hd-calendar .fc-daygrid-day-number,
+        .hd-calendar .fc-daygrid-day-number {
+          /* grey[900] is the darkest shade in light mode and the lightest
+             in dark mode — grey[200] (used previously) is backwards in both
+             cases, which is why the date numbers read as low-contrast. */
+          color: ${colors.grey[900]};
+          font-weight: 700;
+          font-size: 16px;
+          text-decoration: none;
+        }
         .hd-calendar .fc-col-header-cell-cushion {
-          color: ${colors.grey[200]};
+          color: ${colors.grey[900]};
           text-decoration: none;
         }
         .hd-calendar .fc-event {

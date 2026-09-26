@@ -1,7 +1,7 @@
 const db = require('./connection');
 const { syncReminder, removeReminder } = require('./remindersRepository');
 
-const DAY_ABBREV = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
+const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 const todayStr = () => new Date().toISOString().slice(0, 10);
 
 // ---------- Daily reset (the core scheduled workflow) ----------
@@ -11,7 +11,7 @@ const todayStr = () => new Date().toISOString().slice(0, 10);
 // button without risk of double-processing.
 async function runDailyReset() {
   const today = todayStr();
-  const dayAbbrev = DAY_ABBREV[new Date().getDay()];
+  const dayName = DAY_NAMES[new Date().getDay()];
 
   const state = await db.get(`SELECT value FROM app_state WHERE key = 'last_reset_date'`);
   if (state && state.value === today) {
@@ -20,11 +20,21 @@ async function runDailyReset() {
 
   // 1. Log anything left over from the previous cycle that was never marked
   const unmarked = await db.all(`SELECT * FROM daily_routine_temp WHERE status = 'new'`);
+  
   for (const row of unmarked) {
+    const member = row.family_member_id
+      ? await db.get(`SELECT first_name FROM family_members WHERE id = ?`, [row.family_member_id])
+      : null;
     await db.run(
-      `INSERT INTO daily_routine_log (routine_id, title, family_member_id, log_date, status, reason)
-       VALUES (?, ?, ?, ?, 'no_action', 'NO ACTION TAKEN')`,
-      [row.routine_id, row.title, row.family_member_id, today]
+      `INSERT INTO daily_routine_log (routine_id, title, person, family_member_id, log_date, status, reason)
+       VALUES (?, ?, ?, ?, ?, 'no_action', 'NO ACTION TAKEN')`,
+      [
+        row.routine_id,
+        row.title,
+        member?.first_name || 'Unassigned',
+        row.family_member_id,
+        today,
+      ]
     );
   }
 
@@ -41,8 +51,9 @@ async function runDailyReset() {
         (r.day_of_week || '')
           .split(',')
           .map((d) => d.trim())
-          .includes(dayAbbrev))
+          .includes(dayName))
   );
+  console.log(DAY_NAMES);
   for (const task of todaysTasks) {
     // id is inserted explicitly equal to routine_id (task.id), instead of
     // letting it autoincrement, so this routine's reminder keeps a stable
@@ -94,7 +105,14 @@ async function hasResetRunToday() {
 
 // ---------- Today's working list ----------
 async function getTodayTasks() {
-  const rows = await db.all(`SELECT * FROM daily_routine_temp ORDER BY scheduled_time ASC`);
+  // const rows = await db.all(`SELECT * FROM daily_routine_temp ORDER BY scheduled_time ASC`);
+  const rows = await db.all(
+    `SELECT daily_routine_temp.*, family_members.first_name AS family_member_name
+     FROM daily_routine_temp
+     LEFT JOIN family_members ON family_members.id = daily_routine_temp.family_member_id
+     ORDER BY daily_routine_temp.scheduled_time ASC`
+  );
+  
   const now = Date.now();
   return rows
     .map((r) => ({

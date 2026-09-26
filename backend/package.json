@@ -15,7 +15,8 @@
     "jsonwebtoken": "^9.0.3",
     "multer": "^2.2.0",
     "node-cron": "^4.6.0",
-    "web-push": "^3.6.7"
+    "web-push": "^3.6.7",
+    "proxy": "http://localhost:5000"
   },
   "devDependencies": {
     "nodemon": "^3.1.0"

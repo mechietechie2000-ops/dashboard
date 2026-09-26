@@ -30,6 +30,7 @@ launchctl load ~/Library/LaunchAgents/com.dashboard.dailyreset.plist
 # If you want to fix Section
  1. db/sectionConfig.js  (update column names)
  2. config/sectionFields.js (update column name, Frontend fields)
+ 3. for person name (join with )
 
 # Rule of Thumb
 Root package.json: Holds project-wide orchestrators and tooling (like concurrently).
@@ -86,7 +87,6 @@ worth considering react-pro-sidebar@1.x or a lighter custom drawer when we get t
 
 P5 (low)
 - Frontend: CRA (react-scripts 5) + MUI v5 + react-pro-sidebar v0.7 + react-router-dom v6 + FullCalendar + Nivo/Chart.js (two charting libs installed — Nivo and Chart.js, worth consolidating later).
-- Inline form invisible task name (RoutineAdmin -> Add task -> (taskname) in focus, the taskname is not visible, but person is visible)
 
 # Stack overview
 - Backend: Express + sqlite3 + multer + cors, single server.js, no route file separation yet.
@@ -109,8 +109,6 @@ P5 (low)
 
 
 # Gaps / open questions in the algorithm (from Claude)
-- "Populate everyday" — what triggers it? The INSERT INTO daily_routine_temp SELECT * FROM daily_routine WHERE frequency='daily' needs something to fire it at midnight. On an always-on Mac mini, a server-side cron job is the natural fit — but it's a decision point (see below).
-
 - Weekly tasks — the algo only covers frequency='daily'. Weekly tasks need the same temp-table population, but gated by day-of-week (so you'll want a day_of_week column, or a bitmask, on the base table).
 - Multiple people per task — is person a single value, or can one task apply to several people at once (e.g. "brush teeth" for two kids)? That decides whether it's a plain column or a join table.
 - Snooze semantics — snooze for how long? Does it re-notify after the snooze window and pop back toward the top, or just sit at the bottom until manually revisited?
@@ -178,3 +176,217 @@ const login = async (email, password) => {
 ```
 There are 12 errors reported on Developer Tool
 
+
+
+renewals, events, appointments, routines, todo_task.
+
+renewals - must be completed by hand 
+todo_tasks - must be completed by hand 
+events - no action needed for past days (keep buffer of 2 days to display on reminders card)
+appointments - can be manually marked completed (show it for next 7 days and then remove from the view)
+routines - must be completed by hand or skipped, if no action taken, it will disappear from reminders and will be populated again for next day (this functionality already built and working under src/scenes/routine/RoutineAdmin route)
+
+can we have reminder_feed as a view (5 tables)
+upsert/merge on reminder table 
+
+
+future prospect => reminder + tasks from (school calender + US calender + India calender)
+
+
+
+
+events - for birthday or other invitations need to take action to buy gift (haven't considered this scenario)
+renewals - must be completed by hand (can open workflow type todo_list when passport/oci/h1/h4/drivers license is the category as they need several small steps)
+
+- Add new sidebar menu using Dashboard section configuration
+
+1. Database — new table DDL- home_dashboard_schema.sql
+2. Backend — db/sectionConfig.js
+```
+  home_maintenance: {
+  tableName: 'home_maintenance',
+  columns: [
+    'title', 'area', 'service_provider', 'last_serviced_date',
+    'next_due_date', 'frequency', 'amount', 'notes',
+    'family_member_id', 'status',
+  ],
+  requiredColumns: ['title', 'next_due_date'],
+  select: 'home_maintenance.*, family_members.first_name AS family_member_name',
+  joins: 'LEFT JOIN family_members ON family_members.id = home_maintenance.family_member_id',
+  orderBy: '(next_due_date IS NULL) ASC, next_due_date ASC',
+},
+```
+No changes needed to routes/section.js or db/sectionRepository.js — they already work off this config.
+
+3. Frontend — config/sectionFields.js
+Add a matching home_maintenance entry with fields (quick-add), optional detailFields (View All extras, following the todo_list pattern), an icon, and mapRowToItem:
+
+```
+home_maintenance: {
+  tableName: 'home_maintenance',
+  label: 'Home Maintenance',
+  icon: <BuildOutlinedIcon />,
+  viewAllLink: '/homeMaintenance',
+  emptyMessage: 'Nothing scheduled',
+  fields: [
+    { name: 'title', label: 'Task', type: 'text', required: true },
+    { name: 'area', label: 'Area', type: 'select', required: false,
+      options: [
+        { value: 'hvac', label: 'HVAC' },
+        { value: 'plumbing', label: 'Plumbing' },
+        { value: 'roof', label: 'Roof' },
+        { value: 'appliance', label: 'Appliance' },
+        { value: 'other', label: 'Other' },
+      ]},
+    { name: 'next_due_date', label: 'Next Due', type: 'date', required: true },
+    { name: 'family_member_id', label: 'Assigned To', type: 'asyncSelect', source: 'familyMembers', required: false },
+  ],
+  detailFields: [
+    { name: 'service_provider', label: 'Provider', type: 'text', required: false },
+    { name: 'last_serviced_date', label: 'Last Serviced', type: 'date', required: false },
+    { name: 'frequency', label: 'Frequency', type: 'select', required: false,
+      options: ['monthly','quarterly','6_months','yearly','custom']},
+    { name: 'amount', label: 'Cost', type: 'number', required: false },
+    { name: 'status', label: 'Status', type: 'select', required: false,
+      options: [{value:'pending',label:'Pending'},{value:'done',label:'Done'}]},
+    { name: 'notes', label: 'Notes', type: 'textarea', required: false },
+  ],
+  mapRowToItem: (row) => ({
+    id: row.id,
+    primary: row.title,
+    secondary: row.area,
+    meta: row.next_due_date ? fmtDate(row.next_due_date) : undefined,
+  }),
+},
+```
+
+SectionForm and SectionDetailView are entirely driven by this config — no changes needed there either.
+
+
+4. Wire it into the dashboard grid
+Wherever sectionFields entries currently get rendered as <DashboardSection> cards (looks like scenes/dashboard/index.jsx, which wasn't in your upload — worth checking), add home_maintenance to that list the same way todo_list etc. are rendered. Since you didn't attach that file, I can't confirm the exact loop, but based on this pattern it's almost certainly something like:
+
+{Object.keys(sectionFields).map(key => (
+  <DashboardSection key={key} {...sectionFields[key]} items={...} />
+))}
+
+
+5. Sidebar + route
+
+Two small additions, neither reuses "section" logic since they're just navigation:
+
+Sidebar.jsx (not uploaded): add a nav item pointing to /homeMaintenance, probably nested under "Home".
+App.js: add a route using the generic detail view:
+
+```
+<Route path="/homeMaintenance" element={<SectionDetailView sectionKey="home_maintenance" />} />
+```
+
+
+Summary of actual work
+Layer	Change
+DB	1 new table
+Backend	1 config object in sectionConfig.js
+Frontend	1 config object in sectionFields.js
+Routing	1 route in App.js
+Sidebar	1 nav link
+
+
+
+#prompt
+
+# Prompt: Add "Todo Task" as the 9th or 10th Section (SQLite + Express + React)
+
+## Context
+
+Repo: `https://github.com/mechietechie2000-ops/dashboard.git`
+
+This app already has a **generic "section" architecture** that powers 9 existing sections end-to-end:
+
+- **Backend**
+  - `routes/section.js` — generic SELECT / DML routes shared by all sections
+  - `db/sectionConfig.js` — per-section config: table name, column list, default `ORDER BY` clause
+  - `db/sectionRepository.js` — builds dynamic SQL (SELECT / INSERT / UPDATE / DELETE) from each section's config
+- **Frontend**
+  - `config/sectionFields.js` — maps each section's form fields to actual table columns (type, label, required, options, etc.)
+  - `component/SectionForm.js` — generic form component driven by `sectionFields.js`
+
+
+to be added in sectionField: 
+when type='inspection' and category is 'auto'
+      primary= `${row.subcategory} ${type} due on ${expiration_date}`
+
+
+
+
+
+I want to add a **9th section called "Todo Task"** by following this exact existing pattern — do **not** hand-roll a one-off table/route/form outside the generic framework unless something about Todo Task genuinely can't fit it (call that out explicitly if so).
+
+## 1. Database
+
+Create a new SQLite table (name it `todo_task`, or match the existing naming convention used by the other tables — check and follow it) with these columns:
+
+| Column | Notes |
+|---|---|
+| Title | required, text |
+| Priority | e.g. Low/Medium/High enum |
+| Desc | free text |
+| Category | text/enum — reuse existing Category values/table if one already exists in the app |
+| Status | e.g. Not Started / In Progress / Blocked / Done |
+| Target_Date | date |
+| Blocker | text, optional |
+| notes | text, optional |
+| family_member_id | FK to the existing family member table used elsewhere in the app |
+| StartDate | date, optional |
+| CompletionDate | date, optional |
+| EntryDate | date, default to creation timestamp |
+
+Also review db/home_dashboard_schema.sql only and create todo as well todo_history (if required for report generation), give me the table DDL and git patch for rest of the functionality
+
+
+
+Register the new table in `db/sectionConfig.js` (columns, table name, default order-by — probably `Target_Date ASC` or `EntryDate DESC`, use your judgment based on how other date-driven sections are sorted).
+
+## 2. Backend
+
+- Confirm `routes/section.js` and `db/sectionRepository.js` need **no changes** to support `todo_task` (they should be fully generic/dynamic). If they're not fully generic yet, generalize them rather than special-casing Todo Task.
+- Add whatever route registration/wiring is needed (e.g. `/api/sections/todo_task`) consistent with the other 8 sections.
+
+## 3. Frontend — Quick-Add Form (fewer fields)
+
+Add a **Todo Task** entry to `config/sectionFields.js` for the quick-add form shown from the bottom nav "+" button, exposing only:
+
+- Title (required)
+- Priority (select)
+- Desc (textarea)
+- Category (select)
+- Target_Date (date picker)
+- person (this is `family_member_id` — render as a "for" select/dropdown labeled "Person", sourced from the existing family member list/API, but store the FK `family_member_id`)
+
+This should render via the existing generic `component/SectionForm.js` — do not build a separate form component for this quick-add version.
+
+## 4. Frontend — Navigation & Views
+
+- **Bottom nav "+" (Add Task):** wire the existing Add-task action to open the Todo Task quick-add form above (new route, e.g. `/todo-task/new` or whatever the existing add-task routes look like for other sections).
+- **Dashboard widget:** show upcoming Todo Tasks (default filter: next 1 month by `Target_Date`), with basic filter controls (e.g. by Status, Category, Priority, date range) — reuse whatever dashboard-widget/filter pattern the other sections already use on the dashboard.
+- **"View All":** clicking View All should navigate to a **detailed list/table view** of Todo Tasks that exposes *all* columns (including Status, Blocker, StartDate, CompletionDate, EntryDate, notes) and supports edit-in-place or edit-via-form for those extra fields — model this after however the existing "Routine" section's View All / detail view works. Reuse that layout/component if it's generic; otherwise extend it minimally to include the extra Todo Task columns.
+
+## 5. Constraints / Style
+
+- Match existing code style, file layout, and naming conventions found elsewhere in the repo — inspect the existing 8 sections first and mirror them exactly rather than introducing a new pattern.
+- Keep everything data-driven off `sectionConfig.js` / `sectionFields.js` so a future 10th section can be added the same way.
+- Call out any place where Todo Task's requirements (e.g. `family_member_id` FK, the extra date/status columns not present in simpler sections) require a genuine extension to the shared generic code, and explain the change.
+- Include brief testing steps (how to run migrations, start backend/frontend, and manually verify create/list/filter/edit works end-to-end for Todo Task).
+
+## Deliverables
+
+1. DB migration/table creation code for `todo_task`
+2. Updated `db/sectionConfig.js`
+3. Any necessary generalization of `routes/section.js` / `db/sectionRepository.js`
+4. Updated `config/sectionFields.js` (quick-add field set + detail-view field set)
+5. Route wiring for bottom-nav "+" and "View All"
+6. Dashboard widget with next-1-month + filters
+7. Detail/"View All" view with full column set, matching the Routine section's pattern
+
+
+if it's not possible to add 10th grid, feel free to drop "Extra Curriculum Registrations" section and replace that Todo      

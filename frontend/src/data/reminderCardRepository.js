@@ -4,9 +4,8 @@ import { api } from '../services/api';
 // GET /api/reminders/card). NOT the same as the legacy GET /api/reminders
 // live-union endpoint — that one backs the old prototype and the nightly sync.
 
-export async function getReminderCard({ from, to, bucket, sources } = {}) {
+export async function getReminderCard({ from, to, sources } = {}) {
   const params = new URLSearchParams();
-  if (bucket) params.set('bucket', bucket);
   if (from) params.set('from', from);
   if (to) params.set('to', to);
   if (sources && sources.length) params.set('sources', sources.join(','));
@@ -18,4 +17,13 @@ export async function getReminderCard({ from, to, bucket, sources } = {}) {
 export async function completeReminder(sourceType, sourceId) {
   const { data } = await api.patch(`/reminders/${sourceType}/${sourceId}/complete`);
   return data;
+}
+
+// Forces the physical `reminder` table to resync from every source table
+// (see remindersRepository.syncAllReminders) instead of waiting for the
+// nightly job — used by the reminder card's manual refresh button so a
+// sync-on-write gap can be caught same-day instead of a day later.
+export async function syncReminders() {
+  const { data } = await api.post('/reminders/sync');
+  return data; // { synced, orphansRemoved }
 }

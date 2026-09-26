@@ -24,6 +24,8 @@ import Header from "./Header";
 import SectionForm from "./SectionForm";
 import sectionFields from "../config/sectionFields";
 import { listRecords, insertRecord, updateRecord, deleteRecord } from "../data/sectionRepository";
+import DashboardSection from "./DashboardSection"
+import SpreadsheetSection from './SpreadsheetSection';
 
 // Generic "View all" page for any section that has a viewAllLink. Unlike
 // scenes/routine/RoutineAdmin.jsx (a one-off table hand-built for the
@@ -133,7 +135,7 @@ const SectionDetailView = ({ sectionKey }) => {
   return (
     <Box m={{ xs: "0px", sm: "20px" }}>
       <Box display="flex" justifyContent="space-between" alignItems="center" mb="20px">
-        <Header title={config.label.toUpperCase()} subtitle={`All ${config.label.toLowerCase()} records`} />
+        <Header title={config.label} subtitle={`All ${config.label.toLowerCase()} records`} />. {/* remove lable.uppercase()  */}
         <Button
           variant="contained"
           startIcon={<AddIcon />}
@@ -150,7 +152,7 @@ const SectionDetailView = ({ sectionKey }) => {
         </Button>
       </Box>
 
-      <TableContainer
+      {/* <TableContainer
         component={Paper}
         sx={{
           backgroundColor: colors.primary[400],
@@ -160,7 +162,7 @@ const SectionDetailView = ({ sectionKey }) => {
         }}
       >
         <Table sx={{ minWidth: 650 }}>
-          <TableHead sx={{ backgroundColor: colors.blueAccent[700] }}>
+          <TableHead sx={{ backgroundColor: colors.blueAccent[900] }}>
             <TableRow>
               {columns.map((field) => (
                 <TableCell key={field.name} sx={{ color: colors.grey[100], fontWeight: "bold" }}>
@@ -202,8 +204,31 @@ const SectionDetailView = ({ sectionKey }) => {
             )}
           </TableBody>
         </Table>
-      </TableContainer>
+      </TableContainer> */}
 
+      <SpreadsheetSection
+        columns={(config.tableColumns || columns.map((c) => c.name)).map((name) => {
+          const field = columns.find((c) => c.name === name) || {};
+          return { name, label: field.label || name };
+        })}
+/*       columns={(config.tableColumns || []).map((name) => {
+        const field = columns.find((c) => c.name === name) || {};
+        return { name, label: field.label || name, wrap: name === 'details' };
+      })}
+ */
+        items={items}
+        onEditRequest={openEdit}
+        onDeleteRequest={handleDelete}
+        emptyMessage={config.emptyMessage}
+      />
+      <DashboardSection
+        title={null /* Header above already shows the title */}
+        icon={null}
+        items={items}
+        emptyMessage={config.emptyMessage || 'Nothing here yet'}
+        onEditRequest={openEdit}
+        onDeleteRequest={handleDelete}
+      />
       <Dialog
         open={dialogOpen}
         onClose={closeDialog}

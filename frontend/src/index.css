@@ -30,3 +30,11 @@
     z-index: 1300 !important;
   }
 }
+
+/* Optimized Mobile Typography Stack */
+.mobile-playful-header {
+  font-family: "Lobster", "Pinsetter", "cursive", sans-serif;
+  font-weight: 700;
+  line-height: 1.4; /* Prevents long cursive tails from clipping */
+  letter-spacing: 0.02em; /* Gives overlapping characters a bit of breathing room */
+}

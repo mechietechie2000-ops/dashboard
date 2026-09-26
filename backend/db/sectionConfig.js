@@ -63,13 +63,13 @@ module.exports = {
   appointments: {
     tableName: 'appointments',
     columns: [
-      "category",
-      "title",
-      "family_member_id",
-      "provider_name",
-      "appointment_datetime",
-      "amount",
-      "status",
+      'category',
+      'title',
+      'family_member_id',
+      'provider_name',
+      'appointment_datetime',
+      'amount',
+      'status',
     ],
     requiredColumns: ['family_member_id', 'appointment_datetime'],
     select: 'appointments.*, family_members.first_name AS family_member_name',
@@ -133,7 +133,7 @@ module.exports = {
   // updated_at (DB-defaulted, not client-writable) and todo_task_history
   // (populated by a trigger in home_dashboard_schema.sql — see that file).
 
-  todo_task: {
+  todo_list: {
     tableName: 'todo_task',
     columns: [
       'title',
@@ -153,12 +153,35 @@ module.exports = {
     joins: 'LEFT JOIN family_members ON family_members.id = todo_task.family_member_id',
     orderBy: '(target_date IS NULL) ASC, target_date ASC',
   },
-
+  recipe: {
+    tableName: 'recipe',
+    columns: ['id', 'recipe_name', 'recipe_type', 'ingredients', 'instructions'],
+    requiredColumns: ['recipe_name', 'recipe_type'],
+    orderBy: '(recipe_type IS NULL) ASC, target_date ASC',
+  },
+  home_maintenance: {
+    tableName: 'home_maintenance',
+    columns: [
+      'address', 
+      'category',
+      'location',
+      'title',
+      'date_of_work',
+      'details',
+      'cost',
+      'currency',
+      'receipt_saved',
+      'payment_method',
+      'account',
+      'paid_by',
+      'status',
+    ],
+    requiredColumns: ['address', 'category', 'status'],
+    orderBy: '(date_of_work IS NULL) ASC, date_of_work DESC',
+  },  
 };
 
-
-
-  /*
+/*
   // -------------------------------------------------------------------
   // AddTaskForm categories (see backend/db/task_categories_schema.sql).
   // sectionKey matches the `category` value AddTaskForm sends, so the

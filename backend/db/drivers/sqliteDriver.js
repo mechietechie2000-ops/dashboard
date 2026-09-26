@@ -17,7 +17,7 @@ try {
   const schemaPaths = [
     // path.resolve(__dirname, "..", "schema.sql"), -- main sql is home_dashboard_schema.sql 
     path.resolve(__dirname, "..", "home_dashboard_schema.sql"),
-    path.resolve(__dirname, "..", "reminder_schema.sql"),
+    // path.resolve(__dirname, "..", "reminder_schema.sql"),
   ];
   for (const schemaPath of schemaPaths) {
     if (fs.existsSync(schemaPath)) {
