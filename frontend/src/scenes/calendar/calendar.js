@@ -16,6 +16,7 @@ import {
   Alert,
   Divider,
   useTheme,
+  useMediaQuery,
 } from '@mui/material';
 import AddRoundedIcon from '@mui/icons-material/AddRounded';
 import DeleteOutlineRoundedIcon from '@mui/icons-material/DeleteOutlineRounded';
@@ -79,6 +80,7 @@ const Calendar = () => {
   const theme = useTheme();
   const colors = tokens(theme.palette.mode);
   const isDark = theme.palette.mode === 'dark';
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
   const [currentEvents, setCurrentEvents] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -306,18 +308,32 @@ const Calendar = () => {
     [currentEvents]
   );
 
+  // Picks black or white text based on the category color's luminance, so
+  // event pills stay readable regardless of theme or which category color
+  // is used (previously text was hardcoded to a light grey, which read
+  // fine on dark backgrounds but was low-contrast on the light theme).
+  const readableTextOn = (hex) => {
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+    return luminance > 0.6 ? '#111318' : '#ffffff';
+  };
+
   const eventDidMount = (info) => {
     const cat = categoryOf(info.event.extendedProps?.category);
-    info.el.style.backgroundColor = isDark ? `${cat.color}33` : `${cat.color}22`;
+    info.el.style.backgroundColor = cat.color;
     info.el.style.borderColor = cat.color;
-    info.el.style.color = colors.grey[100];
+    info.el.style.color = readableTextOn(cat.color);
     const dot = info.el.querySelector('.fc-daygrid-event-dot');
-    if (dot) dot.style.borderColor = cat.color;
+    if (dot) dot.style.borderColor = readableTextOn(cat.color);
   };
 
   // ---- Custom toolbar handlers -------------------------------------------
   // All routed through calendarApi imperatively since headerToolbar={false}
   // hands off navigation/view-switching to us.
+  const goNextDay = () => calendarRef.current?.getApi().incrementDate({ days: 1 });
+  const goPrevDay = () => calendarRef.current?.getApi().incrementDate({ days: -1 });
   const goPrev = () => calendarRef.current?.getApi().prev();
   const goNext = () => calendarRef.current?.getApi().next();
   const goToday = () => calendarRef.current?.getApi().today();
@@ -334,9 +350,9 @@ const Calendar = () => {
           <Typography variant="h3" fontWeight="600">
             Calendar
           </Typography>
-          <Typography variant="body2" color={colors.grey[300]}>
+          {/* <Typography variant="body2" color={colors.grey[300]}>
             Click a date to add something, drag an event to reschedule it.
-          </Typography>
+          </Typography> */}
         </Box>
         <Button
           variant="contained"
@@ -471,7 +487,7 @@ const Calendar = () => {
           >
             {/* Line 1: nav + title */}
             <Box display="flex" alignItems="center" gap="4px" mb="8px">
-              <IconButton size="small" onClick={goPrev} aria-label="Previous">
+              {/* <IconButton size="small" onClick={goPrevDay} aria-label="Previous">
                 <ChevronLeftRoundedIcon />
               </IconButton>
               <Button
@@ -481,16 +497,22 @@ const Calendar = () => {
               >
                 Today
               </Button>
-              <IconButton size="small" onClick={goNext} aria-label="Next">
+              <IconButton size="small" onClick={goNextDay} aria-label="Next">
                 <ChevronRightRoundedIcon />
-              </IconButton>
+              </IconButton> */}
               <Typography
                 variant="h6"
                 fontWeight={700}
                 noWrap
                 sx={{ flex: 1, textAlign: 'center', pr: '28px' /* balances the arrows' width */ }}
               >
+                <IconButton size="small" onClick={goPrev} aria-label="Previous">
+                  <ChevronLeftRoundedIcon />
+                </IconButton>
                 {viewTitle}
+                <IconButton size="small" onClick={goNext} aria-label="Previous">
+                  <ChevronRightRoundedIcon />
+                </IconButton>
               </Typography>
             </Box>
 
@@ -532,6 +554,7 @@ const Calendar = () => {
           <FullCalendar
             ref={calendarRef}
             height="75vh"
+            aspectRatio={isMobile ? 0.85 : 1.35}
             plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin, listPlugin]}
             headerToolbar={false}
             initialView="dayGridMonth"
@@ -640,26 +663,71 @@ const Calendar = () => {
           sx={{ mb: '8px' }}
         />
 
-        <TextField
-          fullWidth
-          size="small"
-          type={draft.allDay ? 'date' : 'datetime-local'}
-          label="Starts"
-          InputLabelProps={{ shrink: true }}
-          value={draft.start}
-          onChange={(e) => setDraft((d) => ({ ...d, start: e.target.value }))}
-          sx={{ mb: '10px' }}
-        />
-        <TextField
-          fullWidth
-          size="small"
-          type={draft.allDay ? 'date' : 'datetime-local'}
-          label="Ends (optional)"
-          InputLabelProps={{ shrink: true }}
-          value={draft.end}
-          onChange={(e) => setDraft((d) => ({ ...d, end: e.target.value }))}
-          sx={{ mb: '12px' }}
-        />
+        <Box display="flex" gap="8px" sx={{ mb: '10px' }}>
+          <TextField
+            fullWidth
+            size="small"
+            type="date"
+            label="Starts"
+            InputLabelProps={{ shrink: true }}
+            value={draft.start.slice(0, 10)}
+            onChange={(e) =>
+              setDraft((d) => ({
+                ...d,
+                start: d.allDay
+                  ? e.target.value
+                  : `${e.target.value}T${d.start.slice(11, 16) || '09:00'}`,
+              }))
+            }
+          />
+          {!draft.allDay && (
+            <TextField
+              size="small"
+              type="time"
+              label="Time"
+              InputLabelProps={{ shrink: true }}
+              value={draft.start.slice(11, 16)}
+              onChange={(e) =>
+                setDraft((d) => ({ ...d, start: `${d.start.slice(0, 10)}T${e.target.value}` }))
+              }
+              sx={{ width: '130px' }}
+            />
+          )}
+        </Box>
+
+        <Box display="flex" gap="8px" sx={{ mb: '12px' }}>
+          <TextField
+            fullWidth
+            size="small"
+            type="date"
+            label="Ends (optional)"
+            InputLabelProps={{ shrink: true }}
+            value={draft.end.slice(0, 10)}
+            onChange={(e) =>
+              setDraft((d) => ({
+                ...d,
+                end: !e.target.value
+                  ? ''
+                  : d.allDay
+                    ? e.target.value
+                    : `${e.target.value}T${d.end.slice(11, 16) || '10:00'}`,
+              }))
+            }
+          />
+          {!draft.allDay && draft.end && (
+            <TextField
+              size="small"
+              type="time"
+              label="Time"
+              InputLabelProps={{ shrink: true }}
+              value={draft.end.slice(11, 16)}
+              onChange={(e) =>
+                setDraft((d) => ({ ...d, end: `${d.end.slice(0, 10)}T${e.target.value}` }))
+              }
+              sx={{ width: '130px' }}
+            />
+          )}
+        </Box>
 
         {saveError && (
           <Alert severity="error" sx={{ mb: '10px', borderRadius: '8px' }}>
@@ -732,9 +800,17 @@ const Calendar = () => {
           background: ${colors.greenAccent[500]} !important;
           color: ${colors.grey[900]} !important;
         }
-        .hd-calendar .fc-daygrid-day-number,
+        .hd-calendar .fc-daygrid-day-number {
+          /* grey[900] is the darkest shade in light mode and the lightest
+             in dark mode — grey[200] (used previously) is backwards in both
+             cases, which is why the date numbers read as low-contrast. */
+          color: ${colors.grey[900]};
+          font-weight: 700;
+          font-size: 16px;
+          text-decoration: none;
+        }
         .hd-calendar .fc-col-header-cell-cushion {
-          color: ${colors.grey[200]};
+          color: ${colors.grey[900]};
           text-decoration: none;
         }
         .hd-calendar .fc-event {
